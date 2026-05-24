@@ -1994,8 +1994,11 @@ async function branchDown(index) {
 
 async function createBranchConv(messages, title) {
   const id = 'c_' + Date.now();
-  // Deep copy messages to avoid shared references
+  // Deep copy messages, strip usage data (cost belongs to original conversation)
   const msgsCopy = JSON.parse(JSON.stringify(messages));
+  for (const m of msgsCopy) {
+    delete m.usage;
+  }
   const convData = { id, title, messages: msgsCopy, created: Date.now() };
   // Save to IDB
   await saveConvToIDB(convData);
