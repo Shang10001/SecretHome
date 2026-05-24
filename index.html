@@ -1081,6 +1081,26 @@ html, body {
       <div class="field">
         <label>Temperature</label>
         <input type="number" id="temperature" value="0.7" min="0" max="2" step="0.1">
+        <div class="hint">启用思考链时此项会被忽略（Anthropic 要求 temperature=1）</div>
+      </div>
+
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="reasoningEnabled" style="accent-color:var(--accent);width:16px;height:16px;">
+          启用思考链 (Extended Thinking)
+        </label>
+        <div class="hint">开启后模型会先进行深度思考再回答，思考过程可折叠查看。会增加 output token 用量。</div>
+      </div>
+
+      <div class="field" id="reasoningEffortField">
+        <label>思考力度</label>
+        <select id="reasoningEffort">
+          <option value="low">Low — 轻度思考</option>
+          <option value="medium" selected>Medium — 中等思考</option>
+          <option value="high">High — 深度思考</option>
+          <option value="max">Max — 最大力度 (仅 4.6)</option>
+        </select>
+        <div class="hint">Claude 4.6 支持 adaptive thinking，会根据任务复杂度自动调整思考深度</div>
       </div>
 
       <div class="btn-row">
@@ -1225,7 +1245,9 @@ function defaultState() {
     memories: [],
     webdav: { url: '', user: '', pass: '', path: '/BenBenHome/' },
     autoExport: false,
-    msgsSinceExport: 0
+    msgsSinceExport: 0,
+    reasoningEnabled: false,
+    reasoningEffort: 'medium'
   };
 }
 
@@ -1334,6 +1356,8 @@ function exportLocalBackup(silent) {
       cacheTTL: state.cacheTTL,
       maxTokens: state.maxTokens,
       temperature: state.temperature,
+      reasoningEnabled: state.reasoningEnabled,
+      reasoningEffort: state.reasoningEffort,
       conversations: state.conversations,
       memories: state.memories
     }
@@ -1374,6 +1398,8 @@ function importLocalBackup(event) {
       state.cacheTTL = data.cacheTTL || '1h';
       state.maxTokens = data.maxTokens || 4096;
       state.temperature = data.temperature ?? 0.7;
+      state.reasoningEnabled = data.reasoningEnabled ?? false;
+      state.reasoningEffort = data.reasoningEffort || 'medium';
       state.conversations = data.conversations || {};
       state.memories = data.memories || [];
       state.activeConvId = Object.keys(state.conversations)[0] || null;
@@ -1465,6 +1491,8 @@ function showSettings() {
   document.getElementById('webdavPass').value = wd.pass || '';
   document.getElementById('webdavPath').value = wd.path || '/BenBenHome/';
   document.getElementById('autoExportToggle').checked = state.autoExport || false;
+  document.getElementById('reasoningEnabled').checked = state.reasoningEnabled || false;
+  document.getElementById('reasoningEffort').value = state.reasoningEffort || 'medium';
   openModal('settingsModal', true);
 }
 
@@ -1477,6 +1505,8 @@ function saveSettings() {
   state.maxTokens = parseInt(document.getElementById('maxTokens').value) || 4096;
   state.contextLen = parseInt(document.getElementById('contextLen').value) || 0;
   state.temperature = parseFloat(document.getElementById('temperature').value) || 0.7;
+  state.reasoningEnabled = document.getElementById('reasoningEnabled').checked;
+  state.reasoningEffort = document.getElementById('reasoningEffort').value;
   saveState();
   closeModal('settingsModal');
 }
@@ -1682,9 +1712,7 @@ async function sendMessage() {
       : '';
     const fullSystem = (state.systemPrompt + memBlock).trim();
     if (fullSystem) {
-      const sysMsg = { role: 'system', content: fullSystem, cache_control: { type: 'ephemeral' } };
-      if (state.cacheTTL) sysMsg.cache_control.ttl = state.cacheTTL;
-      messages.push(sysMsg);
+      messages.push({ role: 'system', content: fullSystem });
     }
 
     // Apply context length limit (0 = unlimited)
@@ -1701,8 +1729,17 @@ async function sendMessage() {
       messages,
       max_tokens: state.maxTokens,
       temperature: state.temperature,
-      stream: true
+      stream: true,
+      cache_control: { type: 'ephemeral' }
     };
+    if (state.cacheTTL) body.cache_control.ttl = state.cacheTTL;
+
+    // Add reasoning (extended thinking) if enabled
+    if (state.reasoningEnabled) {
+      body.reasoning = { effort: state.reasoningEffort || 'medium' };
+      // Anthropic requires temperature=1 when thinking is enabled
+      delete body.temperature;
+    }
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -1743,12 +1780,26 @@ async function sendMessage() {
           const chunk = JSON.parse(data);
           const delta = chunk.choices?.[0]?.delta;
 
-          // Check for reasoning/thinking content (OpenRouter format)
+          // Check for reasoning_details (current OpenRouter format)
+          if (delta?.reasoning_details) {
+            for (const detail of delta.reasoning_details) {
+              if (detail.type === 'reasoning.text' && detail.text) {
+                assistantMsg.thinking += detail.text;
+                renderStreamingThinking(conv.messages.length - 1, assistantMsg.thinking);
+              } else if (detail.type === 'reasoning.summary' && detail.summary) {
+                // Also capture summary if no text was provided
+                if (!assistantMsg.thinking) {
+                  assistantMsg.thinking += detail.summary;
+                  renderStreamingThinking(conv.messages.length - 1, assistantMsg.thinking);
+                }
+              }
+            }
+          }
+          // Fallback: check legacy reasoning fields
           if (delta?.reasoning) {
             assistantMsg.thinking += delta.reasoning;
             renderStreamingThinking(conv.messages.length - 1, assistantMsg.thinking);
           }
-          // Also check reasoning_content (another common format)
           if (delta?.reasoning_content) {
             assistantMsg.thinking += delta.reasoning_content;
             renderStreamingThinking(conv.messages.length - 1, assistantMsg.thinking);
@@ -2205,6 +2256,8 @@ async function doBackup() {
         cacheTTL: state.cacheTTL,
         maxTokens: state.maxTokens,
         temperature: state.temperature,
+        reasoningEnabled: state.reasoningEnabled,
+        reasoningEffort: state.reasoningEffort,
         conversations: state.conversations,
         memories: state.memories
       }
@@ -2253,6 +2306,8 @@ async function doRestore() {
       state.cacheTTL = data.cacheTTL || '1h';
       state.maxTokens = data.maxTokens || 4096;
       state.temperature = data.temperature ?? 0.7;
+      state.reasoningEnabled = data.reasoningEnabled ?? false;
+      state.reasoningEffort = data.reasoningEffort || 'medium';
       state.conversations = data.conversations || {};
       state.memories = data.memories || [];
       state.activeConvId = Object.keys(state.conversations)[0] || null;
