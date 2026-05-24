@@ -1429,7 +1429,11 @@ async function sendMessage() {
       ? '\n\n<memories>\n' + state.memories.map((m,i) => `${i+1}. ${m}`).join('\n') + '\n</memories>'
       : '';
     const fullSystem = (state.systemPrompt + memBlock).trim();
-    if (fullSystem) messages.push({ role: 'system', content: fullSystem });
+    if (fullSystem) {
+      const sysMsg = { role: 'system', content: fullSystem, cache_control: { type: 'ephemeral' } };
+      if (state.cacheTTL) sysMsg.cache_control.ttl = state.cacheTTL;
+      messages.push(sysMsg);
+    }
 
     // Apply context length limit (0 = unlimited)
     let historyMsgs = conv.messages.filter(m => m !== assistantMsg);
@@ -1445,10 +1449,8 @@ async function sendMessage() {
       messages,
       max_tokens: state.maxTokens,
       temperature: state.temperature,
-      stream: true,
-      cache_control: { type: 'ephemeral' }
+      stream: true
     };
-    if (state.cacheTTL) body.cache_control.ttl = state.cacheTTL;
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
