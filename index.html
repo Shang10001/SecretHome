@@ -2064,7 +2064,11 @@ async function sendMessage() {
   }
 
   const conv = getActiveConv();
-  conv.messages.push({ role: 'user', content: text });
+  // Record send timestamp for cache-stable time injection
+  const now = new Date();
+  const days = ['日','一','二','三','四','五','六'];
+  const sendTs = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 周${days[now.getDay()]}`;
+  conv.messages.push({ role: 'user', content: text, ts: sendTs });
   if (conv.messages.length === 1) conv.title = text.slice(0, 30) + (text.length > 30 ? '...' : '');
 
   input.value = '';
@@ -2104,12 +2108,9 @@ async function sendMessage() {
     for (let mi = 0; mi < historyMsgs.length; mi++) {
       const m = historyMsgs[mi];
       let content = m.content;
-      // Append timestamp to the last user message only
-      if (mi === historyMsgs.length - 1 && m.role === 'user') {
-        const now = new Date();
-        const days = ['日','一','二','三','四','五','六'];
-        const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 周${days[now.getDay()]}`;
-        content = content + `\n\n[当前时间: ${ts}]`;
+      // Append stored timestamp to every user message
+      if (m.role === 'user' && m.ts) {
+        content = content + `\n\n[当前时间: ${m.ts}]`;
       }
       messages.push({ role: m.role, content });
     }
