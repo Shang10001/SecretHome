@@ -2098,8 +2098,17 @@ async function sendMessage() {
     if (state.contextLen > 0 && historyMsgs.length > state.contextLen) {
       historyMsgs = historyMsgs.slice(-state.contextLen);
     }
-    for (const m of historyMsgs) {
-      messages.push({ role: m.role, content: m.content });
+    for (let mi = 0; mi < historyMsgs.length; mi++) {
+      const m = historyMsgs[mi];
+      let content = m.content;
+      // Append timestamp to the last user message only
+      if (mi === historyMsgs.length - 1 && m.role === 'user') {
+        const now = new Date();
+        const days = ['日','一','二','三','四','五','六'];
+        const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 周${days[now.getDay()]}`;
+        content = content + `\n\n[当前时间: ${ts}]`;
+      }
+      messages.push({ role: m.role, content });
     }
 
     const body = {
