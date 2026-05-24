@@ -536,6 +536,125 @@ html, body {
 }
 .conv-item-del:hover { color: var(--red); background: var(--red-light); }
 
+/* ========== THINKING BLOCK ========== */
+.thinking-block {
+  margin-bottom: 8px;
+}
+.thinking-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+.thinking-toggle:hover {
+  background: var(--surface3);
+  color: var(--text2);
+}
+.thinking-toggle .arrow {
+  font-size: 9px;
+  transition: transform 0.2s;
+}
+.thinking-toggle.open .arrow {
+  transform: rotate(90deg);
+}
+.thinking-content {
+  display: none;
+  margin-top: 6px;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text2);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.thinking-content.open {
+  display: block;
+  animation: msgIn 0.2s ease-out;
+}
+.thinking-streaming {
+  display: block;
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* ========== MESSAGE EDIT ========== */
+.msg-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  padding-left: 4px;
+}
+.msg-action-btn {
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text3);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.msg-action-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
+  border-color: var(--border2);
+}
+.msg-action-btn.save {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.msg-action-btn.save:hover {
+  background: var(--accent2);
+}
+.msg-action-btn.cancel {
+  color: var(--text3);
+}
+.msg-content.editing {
+  outline: none;
+  border: 1px solid var(--accent) !important;
+  background: var(--surface) !important;
+  box-shadow: 0 0 0 3px var(--accent-dim) !important;
+}
+.edit-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  padding-left: 4px;
+}
+
+/* ========== COST DASHBOARD ========== */
+.cost-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  padding: 2px 0;
+  flex-wrap: wrap;
+}
+.cost-bar .cost-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
 /* ========== STREAMING CURSOR ========== */
 .streaming-cursor::after {
   content: '';
@@ -841,14 +960,25 @@ html, body {
 
   <!-- INPUT -->
   <div class="input-area">
-    <div class="save-indicator" id="saveIndicator">
-      <span class="pulse"></span>
-      <span id="saveStatus">已保存</span>
+    <div class="cost-bar" id="costBar">
+      <span class="cost-item"><span class="pulse"></span><span id="saveStatus">已保存</span></span>
+      <span class="cost-item" id="costDisplay" style="display:none">
+        <span>💰</span><span id="costTotal">$0.00</span>
+      </span>
+      <span class="cost-item" id="msgCountDisplay" style="display:none">
+        <span id="msgCountTotal">0</span>条
+      </span>
+      <span class="cost-item" id="tokenDisplay" style="display:none">
+        <span id="tokenTotal">0</span>tok
+      </span>
+      <span class="cost-item" id="cacheInfoDisplay" style="display:none">
+        <span id="cacheInfoText">--</span>
+      </span>
     </div>
     <div class="input-box">
       <div class="input-row">
         <textarea id="userInput" rows="1" placeholder="跟笨笨说点什么..."
-          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          oninput="autoResize(this)"></textarea>
         <button class="send-btn" id="sendBtn" onclick="sendMessage()">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
@@ -1352,6 +1482,7 @@ function renderMessages() {
         <div class="label">笨笨在这里等你 (&#865;&#176;&#860;&#662;&#865;&#176;)</div>
         <div class="sublabel">cache_control: ready</div>
       </div>`;
+    updateCostBar();
     return;
   }
 
@@ -1368,16 +1499,116 @@ function renderMessages() {
       if (u.cost !== undefined && u.cost !== null) parts.push(`<span class="meta-tag tokens">$${u.cost.toFixed(5)}</span>`);
       metaHtml = `<div class="msg-meta">${parts.join('')}</div>`;
     }
+
+    // Thinking block (collapsed by default)
+    let thinkingHtml = '';
+    if (m.thinking) {
+      thinkingHtml = `
+        <div class="thinking-block">
+          <div class="thinking-toggle" onclick="toggleThinking(${i})">
+            <span class="arrow">&#9654;</span>
+            思考过程
+          </div>
+          <div class="thinking-content" id="thinking-${i}">${esc(m.thinking)}</div>
+        </div>`;
+    }
+
+    // Edit button
+    const editBtn = `<div class="msg-actions"><button class="msg-action-btn" onclick="startEdit(${i})">编辑</button></div>`;
+
     return `
-      <div class="msg ${m.role}">
+      <div class="msg ${m.role}" data-index="${i}">
         ${m.role === 'assistant' ? `<div class="msg-model">${esc(m.model || getModel())}</div>` : ''}
-        <div class="msg-content">${esc(m.content)}</div>
+        ${thinkingHtml}
+        <div class="msg-content" id="msgContent-${i}">${esc(m.content)}</div>
         ${metaHtml}
+        ${editBtn}
       </div>
     `;
   }).join('');
 
   container.scrollTop = container.scrollHeight;
+  updateCostBar();
+}
+
+function toggleThinking(index) {
+  const content = document.getElementById('thinking-' + index);
+  const toggle = content.previousElementSibling;
+  content.classList.toggle('open');
+  toggle.classList.toggle('open');
+}
+
+// ============ MESSAGE EDITING ============
+function startEdit(index) {
+  const el = document.getElementById('msgContent-' + index);
+  if (!el) return;
+  el.contentEditable = 'true';
+  el.classList.add('editing');
+  el.focus();
+
+  // Show save/cancel buttons
+  const msg = el.closest('.msg');
+  const existingActions = msg.querySelector('.msg-actions');
+  if (existingActions) existingActions.style.display = 'none';
+
+  let editActions = msg.querySelector('.edit-actions');
+  if (!editActions) {
+    editActions = document.createElement('div');
+    editActions.className = 'edit-actions';
+    editActions.innerHTML = `
+      <button class="msg-action-btn save" onclick="saveEdit(${index})">保存</button>
+      <button class="msg-action-btn cancel" onclick="cancelEdit(${index})">取消</button>
+    `;
+    el.after(editActions);
+  }
+}
+
+function saveEdit(index) {
+  const el = document.getElementById('msgContent-' + index);
+  if (!el) return;
+  const conv = getActiveConv();
+  conv.messages[index].content = el.textContent;
+  el.contentEditable = 'false';
+  el.classList.remove('editing');
+  saveState();
+  renderMessages();
+  showToast('消息已编辑');
+}
+
+function cancelEdit(index) {
+  renderMessages();
+}
+
+// ============ COST DASHBOARD ============
+function updateCostBar() {
+  const conv = getActiveConv();
+  let totalCost = 0;
+  let totalTokens = 0;
+  let msgCount = conv.messages.length;
+
+  for (const m of conv.messages) {
+    if (m.usage) {
+      if (m.usage.cost !== undefined && m.usage.cost !== null) totalCost += m.usage.cost;
+      totalTokens += (m.usage.prompt_tokens || 0) + (m.usage.completion_tokens || 0);
+    }
+  }
+
+  const costEl = document.getElementById('costDisplay');
+  const msgEl = document.getElementById('msgCountDisplay');
+  const tokenEl = document.getElementById('tokenDisplay');
+
+  if (msgCount > 0) {
+    document.getElementById('costTotal').textContent = '$' + totalCost.toFixed(4);
+    document.getElementById('msgCountTotal').textContent = msgCount;
+    document.getElementById('tokenTotal').textContent = totalTokens > 1000 ? (totalTokens/1000).toFixed(1) + 'k' : totalTokens;
+    costEl.style.display = '';
+    msgEl.style.display = '';
+    tokenEl.style.display = '';
+  } else {
+    costEl.style.display = 'none';
+    msgEl.style.display = 'none';
+    tokenEl.style.display = 'none';
+  }
 }
 
 function esc(str) {
@@ -1412,7 +1643,7 @@ async function sendMessage() {
   isStreaming = true;
   document.getElementById('sendBtn').disabled = true;
 
-  const assistantMsg = { role: 'assistant', content: '', usage: null, model: getModel() };
+  const assistantMsg = { role: 'assistant', content: '', thinking: '', usage: null, model: getModel() };
   conv.messages.push(assistantMsg);
   renderMessages();
 
@@ -1474,6 +1705,7 @@ async function sendMessage() {
     const decoder = new TextDecoder();
     let buffer = '';
     let usage = {};
+    let isThinking = false;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -1489,6 +1721,18 @@ async function sendMessage() {
         try {
           const chunk = JSON.parse(data);
           const delta = chunk.choices?.[0]?.delta;
+
+          // Check for reasoning/thinking content (OpenRouter format)
+          if (delta?.reasoning) {
+            assistantMsg.thinking += delta.reasoning;
+            renderStreamingThinking(conv.messages.length - 1, assistantMsg.thinking);
+          }
+          // Also check reasoning_content (another common format)
+          if (delta?.reasoning_content) {
+            assistantMsg.thinking += delta.reasoning_content;
+            renderStreamingThinking(conv.messages.length - 1, assistantMsg.thinking);
+          }
+
           if (delta?.content) {
             assistantMsg.content += delta.content;
             renderStreamingMessage(conv.messages.length - 1, assistantMsg.content);
@@ -1497,6 +1741,9 @@ async function sendMessage() {
         } catch(e) {}
       }
     }
+
+    // Clean up: remove thinking field if empty
+    if (!assistantMsg.thinking) delete assistantMsg.thinking;
 
     const cached = usage.prompt_tokens_details?.cached_tokens || 0;
     const cacheWrite = usage.prompt_tokens_details?.cache_write_tokens || 0;
@@ -1535,6 +1782,46 @@ function renderStreamingMessage(index, content) {
       contentEl.textContent = content;
       contentEl.classList.add('streaming-cursor');
     }
+    // Collapse thinking when content starts streaming
+    const thinkingContent = el.querySelector('.thinking-content');
+    if (thinkingContent && thinkingContent.classList.contains('thinking-streaming')) {
+      thinkingContent.classList.remove('thinking-streaming');
+      thinkingContent.classList.remove('open');
+      const toggle = el.querySelector('.thinking-toggle');
+      if (toggle) toggle.classList.remove('open');
+    }
+  }
+  container.scrollTop = container.scrollHeight;
+}
+
+function renderStreamingThinking(index, thinking) {
+  const container = document.getElementById('messages');
+  const msgEls = container.querySelectorAll('.msg');
+  const el = msgEls[index];
+  if (!el) return;
+
+  // Create or update thinking block
+  let thinkingBlock = el.querySelector('.thinking-block');
+  if (!thinkingBlock) {
+    // Insert thinking block before msg-content
+    const contentEl = el.querySelector('.msg-content');
+    thinkingBlock = document.createElement('div');
+    thinkingBlock.className = 'thinking-block';
+    thinkingBlock.innerHTML = `
+      <div class="thinking-toggle open" onclick="toggleThinking(${index})">
+        <span class="arrow">&#9654;</span>
+        思考中...
+      </div>
+      <div class="thinking-content open thinking-streaming" id="thinking-${index}"></div>
+    `;
+    contentEl.before(thinkingBlock);
+  }
+
+  const thinkingContent = thinkingBlock.querySelector('.thinking-content');
+  if (thinkingContent) {
+    thinkingContent.textContent = thinking;
+    // Keep scrolled to bottom during streaming
+    thinkingContent.scrollTop = thinkingContent.scrollHeight;
   }
   container.scrollTop = container.scrollHeight;
 }
@@ -1546,13 +1833,59 @@ function updateCacheIndicator(cached, cacheWrite) {
   if (cached > 0) { dot.classList.add('hit'); label.textContent = `HIT ${cached}`; }
   else if (cacheWrite > 0) { dot.classList.add('write'); label.textContent = `WRITE ${cacheWrite}`; }
   else { dot.classList.add('miss'); label.textContent = 'MISS'; }
+
+  // Track cache state for countdown
+  const totalCached = (cached || 0) + (cacheWrite || 0);
+  if (totalCached > 0) {
+    cacheState.tokens = totalCached;
+    cacheState.lastRefresh = Date.now();
+    // TTL: parse from settings
+    cacheState.ttlMs = state.cacheTTL === '1h' ? 3600000 : 300000; // 1h or 5min
+    updateCacheCountdown();
+    startCacheTimer();
+  }
+}
+
+// ============ CACHE COUNTDOWN ============
+let cacheState = { tokens: 0, lastRefresh: 0, ttlMs: 3600000 };
+let cacheTimerInterval = null;
+
+function startCacheTimer() {
+  if (cacheTimerInterval) clearInterval(cacheTimerInterval);
+  cacheTimerInterval = setInterval(updateCacheCountdown, 10000); // update every 10s
+}
+
+function updateCacheCountdown() {
+  const el = document.getElementById('cacheInfoDisplay');
+  const textEl = document.getElementById('cacheInfoText');
+  if (!cacheState.lastRefresh || !cacheState.tokens) {
+    el.style.display = 'none';
+    return;
+  }
+
+  const elapsed = Date.now() - cacheState.lastRefresh;
+  const remaining = cacheState.ttlMs - elapsed;
+
+  if (remaining <= 0) {
+    textEl.textContent = 'cache 已过期';
+    el.style.display = '';
+    if (cacheTimerInterval) { clearInterval(cacheTimerInterval); cacheTimerInterval = null; }
+    // Update header dot
+    const dot = document.getElementById('cacheDot');
+    const label = document.getElementById('cacheLabel');
+    dot.className = 'cache-dot miss';
+    label.textContent = '已过期';
+    return;
+  }
+
+  const mins = Math.floor(remaining / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+  const tokStr = cacheState.tokens > 1000 ? (cacheState.tokens/1000).toFixed(1) + 'k' : cacheState.tokens;
+  textEl.textContent = `cache ${tokStr}tok · ${mins}:${secs.toString().padStart(2,'0')}`;
+  el.style.display = '';
 }
 
 // ============ INPUT HELPERS ============
-function handleKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-}
-
 function autoResize(el) {
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 160) + 'px';
