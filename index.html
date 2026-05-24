@@ -611,6 +611,70 @@ html, body {
   gap: 2px;
   margin-top: 4px;
   padding-left: 2px;
+  position: relative;
+}
+.msg-menu-trigger {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  font-family: var(--font);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 2px;
+  line-height: 1;
+}
+.msg-menu-trigger:hover {
+  background: var(--surface2);
+  color: var(--text2);
+}
+.msg-menu {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  min-width: 160px;
+  z-index: 50;
+  overflow: hidden;
+  animation: msgIn 0.15s ease-out;
+}
+.msg-menu.open { display: block; }
+.msg-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+.msg-menu-item:hover {
+  background: var(--surface2);
+}
+.msg-menu-item .menu-icon {
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+  color: var(--text3);
+}
+.msg-menu-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 0;
 }
 .msg-action-btn {
   padding: 4px 8px;
@@ -1192,6 +1256,9 @@ html, body {
         <input type="file" id="kelivoFile" accept=".json" style="display:none" onchange="importKelivo(event)">
       </div>
       <div id="kelivoStatus" style="margin-top:8px;font-size:12px;color:var(--text3);font-family:var(--mono);"></div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:20px 0;">
+      <div style="font-family:var(--mono);font-size:11px;padding:4px 0;" id="storageUsage">存储: 检测中...</div>
     </div>
 
   </div>
@@ -1228,7 +1295,10 @@ html, body {
 <script>
 // ============ STATE ============
 const DB_KEY = 'benben_data';
-let state = loadState();
+
+// state.conversations now only holds metadata (no messages) for sidebar/list rendering.
+// Full conversation data (with messages) lives in IndexedDB, loaded on demand.
+// state._activeConvData holds the currently loaded conversation's full data (with messages).
 
 function defaultState() {
   return {
@@ -1240,7 +1310,7 @@ function defaultState() {
     maxTokens: 4096,
     contextLen: 0,
     temperature: 0.7,
-    conversations: {},
+    conversations: {},   // { id: { id, title, created, msgCount } } — NO messages
     activeConvId: null,
     memories: [],
     webdav: { url: '', user: '', pass: '', path: '/BenBenHome/' },
@@ -1251,75 +1321,260 @@ function defaultState() {
   };
 }
 
+// Lightweight synchronous load from localStorage (settings + conversation index only)
 function loadState() {
   try {
     const raw = localStorage.getItem(DB_KEY);
-    if (raw) return { ...defaultState(), ...JSON.parse(raw) };
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Strip any leftover messages from conversation index (migration)
+      if (parsed.conversations) {
+        for (const id in parsed.conversations) {
+          const c = parsed.conversations[id];
+          if (c.messages) {
+            c.msgCount = c.messages.length;
+            delete c.messages;
+          }
+        }
+      }
+      return { ...defaultState(), ...parsed, _activeConvData: null };
+    }
   } catch(e) {}
-  return defaultState();
+  return { ...defaultState(), _activeConvData: null };
 }
 
-// Try loading from IndexedDB if localStorage was empty (async, runs on init)
-async function tryLoadFromIDB() {
-  const raw = await loadFromIDB();
-  if (raw && !localStorage.getItem(DB_KEY)) {
-    try {
-      state = { ...defaultState(), ...JSON.parse(raw) };
-      if (!state.activeConvId) newConversation();
-      renderMessages();
-      updateMemBadge();
-      showToast('已从 IndexedDB 恢复数据');
-    } catch(e) {}
-  }
-}
+let state = loadState();
 
-function saveState() {
-  const json = JSON.stringify(state);
-  // Primary: localStorage (synchronous, reliable for single-file HTML)
-  try { localStorage.setItem(DB_KEY, json); } catch(e) {}
-  // Secondary: IndexedDB (async, more persistent)
-  saveToIDB(json);
-  // Update save indicator
-  updateSaveStatus('已保存');
-}
-
-// ============ INDEXEDDB LAYER ============
+// ============ INDEXEDDB LAYER (v2 — split stores) ============
 const IDB_NAME = 'BenBenHomeDB';
-const IDB_STORE = 'state';
+const IDB_VERSION = 2;
 let idb = null;
 
 function openIDB() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(IDB_NAME, 1);
-    req.onupgradeneeded = () => { req.result.createObjectStore(IDB_STORE); };
+    const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = req.result;
+      // v1 had a single 'state' store — remove it
+      if (db.objectStoreNames.contains('state')) {
+        db.deleteObjectStore('state');
+      }
+      if (!db.objectStoreNames.contains('settings')) {
+        db.createObjectStore('settings');
+      }
+      if (!db.objectStoreNames.contains('conversations')) {
+        db.createObjectStore('conversations');
+      }
+    };
     req.onsuccess = () => { idb = req.result; resolve(idb); };
     req.onerror = () => reject(req.error);
   });
 }
 
-async function saveToIDB(json) {
+// Save settings (everything except conversation messages) to IDB
+async function saveSettingsToIDB() {
   try {
     if (!idb) await openIDB();
-    const tx = idb.transaction(IDB_STORE, 'readwrite');
-    tx.objectStore(IDB_STORE).put(json, 'main');
-  } catch(e) {}
+    const data = { ...state };
+    delete data._activeConvData;  // never persist this
+    const tx = idb.transaction('settings', 'readwrite');
+    tx.objectStore('settings').put(JSON.stringify(data), 'main');
+  } catch(e) { console.warn('IDB settings save failed:', e); }
 }
 
-async function loadFromIDB() {
+// Save a single conversation (with messages) to IDB
+async function saveConvToIDB(convData) {
+  try {
+    if (!idb) await openIDB();
+    const tx = idb.transaction('conversations', 'readwrite');
+    tx.objectStore('conversations').put(JSON.stringify(convData), convData.id);
+  } catch(e) { console.warn('IDB conv save failed:', e); }
+}
+
+// Load a single conversation from IDB
+async function loadConvFromIDB(convId) {
   try {
     if (!idb) await openIDB();
     return new Promise((resolve) => {
-      const tx = idb.transaction(IDB_STORE, 'readonly');
-      const req = tx.objectStore(IDB_STORE).get('main');
-      req.onsuccess = () => resolve(req.result || null);
+      const tx = idb.transaction('conversations', 'readonly');
+      const req = tx.objectStore('conversations').get(convId);
+      req.onsuccess = () => {
+        if (req.result) {
+          try { resolve(JSON.parse(req.result)); } catch(e) { resolve(null); }
+        } else { resolve(null); }
+      };
       req.onerror = () => resolve(null);
     });
   } catch(e) { return null; }
 }
 
+// Load all conversations from IDB (for export/backup)
+async function loadAllConvsFromIDB() {
+  try {
+    if (!idb) await openIDB();
+    return new Promise((resolve) => {
+      const tx = idb.transaction('conversations', 'readonly');
+      const store = tx.objectStore('conversations');
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const result = {};
+        for (const raw of (req.result || [])) {
+          try {
+            const conv = JSON.parse(raw);
+            if (conv && conv.id) result[conv.id] = conv;
+          } catch(e) {}
+        }
+        resolve(result);
+      };
+      req.onerror = () => resolve({});
+    });
+  } catch(e) { return {}; }
+}
+
+// Delete a conversation from IDB
+async function deleteConvFromIDB(convId) {
+  try {
+    if (!idb) await openIDB();
+    const tx = idb.transaction('conversations', 'readwrite');
+    tx.objectStore('conversations').delete(convId);
+  } catch(e) {}
+}
+
+// ============ UNIFIED SAVE / LOAD ============
+
+// Save settings index to localStorage (lightweight, no messages)
+function saveSettingsToLS() {
+  try {
+    const data = { ...state };
+    delete data._activeConvData;
+    localStorage.setItem(DB_KEY, JSON.stringify(data));
+  } catch(e) {
+    console.warn('localStorage save failed (probably full):', e);
+    // localStorage full — that's OK, IDB is the primary store now
+  }
+}
+
+// Save state: writes settings to both LS and IDB, and writes the active conv to IDB
+function saveState() {
+  // Update conversation index metadata from active conv data
+  if (state._activeConvData && state.conversations[state._activeConvData.id]) {
+    const meta = state.conversations[state._activeConvData.id];
+    meta.title = state._activeConvData.title;
+    meta.msgCount = state._activeConvData.messages.length;
+  }
+  saveSettingsToLS();
+  saveSettingsToIDB();
+  // Save active conversation's full data to IDB
+  if (state._activeConvData) {
+    saveConvToIDB(state._activeConvData);
+  }
+  updateSaveStatus('已保存');
+}
+
+// Migration: on first load, check if old v1 IDB or localStorage has full conversations
+// and migrate them into the new split format.
+async function tryLoadFromIDB() {
+  try {
+    if (!idb) await openIDB();
+  } catch(e) { return; }
+
+  // Check if we need to migrate from old localStorage data that had messages
+  // This runs once: if conversations in IDB 'conversations' store are empty but localStorage had data
+  const existingConvs = await loadAllConvsFromIDB();
+  const hasIDBConvs = Object.keys(existingConvs).length > 0;
+
+  if (!hasIDBConvs) {
+    // Try migrating from old localStorage data
+    try {
+      const raw = localStorage.getItem(DB_KEY);
+      if (raw) {
+        const oldState = JSON.parse(raw);
+        if (oldState.conversations) {
+          let migrated = 0;
+          for (const [id, conv] of Object.entries(oldState.conversations)) {
+            if (conv.messages && conv.messages.length > 0) {
+              // Save full conv to IDB
+              await saveConvToIDB(conv);
+              // Update index in state (strip messages)
+              state.conversations[id] = {
+                id: conv.id,
+                title: conv.title,
+                created: conv.created,
+                msgCount: conv.messages.length
+              };
+              migrated++;
+            }
+          }
+          if (migrated > 0) {
+            // Re-save the now-lightweight state to localStorage
+            saveSettingsToLS();
+            saveSettingsToIDB();
+            // Load active conversation
+            if (state.activeConvId) {
+              state._activeConvData = await loadConvFromIDB(state.activeConvId);
+            }
+            renderMessages();
+            showToast(`已迁移 ${migrated} 个对话到新存储`);
+          }
+        }
+      }
+    } catch(e) { console.warn('Migration failed:', e); }
+  } else {
+    // IDB has conversations — if we're missing _activeConvData, load it
+    if (state.activeConvId && !state._activeConvData) {
+      state._activeConvData = await loadConvFromIDB(state.activeConvId);
+      if (state._activeConvData) {
+        renderMessages();
+      }
+    }
+    // Also sync conversation index from IDB (in case localStorage was cleared)
+    if (Object.keys(state.conversations).length === 0 && Object.keys(existingConvs).length > 0) {
+      for (const [id, conv] of Object.entries(existingConvs)) {
+        state.conversations[id] = {
+          id: conv.id,
+          title: conv.title,
+          created: conv.created,
+          msgCount: (conv.messages || []).length
+        };
+      }
+      saveSettingsToLS();
+      showToast('已从存储恢复对话索引');
+    }
+  }
+
+  // Update storage usage display
+  updateStorageUsage();
+}
+
 function updateSaveStatus(text) {
   const el = document.getElementById('saveStatus');
   if (el) el.textContent = text;
+}
+
+// ============ STORAGE USAGE ============
+async function updateStorageUsage() {
+  const el = document.getElementById('storageUsage');
+  if (!el) return;
+  try {
+    if (navigator.storage && navigator.storage.estimate) {
+      const est = await navigator.storage.estimate();
+      const usedMB = (est.usage / 1024 / 1024).toFixed(1);
+      const quotaMB = (est.quota / 1024 / 1024).toFixed(0);
+      const pct = ((est.usage / est.quota) * 100).toFixed(1);
+      el.textContent = `存储: ${usedMB}MB / ${quotaMB}MB (${pct}%)`;
+      if (pct > 80) {
+        el.style.color = 'var(--red)';
+      } else if (pct > 50) {
+        el.style.color = 'var(--orange)';
+      } else {
+        el.style.color = 'var(--text3)';
+      }
+    } else {
+      el.textContent = '存储: 无法检测';
+    }
+  } catch(e) {
+    el.textContent = '存储: 检测失败';
+  }
 }
 
 function showToast(msg) {
@@ -1345,7 +1600,9 @@ function checkAutoExport() {
   }
 }
 
-function exportLocalBackup(silent) {
+async function exportLocalBackup(silent) {
+  // Load all conversations from IDB for export
+  const allConvs = await loadAllConvsFromIDB();
   const backup = {
     version: 1,
     timestamp: new Date().toISOString(),
@@ -1358,7 +1615,7 @@ function exportLocalBackup(silent) {
       temperature: state.temperature,
       reasoningEnabled: state.reasoningEnabled,
       reasoningEffort: state.reasoningEffort,
-      conversations: state.conversations,
+      conversations: allConvs,
       memories: state.memories
     }
   };
@@ -1383,7 +1640,7 @@ function importLocalBackup(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       const backup = JSON.parse(e.target.result);
       const data = backup.data;
@@ -1400,13 +1657,33 @@ function importLocalBackup(event) {
       state.temperature = data.temperature ?? 0.7;
       state.reasoningEnabled = data.reasoningEnabled ?? false;
       state.reasoningEffort = data.reasoningEffort || 'medium';
-      state.conversations = data.conversations || {};
       state.memories = data.memories || [];
-      state.activeConvId = Object.keys(state.conversations)[0] || null;
       state.apiKey = keepApiKey;
       state.webdav = keepWebdav;
       state.autoExport = keepAutoExport;
-      saveState();
+
+      // Import conversations: save each to IDB, keep only metadata in state
+      const importedConvs = data.conversations || {};
+      state.conversations = {};
+      for (const [id, conv] of Object.entries(importedConvs)) {
+        await saveConvToIDB(conv);
+        state.conversations[id] = {
+          id: conv.id,
+          title: conv.title,
+          created: conv.created,
+          msgCount: (conv.messages || []).length
+        };
+      }
+
+      state.activeConvId = Object.keys(state.conversations)[0] || null;
+      if (state.activeConvId) {
+        state._activeConvData = await loadConvFromIDB(state.activeConvId);
+      } else {
+        state._activeConvData = null;
+      }
+
+      saveSettingsToLS();
+      saveSettingsToIDB();
       if (!state.activeConvId) newConversation();
       renderMessages();
       updateMemBadge();
@@ -1421,7 +1698,17 @@ function importLocalBackup(event) {
 
 function getActiveConv() {
   if (!state.activeConvId || !state.conversations[state.activeConvId]) newConversation();
-  return state.conversations[state.activeConvId];
+  // Return the full conversation data (with messages)
+  if (!state._activeConvData || state._activeConvData.id !== state.activeConvId) {
+    // Fallback: create empty conv data if not loaded yet
+    state._activeConvData = {
+      id: state.activeConvId,
+      title: state.conversations[state.activeConvId]?.title || '新对话',
+      messages: [],
+      created: state.conversations[state.activeConvId]?.created || Date.now()
+    };
+  }
+  return state._activeConvData;
 }
 
 function getModel() {
@@ -1431,15 +1718,31 @@ function getModel() {
 // ============ CONVERSATIONS ============
 function newConversation() {
   const id = 'c_' + Date.now();
-  state.conversations[id] = { id, title: '新对话', messages: [], created: Date.now() };
+  const convData = { id, title: '新对话', messages: [], created: Date.now() };
+  // Save index metadata (no messages)
+  state.conversations[id] = { id, title: '新对话', created: Date.now(), msgCount: 0 };
   state.activeConvId = id;
+  state._activeConvData = convData;
   saveState();
   renderMessages();
   closeModal('convModal');
 }
 
-function switchConversation(id) {
+async function switchConversation(id) {
   state.activeConvId = id;
+  // Load full conversation data from IDB
+  const convData = await loadConvFromIDB(id);
+  if (convData) {
+    state._activeConvData = convData;
+  } else {
+    // Fallback: create empty
+    state._activeConvData = {
+      id,
+      title: state.conversations[id]?.title || '新对话',
+      messages: [],
+      created: state.conversations[id]?.created || Date.now()
+    };
+  }
   saveState();
   renderMessages();
   closeModal('convModal');
@@ -1449,13 +1752,15 @@ function deleteConversation(id, e) {
   e.stopPropagation();
   if (!confirm('删除这个对话？')) return;
   delete state.conversations[id];
+  deleteConvFromIDB(id);
   if (state.activeConvId === id) {
     const ids = Object.keys(state.conversations);
     state.activeConvId = ids.length > 0 ? ids[ids.length - 1] : null;
+    state._activeConvData = null;
   }
   saveState();
   if (!state.activeConvId) newConversation();
-  renderMessages();
+  else switchConversation(state.activeConvId);
   showConversations();
 }
 
@@ -1466,7 +1771,7 @@ function showConversations() {
     <div class="conv-item ${c.id === state.activeConvId ? 'active' : ''}" onclick="switchConversation('${c.id}')">
       <div class="conv-item-info">
         <div class="conv-item-title">${esc(c.title)}</div>
-        <div class="conv-item-meta">${c.messages.length} 条消息</div>
+        <div class="conv-item-meta">${c.msgCount || 0} 条消息</div>
       </div>
       <button class="conv-item-del" onclick="deleteConversation('${c.id}', event)">&#128465;</button>
     </div>
@@ -1494,6 +1799,7 @@ function showSettings() {
   document.getElementById('reasoningEnabled').checked = state.reasoningEnabled || false;
   document.getElementById('reasoningEffort').value = state.reasoningEffort || 'medium';
   openModal('settingsModal', true);
+  updateStorageUsage();
 }
 
 function saveSettings() {
@@ -1564,8 +1870,25 @@ function renderMessages() {
         </div>`;
     }
 
-    // Edit button
-    const editBtn = `<div class="msg-actions"><button class="msg-action-btn" onclick="startEdit(${i})">编辑</button></div>`;
+    // Message actions menu
+    const totalMsgs = conv.messages.length;
+    const canBranchUp = i > 0;  // at least 1 message above
+    const canBranchDown = i < totalMsgs - 1;  // at least 1 message below
+    const actionsHtml = `<div class="msg-actions">
+      <button class="msg-menu-trigger" onclick="toggleMsgMenu(${i}, event)">&#8943;</button>
+      <div class="msg-menu" id="msgMenu-${i}">
+        <button class="msg-menu-item" onclick="startEdit(${i}); closeMsgMenus();">
+          <span class="menu-icon">&#9998;</span>编辑
+        </button>
+        ${canBranchUp ? `<div class="msg-menu-sep"></div>
+        <button class="msg-menu-item" onclick="branchUp(${i}); closeMsgMenus();">
+          <span class="menu-icon">&#8598;</span>从这里往上创建分支
+        </button>` : ''}
+        ${canBranchDown ? `<button class="msg-menu-item" onclick="branchDown(${i}); closeMsgMenus();">
+          <span class="menu-icon">&#8600;</span>从这里往下创建分支
+        </button>` : ''}
+      </div>
+    </div>`;
 
     return `
       <div class="msg ${m.role}" data-index="${i}">
@@ -1573,7 +1896,7 @@ function renderMessages() {
         ${thinkingHtml}
         <div class="msg-content" id="msgContent-${i}">${esc(m.content)}</div>
         ${metaHtml}
-        ${editBtn}
+        ${actionsHtml}
       </div>
     `;
   }).join('');
@@ -1627,6 +1950,61 @@ function saveEdit(index) {
 }
 
 function cancelEdit(index) {
+  renderMessages();
+}
+
+// ============ MESSAGE MENU & BRANCHING ============
+function toggleMsgMenu(index, event) {
+  event.stopPropagation();
+  const menu = document.getElementById('msgMenu-' + index);
+  const wasOpen = menu.classList.contains('open');
+  closeMsgMenus();
+  if (!wasOpen) {
+    menu.classList.add('open');
+    // Close on outside click
+    setTimeout(() => {
+      document.addEventListener('click', closeMsgMenus, { once: true });
+    }, 0);
+  }
+}
+
+function closeMsgMenus() {
+  document.querySelectorAll('.msg-menu.open').forEach(m => m.classList.remove('open'));
+}
+
+// Branch up: messages 0..index → new conversation
+async function branchUp(index) {
+  const conv = getActiveConv();
+  if (index <= 0) return;
+  const msgs = conv.messages.slice(0, index + 1);
+  const title = (conv.title || '新对话') + ' (上)';
+  await createBranchConv(msgs, title);
+  showToast(`已创建分支: 前 ${msgs.length} 条消息`);
+}
+
+// Branch down: messages index..end → new conversation
+async function branchDown(index) {
+  const conv = getActiveConv();
+  if (index >= conv.messages.length - 1) return;
+  const msgs = conv.messages.slice(index);
+  const title = (conv.title || '新对话') + ' (下)';
+  await createBranchConv(msgs, title);
+  showToast(`已创建分支: 后 ${msgs.length} 条消息`);
+}
+
+async function createBranchConv(messages, title) {
+  const id = 'c_' + Date.now();
+  // Deep copy messages to avoid shared references
+  const msgsCopy = JSON.parse(JSON.stringify(messages));
+  const convData = { id, title, messages: msgsCopy, created: Date.now() };
+  // Save to IDB
+  await saveConvToIDB(convData);
+  // Update state index
+  state.conversations[id] = { id, title, created: Date.now(), msgCount: msgsCopy.length };
+  // Switch to the new conversation
+  state.activeConvId = id;
+  state._activeConvData = convData;
+  saveState();
   renderMessages();
 }
 
@@ -1971,7 +2349,7 @@ function importKelivo(event) {
   statusEl.textContent = '读取中...';
 
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       const data = JSON.parse(e.target.result);
       const kelivoConvs = data.conversations || [];
@@ -2053,16 +2431,26 @@ function importKelivo(event) {
 
         if (messages.length === 0) continue;
 
-        state.conversations[newId] = {
+        const convData = {
           id: newId,
           title: conv.title || '(Kelivo) 未命名对话',
           messages,
           created: new Date(conv.createdAt || conv.updatedAt || Date.now()).getTime()
         };
+        // Save full conv to IDB
+        await saveConvToIDB(convData);
+        // Save metadata to state index
+        state.conversations[newId] = {
+          id: newId,
+          title: convData.title,
+          created: convData.created,
+          msgCount: messages.length
+        };
         importedCount++;
       }
 
-      saveState();
+      saveSettingsToLS();
+      saveSettingsToIDB();
       renderMessages();
       statusEl.textContent = `导入完成: ${importedCount} 个对话, ${msgCount} 条消息`;
       showToast(`Kelivo 导入完成: ${importedCount} 个对话`);
@@ -2245,6 +2633,8 @@ async function testWebDAV() {
 async function doBackup() {
   try {
     setWebDAVStatus('idle', '正在备份...');
+    // Load all conversations from IDB
+    const allConvs = await loadAllConvsFromIDB();
     // Prepare backup data (exclude apiKey and webdav pass for security)
     const backup = {
       version: 1,
@@ -2258,7 +2648,7 @@ async function doBackup() {
         temperature: state.temperature,
         reasoningEnabled: state.reasoningEnabled,
         reasoningEffort: state.reasoningEffort,
-        conversations: state.conversations,
+        conversations: allConvs,
         memories: state.memories
       }
     };
@@ -2308,17 +2698,31 @@ async function doRestore() {
       state.temperature = data.temperature ?? 0.7;
       state.reasoningEnabled = data.reasoningEnabled ?? false;
       state.reasoningEffort = data.reasoningEffort || 'medium';
-      state.conversations = data.conversations || {};
       state.memories = data.memories || [];
-      state.activeConvId = Object.keys(state.conversations)[0] || null;
       state.apiKey = keepApiKey;
       state.webdav = keepWebdav;
+
+      // Import conversations to IDB
+      const importedConvs = data.conversations || {};
+      state.conversations = {};
+      for (const [id, conv] of Object.entries(importedConvs)) {
+        await saveConvToIDB(conv);
+        state.conversations[id] = {
+          id: conv.id, title: conv.title, created: conv.created,
+          msgCount: (conv.messages || []).length
+        };
+      }
+      state.activeConvId = Object.keys(state.conversations)[0] || null;
     } else {
       // Smart merge: only add missing conversations and memories
       const backupConvs = data.conversations || {};
       for (const [id, conv] of Object.entries(backupConvs)) {
         if (!state.conversations[id]) {
-          state.conversations[id] = conv;
+          await saveConvToIDB(conv);
+          state.conversations[id] = {
+            id: conv.id, title: conv.title, created: conv.created,
+            msgCount: (conv.messages || []).length
+          };
         }
       }
       const backupMems = data.memories || [];
@@ -2329,7 +2733,14 @@ async function doRestore() {
       }
     }
 
-    saveState();
+    if (state.activeConvId) {
+      state._activeConvData = await loadConvFromIDB(state.activeConvId);
+    } else {
+      state._activeConvData = null;
+    }
+
+    saveSettingsToLS();
+    saveSettingsToIDB();
     if (!state.activeConvId) newConversation();
     renderMessages();
     updateMemBadge();
@@ -2341,15 +2752,15 @@ async function doRestore() {
 }
 
 // ============ INIT ============
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   if (!state.activeConvId) newConversation();
   renderMessages();
   updateMemBadge();
   // Set auto-export toggle state
   const aeToggle = document.getElementById('autoExportToggle');
   if (aeToggle) aeToggle.checked = state.autoExport || false;
-  // Try IDB recovery
-  tryLoadFromIDB();
+  // Initialize IDB and migrate/load data
+  await tryLoadFromIDB();
   // Modal close on overlay click
   document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); });
