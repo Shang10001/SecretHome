@@ -215,17 +215,6 @@ html, body {
   box-shadow: none;
   padding: 4px 2px;
 }
-.msg-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--text3);
-  flex-wrap: wrap;
-  padding-left: 4px;
-}
 .meta-tag {
   padding: 2px 7px;
   border-radius: 6px;
@@ -549,6 +538,111 @@ html, body {
 }
 .conv-item-del:hover { color: var(--red); background: var(--red-light); }
 
+/* ========== CONV DATE GROUP (Kelivo-style) ========== */
+.conv-date-group {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 14px 14px 6px;
+  letter-spacing: 0.3px;
+}
+.conv-date-group:first-child {
+  padding-top: 4px;
+}
+
+/* Conversation item "..." menu */
+.conv-item-more {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  line-height: 1;
+  letter-spacing: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.conv-item:hover .conv-item-more,
+.conv-item .conv-item-more.force-show {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* Always show on touch devices */
+@media (hover: none) {
+  .conv-item-more {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+.conv-item-more:hover {
+  background: var(--surface3);
+  color: var(--text);
+}
+
+/* Conversation context menu (popup) */
+.conv-context-menu {
+  display: none;
+  position: fixed;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  min-width: 150px;
+  z-index: 200;
+  overflow: hidden;
+  animation: msgIn 0.12s ease-out;
+}
+.conv-context-menu.open { display: block; }
+.conv-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+.conv-context-menu-item:hover {
+  background: var(--surface2);
+}
+.conv-context-menu-item .ctx-icon {
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+  color: var(--text3);
+}
+.conv-context-menu-item.danger { color: var(--red); }
+.conv-context-menu-item.danger .ctx-icon { color: var(--red); }
+.conv-context-sep {
+  height: 1px;
+  background: var(--border);
+}
+
+/* Rename inline input */
+.conv-item-title.editing {
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 2px 8px;
+  outline: none;
+  cursor: text;
+}
+
 /* ========== THINKING BLOCK ========== */
 .thinking-block {
   margin-bottom: 8px;
@@ -606,16 +700,33 @@ html, body {
 }
 
 /* ========== MESSAGE EDIT ========== */
+.msg-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  flex-wrap: wrap;
+  padding-left: 4px;
+}
+.msg.user .msg-footer {
+  justify-content: flex-end;
+  padding-right: 4px;
+  padding-left: 0;
+}
+/* Hide empty footer (user msgs with no meta) to save space */
+.msg-footer:empty { display: none; margin: 0; }
 .msg-actions {
   display: flex;
   gap: 2px;
-  margin-top: 4px;
-  padding-left: 2px;
   position: relative;
+  margin-left: auto;
 }
 .msg-menu-trigger {
-  padding: 4px 10px;
-  border-radius: 8px;
+  padding: 3px 8px;
+  border-radius: 6px;
   border: none;
   background: transparent;
   color: var(--text3);
@@ -625,11 +736,59 @@ html, body {
   transition: all 0.15s;
   letter-spacing: 2px;
   line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+}
+.msg:hover .msg-menu-trigger {
+  opacity: 1;
+  pointer-events: auto;
 }
 .msg-menu-trigger:hover {
   background: var(--surface2);
   color: var(--text2);
+  opacity: 1;
 }
+/* Touch devices: hide "..." entirely, use long-press instead */
+@media (hover: none) {
+  .msg-menu-trigger {
+    display: none;
+  }
+  /* No meta user msgs: hide the empty footer row */
+  .msg.user .msg-footer:not(:has(.meta-tag)) {
+    display: none;
+  }
+}
+/* Long-press visual feedback */
+.msg.longpress-active .msg-content {
+  background: var(--surface3) !important;
+  transition: background 0.2s;
+}
+.msg.longpress-active.user .msg-content {
+  background: #DDDCF0 !important;
+}
+
+/* Message context menu (fixed, for long-press on touch) */
+.msg-context-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(0,0,0,0.08);
+  animation: fadeIn 0.1s;
+}
+.msg-context-overlay.open { display: block; }
+.msg-context-popup {
+  position: fixed;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  min-width: 170px;
+  z-index: 160;
+  overflow: hidden;
+  animation: msgIn 0.12s ease-out;
+}
+
 .msg-menu {
   display: none;
   position: absolute;
@@ -1275,6 +1434,23 @@ html, body {
   </div>
 </div>
 
+<!-- Conv context menu (fixed, outside modal) -->
+<div class="conv-context-menu" id="convContextMenu">
+  <button class="conv-context-menu-item" onclick="startRenameConv()">
+    <span class="ctx-icon">&#9998;</span>重命名
+  </button>
+  <div class="conv-context-sep"></div>
+  <button class="conv-context-menu-item danger" onclick="deleteConvFromMenu()">
+    <span class="ctx-icon">&#128465;</span>删除对话
+  </button>
+</div>
+
+<!-- Message long-press context menu overlay -->
+<div class="msg-context-overlay" id="msgContextOverlay" onclick="closeMsgContextMenu()">
+  <div class="msg-context-popup" id="msgContextPopup" onclick="event.stopPropagation()">
+  </div>
+</div>
+
 <!-- AUTOSAVE TOAST -->
 <div class="autosave-toast" id="autosaveToast"></div>
 
@@ -1748,8 +1924,7 @@ async function switchConversation(id) {
   closeModal('convModal');
 }
 
-function deleteConversation(id, e) {
-  e.stopPropagation();
+function deleteConversation(id) {
   if (!confirm('删除这个对话？')) return;
   delete state.conversations[id];
   deleteConvFromIDB(id);
@@ -1764,19 +1939,157 @@ function deleteConversation(id, e) {
   showConversations();
 }
 
+// Format date group label (Kelivo-style: "5月22日", "4月27日", etc.)
+function formatDateGroup(timestamp) {
+  const d = new Date(timestamp);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 86400000);
+  const convDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  if (convDay.getTime() === today.getTime()) return '今天';
+  if (convDay.getTime() === yesterday.getTime()) return '昨天';
+
+  // Same year: "5月22日"; different year: "2025年5月22日"
+  if (d.getFullYear() === now.getFullYear()) {
+    return `${d.getMonth()+1}月${d.getDate()}日`;
+  }
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
+}
+
+function formatDateGroupKey(timestamp) {
+  const d = new Date(timestamp);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Context menu state
+let convMenuTargetId = null;
+
 function showConversations() {
   const list = document.getElementById('convList');
   const convs = Object.values(state.conversations).sort((a,b) => b.created - a.created);
-  list.innerHTML = convs.map(c => `
-    <div class="conv-item ${c.id === state.activeConvId ? 'active' : ''}" onclick="switchConversation('${c.id}')">
-      <div class="conv-item-info">
-        <div class="conv-item-title">${esc(c.title)}</div>
-        <div class="conv-item-meta">${c.msgCount || 0} 条消息</div>
+
+  // Group by date
+  const groups = [];
+  let lastGroupKey = null;
+  for (const c of convs) {
+    const key = formatDateGroupKey(c.created);
+    if (key !== lastGroupKey) {
+      groups.push({ type: 'date', label: formatDateGroup(c.created), key });
+      lastGroupKey = key;
+    }
+    groups.push({ type: 'conv', data: c });
+  }
+
+  list.innerHTML = groups.map(g => {
+    if (g.type === 'date') {
+      return `<div class="conv-date-group">${g.label}</div>`;
+    }
+    const c = g.data;
+    return `
+      <div class="conv-item ${c.id === state.activeConvId ? 'active' : ''}" onclick="switchConversation('${c.id}')">
+        <div class="conv-item-info">
+          <div class="conv-item-title" id="convTitle-${c.id}">${esc(c.title)}</div>
+          <div class="conv-item-meta">${c.msgCount || 0} 条消息</div>
+        </div>
+        <button class="conv-item-more" onclick="showConvMenu(event, '${c.id}')">&#8943;</button>
       </div>
-      <button class="conv-item-del" onclick="deleteConversation('${c.id}', event)">&#128465;</button>
-    </div>
-  `).join('');
+    `;
+  }).join('');
   openModal('convModal', true);
+}
+
+function showConvMenu(e, convId) {
+  e.stopPropagation();
+  convMenuTargetId = convId;
+  const menu = document.getElementById('convContextMenu');
+  const btn = e.currentTarget;
+
+  // Force show the "..." button while menu is open
+  btn.classList.add('force-show');
+
+  // Position the menu near the button
+  const rect = btn.getBoundingClientRect();
+  menu.style.top = (rect.bottom + 4) + 'px';
+  menu.style.right = (window.innerWidth - rect.right) + 'px';
+  menu.style.left = 'auto';
+  menu.classList.add('open');
+
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', closeConvMenu, { once: true });
+  }, 0);
+}
+
+function closeConvMenu() {
+  const menu = document.getElementById('convContextMenu');
+  menu.classList.remove('open');
+  // Remove force-show from all buttons
+  document.querySelectorAll('.conv-item-more.force-show').forEach(b => b.classList.remove('force-show'));
+}
+
+function startRenameConv() {
+  closeConvMenu();
+  if (!convMenuTargetId) return;
+  const titleEl = document.getElementById('convTitle-' + convMenuTargetId);
+  if (!titleEl) return;
+
+  titleEl.classList.add('editing');
+  titleEl.contentEditable = 'true';
+  titleEl.focus();
+
+  // Select all text
+  const range = document.createRange();
+  range.selectNodeContents(titleEl);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+
+  const targetId = convMenuTargetId;
+
+  // Prevent click from switching conversation
+  titleEl.onclick = (ev) => { ev.stopPropagation(); };
+
+  const finishRename = () => {
+    const newTitle = titleEl.textContent.trim();
+    if (newTitle && state.conversations[targetId]) {
+      state.conversations[targetId].title = newTitle;
+      // Also update active conv data if it's the same
+      if (state._activeConvData && state._activeConvData.id === targetId) {
+        state._activeConvData.title = newTitle;
+      }
+      saveState();
+    }
+    titleEl.contentEditable = 'false';
+    titleEl.classList.remove('editing');
+    titleEl.onclick = null;
+    showToast('标题已更新');
+  };
+
+  titleEl.onkeydown = (ev) => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      finishRename();
+    } else if (ev.key === 'Escape') {
+      titleEl.textContent = state.conversations[targetId]?.title || '';
+      titleEl.contentEditable = 'false';
+      titleEl.classList.remove('editing');
+      titleEl.onclick = null;
+    }
+  };
+
+  titleEl.onblur = () => {
+    // Delay to allow Enter key to fire first
+    setTimeout(() => {
+      if (titleEl.contentEditable === 'true') finishRename();
+    }, 100);
+  };
+}
+
+function deleteConvFromMenu() {
+  closeConvMenu();
+  if (!convMenuTargetId) return;
+  deleteConversation(convMenuTargetId);
 }
 
 // ============ SETTINGS ============
@@ -1844,7 +2157,7 @@ function renderMessages() {
   }
 
   container.innerHTML = conv.messages.map((m, i) => {
-    let metaHtml = '';
+    let metaParts = '';
     if (m.usage) {
       const u = m.usage;
       const parts = [];
@@ -1854,7 +2167,7 @@ function renderMessages() {
       if (u.cache_write_tokens > 0) parts.push(`<span class="meta-tag cache-write">&#9998; write:${u.cache_write_tokens}</span>`);
       if (u.cached_tokens === 0 && u.cache_write_tokens === 0 && u.prompt_tokens > 0) parts.push(`<span class="meta-tag cache-miss">&#10007; no cache</span>`);
       if (u.cost !== undefined && u.cost !== null) parts.push(`<span class="meta-tag tokens">$${u.cost.toFixed(5)}</span>`);
-      metaHtml = `<div class="msg-meta">${parts.join('')}</div>`;
+      metaParts = parts.join('');
     }
 
     // Thinking block (collapsed by default)
@@ -1870,10 +2183,10 @@ function renderMessages() {
         </div>`;
     }
 
-    // Message actions menu
+    // Message actions menu (inside footer)
     const totalMsgs = conv.messages.length;
-    const canBranchUp = i > 0;  // at least 1 message above
-    const canBranchDown = i < totalMsgs - 1;  // at least 1 message below
+    const canBranchUp = i > 0;
+    const canBranchDown = i < totalMsgs - 1;
     const actionsHtml = `<div class="msg-actions">
       <button class="msg-menu-trigger" onclick="toggleMsgMenu(${i}, event)">&#8943;</button>
       <div class="msg-menu" id="msgMenu-${i}">
@@ -1890,13 +2203,15 @@ function renderMessages() {
       </div>
     </div>`;
 
+    // Combined footer: meta tags + actions in one row
+    const footerHtml = `<div class="msg-footer">${metaParts}${actionsHtml}</div>`;
+
     return `
       <div class="msg ${m.role}" data-index="${i}">
         ${m.role === 'assistant' ? `<div class="msg-model">${esc(m.model || getModel())}</div>` : ''}
         ${thinkingHtml}
         <div class="msg-content" id="msgContent-${i}">${esc(m.content)}</div>
-        ${metaHtml}
-        ${actionsHtml}
+        ${footerHtml}
       </div>
     `;
   }).join('');
@@ -1970,6 +2285,90 @@ function toggleMsgMenu(index, event) {
 
 function closeMsgMenus() {
   document.querySelectorAll('.msg-menu.open').forEach(m => m.classList.remove('open'));
+}
+
+// ============ LONG-PRESS CONTEXT MENU (Touch devices) ============
+let longPressTimer = null;
+let longPressTargetIndex = null;
+
+function initLongPress() {
+  const container = document.getElementById('messages');
+
+  container.addEventListener('touchstart', (e) => {
+    const msgEl = e.target.closest('.msg');
+    if (!msgEl) return;
+    const index = parseInt(msgEl.dataset.index);
+    if (isNaN(index)) return;
+
+    // Don't trigger during editing
+    const contentEl = msgEl.querySelector('.msg-content');
+    if (contentEl && contentEl.contentEditable === 'true') return;
+
+    longPressTargetIndex = index;
+    longPressTimer = setTimeout(() => {
+      // Haptic feedback if available
+      if (navigator.vibrate) navigator.vibrate(20);
+      // Visual feedback
+      msgEl.classList.add('longpress-active');
+      setTimeout(() => msgEl.classList.remove('longpress-active'), 300);
+      showMsgContextMenu(index, e.touches[0].clientX, e.touches[0].clientY);
+    }, 500);
+  }, { passive: true });
+
+  container.addEventListener('touchmove', () => {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }, { passive: true });
+
+  container.addEventListener('touchend', () => {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }, { passive: true });
+
+  container.addEventListener('touchcancel', () => {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }, { passive: true });
+}
+
+function showMsgContextMenu(index, x, y) {
+  const conv = getActiveConv();
+  const totalMsgs = conv.messages.length;
+  const canBranchUp = index > 0;
+  const canBranchDown = index < totalMsgs - 1;
+
+  const popup = document.getElementById('msgContextPopup');
+  popup.innerHTML = `
+    <button class="conv-context-menu-item" onclick="startEdit(${index}); closeMsgContextMenu();">
+      <span class="ctx-icon">&#9998;</span>编辑
+    </button>
+    ${canBranchUp ? `<div class="conv-context-sep"></div>
+    <button class="conv-context-menu-item" onclick="branchUp(${index}); closeMsgContextMenu();">
+      <span class="ctx-icon">&#8598;</span>从这里往上创建分支
+    </button>` : ''}
+    ${canBranchDown ? `<button class="conv-context-menu-item" onclick="branchDown(${index}); closeMsgContextMenu();">
+      <span class="ctx-icon">&#8600;</span>从这里往下创建分支
+    </button>` : ''}
+  `;
+
+  const overlay = document.getElementById('msgContextOverlay');
+  overlay.classList.add('open');
+
+  // Position: try to show below the touch point, adjust if overflows
+  const popupW = 170;
+  const popupH = popup.offsetHeight || 120;
+  let left = Math.min(x, window.innerWidth - popupW - 12);
+  let top = y + 8;
+  if (top + popupH > window.innerHeight - 20) {
+    top = y - popupH - 8;
+  }
+  left = Math.max(12, left);
+  popup.style.left = left + 'px';
+  popup.style.top = top + 'px';
+}
+
+function closeMsgContextMenu() {
+  document.getElementById('msgContextOverlay').classList.remove('open');
 }
 
 // Branch up: messages 0..index → new conversation
@@ -2778,6 +3177,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); });
   });
+  // Initialize long-press for touch devices
+  initLongPress();
 });
 
 // ============ SERVICE WORKER (PWA) ============
