@@ -111,8 +111,6 @@ html, body {
   font-family: var(--mono);
   font-size: 11px;
   color: var(--text3);
-  margin-bottom: 6px;
-  padding-left: 2px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -190,23 +188,70 @@ html, body {
   margin-bottom: 16px;
   max-width: 100%;
   animation: msgIn 0.3s ease-out;
+  position: relative;
 }
 @keyframes msgIn {
   from { opacity:0; transform: translateY(6px); }
   to { opacity:1; transform: translateY(0); }
 }
+
+/* User message: row layout with "..." on the left */
+.msg.user .msg-top-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+}
+.msg.user .msg-top-row .msg-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Assistant message: model row becomes flex with "..." on right */
+.msg-model-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  padding-left: 2px;
+}
+
+/* Inline "..." button next to message */
+.msg-inline-menu {
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  font-family: var(--font);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 1px;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.35;
+}
+.msg-inline-menu:hover, .msg-inline-menu:active {
+  opacity: 1;
+  background: var(--surface2);
+  color: var(--text2);
+}
+/* User msg: align top with the bubble */
+.msg.user .msg-inline-menu {
+  margin-top: 10px;
+}
+
 .msg-content {
   padding: 12px 16px;
   border-radius: var(--radius);
-  font-size: 15px;
-  line-height: 1.7;
+  font-size: 13.5px;
+  line-height: 20px;
   word-wrap: break-word;
   white-space: pre-wrap;
 }
 .msg.user .msg-content {
   background: var(--user-bg);
   border-radius: 18px 18px 6px 18px;
-  margin-left: 40px;
 }
 .msg.assistant .msg-content {
   background: transparent;
@@ -711,73 +756,13 @@ html, body {
   flex-wrap: wrap;
   padding-left: 4px;
 }
-.msg.user .msg-footer {
-  justify-content: flex-end;
-  padding-right: 4px;
-  padding-left: 0;
-}
-/* Hide empty footer (user msgs with no meta) to save space */
-.msg-footer:empty { display: none; margin: 0; }
-.msg-actions {
-  display: flex;
-  gap: 2px;
-  position: relative;
-  margin-left: auto;
-}
-.msg-menu-trigger {
-  padding: 3px 8px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: var(--text3);
-  font-family: var(--font);
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.15s;
-  letter-spacing: 2px;
-  line-height: 1;
-  opacity: 0;
-  pointer-events: none;
-}
-.msg:hover .msg-menu-trigger {
-  opacity: 1;
-  pointer-events: auto;
-}
-.msg-menu-trigger:hover {
-  background: var(--surface2);
-  color: var(--text2);
-  opacity: 1;
-}
-/* Touch devices: hide "..." entirely, use long-press instead */
-@media (hover: none) {
-  .msg-menu-trigger {
-    display: none;
-  }
-  /* No meta user msgs: hide the empty footer row */
-  .msg.user .msg-footer:not(:has(.meta-tag)) {
-    display: none;
-  }
-}
-/* Long-press visual feedback */
-.msg.longpress-active .msg-content {
-  background: var(--surface3) !important;
-  transition: background 0.2s;
-}
-.msg.longpress-active.user .msg-content {
-  background: #DDDCF0 !important;
-}
+/* Hide footer when empty */
+.msg-footer:empty { display: none; }
+.msg.user .msg-footer { display: none; }
 
-/* Message context menu (fixed, for long-press on touch) */
-.msg-context-overlay {
+/* Old msg-menu (desktop click from "..." inline button) */
+.msg-menu {
   display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 150;
-  background: rgba(0,0,0,0.08);
-  animation: fadeIn 0.1s;
-}
-.msg-context-overlay.open { display: block; }
-.msg-context-popup {
   position: fixed;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -788,23 +773,17 @@ html, body {
   overflow: hidden;
   animation: msgIn 0.12s ease-out;
 }
-
-.msg-menu {
-  display: none;
-  position: absolute;
-  bottom: 100%;
-  left: 0;
-  margin-bottom: 4px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-lg);
-  min-width: 160px;
-  z-index: 50;
-  overflow: hidden;
-  animation: msgIn 0.15s ease-out;
-}
 .msg-menu.open { display: block; }
+
+/* Msg menu overlay for closing */
+.msg-menu-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(0,0,0,0.05);
+}
+.msg-menu-overlay.open { display: block; }
 .msg-menu-item {
   display: flex;
   align-items: center;
@@ -1445,11 +1424,9 @@ html, body {
   </button>
 </div>
 
-<!-- Message long-press context menu overlay -->
-<div class="msg-context-overlay" id="msgContextOverlay" onclick="closeMsgContextMenu()">
-  <div class="msg-context-popup" id="msgContextPopup" onclick="event.stopPropagation()">
-  </div>
-</div>
+<!-- Message menu overlay + popup -->
+<div class="msg-menu-overlay" id="msgMenuOverlay" onclick="closeMsgMenus()"></div>
+<div class="msg-menu" id="msgMenuPopup" onclick="event.stopPropagation()"></div>
 
 <!-- AUTOSAVE TOAST -->
 <div class="autosave-toast" id="autosaveToast"></div>
@@ -2183,37 +2160,36 @@ function renderMessages() {
         </div>`;
     }
 
-    // Message actions menu (inside footer)
-    const totalMsgs = conv.messages.length;
-    const canBranchUp = i > 0;
-    const canBranchDown = i < totalMsgs - 1;
-    const actionsHtml = `<div class="msg-actions">
-      <button class="msg-menu-trigger" onclick="toggleMsgMenu(${i}, event)">&#8943;</button>
-      <div class="msg-menu" id="msgMenu-${i}">
-        <button class="msg-menu-item" onclick="startEdit(${i}); closeMsgMenus();">
-          <span class="menu-icon">&#9998;</span>编辑
-        </button>
-        ${canBranchUp ? `<div class="msg-menu-sep"></div>
-        <button class="msg-menu-item" onclick="branchUp(${i}); closeMsgMenus();">
-          <span class="menu-icon">&#8598;</span>从这里往上创建分支
-        </button>` : ''}
-        ${canBranchDown ? `<button class="msg-menu-item" onclick="branchDown(${i}); closeMsgMenus();">
-          <span class="menu-icon">&#8600;</span>从这里往下创建分支
-        </button>` : ''}
-      </div>
-    </div>`;
+    // The "..." button
+    const menuBtn = `<button class="msg-inline-menu" onclick="toggleMsgMenu(${i}, event)">&#8943;</button>`;
 
-    // Combined footer: meta tags + actions in one row
-    const footerHtml = `<div class="msg-footer">${metaParts}${actionsHtml}</div>`;
+    // Footer (only for assistant with meta)
+    const footerHtml = metaParts ? `<div class="msg-footer">${metaParts}</div>` : '';
 
-    return `
-      <div class="msg ${m.role}" data-index="${i}">
-        ${m.role === 'assistant' ? `<div class="msg-model">${esc(m.model || getModel())}</div>` : ''}
-        ${thinkingHtml}
-        <div class="msg-content" id="msgContent-${i}">${esc(m.content)}</div>
-        ${footerHtml}
-      </div>
-    `;
+    if (m.role === 'user') {
+      // User: "..." on the left, bubble on the right
+      return `
+        <div class="msg user" data-index="${i}">
+          <div class="msg-top-row">
+            ${menuBtn}
+            <div class="msg-content" id="msgContent-${i}">${esc(m.content)}</div>
+          </div>
+        </div>
+      `;
+    } else {
+      // Assistant: model row with "..." on right, then content, then meta footer
+      return `
+        <div class="msg assistant" data-index="${i}">
+          <div class="msg-model-row">
+            <div class="msg-model">${esc(m.model || getModel())}</div>
+            ${menuBtn}
+          </div>
+          ${thinkingHtml}
+          <div class="msg-content" id="msgContent-${i}">${esc(m.content)}</div>
+          ${footerHtml}
+        </div>
+      `;
+    }
   }).join('');
 
   container.scrollTop = container.scrollHeight;
@@ -2235,10 +2211,10 @@ function startEdit(index) {
   el.classList.add('editing');
   el.focus();
 
-  // Show save/cancel buttons
+  // Hide the "..." button during editing
   const msg = el.closest('.msg');
-  const existingActions = msg.querySelector('.msg-actions');
-  if (existingActions) existingActions.style.display = 'none';
+  const inlineMenu = msg.querySelector('.msg-inline-menu');
+  if (inlineMenu) inlineMenu.style.display = 'none';
 
   let editActions = msg.querySelector('.edit-actions');
   if (!editActions) {
@@ -2271,104 +2247,61 @@ function cancelEdit(index) {
 // ============ MESSAGE MENU & BRANCHING ============
 function toggleMsgMenu(index, event) {
   event.stopPropagation();
-  const menu = document.getElementById('msgMenu-' + index);
-  const wasOpen = menu.classList.contains('open');
-  closeMsgMenus();
-  if (!wasOpen) {
-    menu.classList.add('open');
-    // Close on outside click
-    setTimeout(() => {
-      document.addEventListener('click', closeMsgMenus, { once: true });
-    }, 0);
-  }
-}
-
-function closeMsgMenus() {
-  document.querySelectorAll('.msg-menu.open').forEach(m => m.classList.remove('open'));
-}
-
-// ============ LONG-PRESS CONTEXT MENU (Touch devices) ============
-let longPressTimer = null;
-let longPressTargetIndex = null;
-
-function initLongPress() {
-  const container = document.getElementById('messages');
-
-  container.addEventListener('touchstart', (e) => {
-    const msgEl = e.target.closest('.msg');
-    if (!msgEl) return;
-    const index = parseInt(msgEl.dataset.index);
-    if (isNaN(index)) return;
-
-    // Don't trigger during editing
-    const contentEl = msgEl.querySelector('.msg-content');
-    if (contentEl && contentEl.contentEditable === 'true') return;
-
-    longPressTargetIndex = index;
-    longPressTimer = setTimeout(() => {
-      // Haptic feedback if available
-      if (navigator.vibrate) navigator.vibrate(20);
-      // Visual feedback
-      msgEl.classList.add('longpress-active');
-      setTimeout(() => msgEl.classList.remove('longpress-active'), 300);
-      showMsgContextMenu(index, e.touches[0].clientX, e.touches[0].clientY);
-    }, 500);
-  }, { passive: true });
-
-  container.addEventListener('touchmove', () => {
-    clearTimeout(longPressTimer);
-    longPressTimer = null;
-  }, { passive: true });
-
-  container.addEventListener('touchend', () => {
-    clearTimeout(longPressTimer);
-    longPressTimer = null;
-  }, { passive: true });
-
-  container.addEventListener('touchcancel', () => {
-    clearTimeout(longPressTimer);
-    longPressTimer = null;
-  }, { passive: true });
-}
-
-function showMsgContextMenu(index, x, y) {
   const conv = getActiveConv();
   const totalMsgs = conv.messages.length;
   const canBranchUp = index > 0;
   const canBranchDown = index < totalMsgs - 1;
 
-  const popup = document.getElementById('msgContextPopup');
-  popup.innerHTML = `
-    <button class="conv-context-menu-item" onclick="startEdit(${index}); closeMsgContextMenu();">
+  // Build menu content
+  const menu = document.getElementById('msgMenuPopup');
+  menu.innerHTML = `
+    <button class="conv-context-menu-item" onclick="startEdit(${index}); closeMsgMenus();">
       <span class="ctx-icon">&#9998;</span>编辑
     </button>
     ${canBranchUp ? `<div class="conv-context-sep"></div>
-    <button class="conv-context-menu-item" onclick="branchUp(${index}); closeMsgContextMenu();">
-      <span class="ctx-icon">&#8598;</span>从这里往上创建分支
+    <button class="conv-context-menu-item" onclick="branchUp(${index}); closeMsgMenus();">
+      <span class="ctx-icon">&#8598;</span>从这里往上分支
     </button>` : ''}
-    ${canBranchDown ? `<button class="conv-context-menu-item" onclick="branchDown(${index}); closeMsgContextMenu();">
-      <span class="ctx-icon">&#8600;</span>从这里往下创建分支
+    ${canBranchDown ? `<button class="conv-context-menu-item" onclick="branchDown(${index}); closeMsgMenus();">
+      <span class="ctx-icon">&#8600;</span>从这里往下分支
     </button>` : ''}
   `;
 
-  const overlay = document.getElementById('msgContextOverlay');
-  overlay.classList.add('open');
+  // Position near the button
+  const btn = event.currentTarget;
+  const rect = btn.getBoundingClientRect();
 
-  // Position: try to show below the touch point, adjust if overflows
-  const popupW = 170;
-  const popupH = popup.offsetHeight || 120;
-  let left = Math.min(x, window.innerWidth - popupW - 12);
-  let top = y + 8;
-  if (top + popupH > window.innerHeight - 20) {
-    top = y - popupH - 8;
-  }
-  left = Math.max(12, left);
-  popup.style.left = left + 'px';
-  popup.style.top = top + 'px';
+  const overlay = document.getElementById('msgMenuOverlay');
+  overlay.classList.add('open');
+  menu.classList.add('open');
+
+  // Position after display so we can measure
+  requestAnimationFrame(() => {
+    const menuH = menu.offsetHeight;
+    const menuW = menu.offsetWidth;
+    let top = rect.bottom + 4;
+    let left = rect.left;
+
+    // If would overflow bottom, show above
+    if (top + menuH > window.innerHeight - 12) {
+      top = rect.top - menuH - 4;
+    }
+    // If would overflow right
+    if (left + menuW > window.innerWidth - 12) {
+      left = window.innerWidth - menuW - 12;
+    }
+    left = Math.max(12, left);
+
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
+  });
 }
 
-function closeMsgContextMenu() {
-  document.getElementById('msgContextOverlay').classList.remove('open');
+function closeMsgMenus() {
+  const overlay = document.getElementById('msgMenuOverlay');
+  const menu = document.getElementById('msgMenuPopup');
+  if (overlay) overlay.classList.remove('open');
+  if (menu) menu.classList.remove('open');
 }
 
 // Branch up: messages 0..index → new conversation
@@ -3177,8 +3110,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); });
   });
-  // Initialize long-press for touch devices
-  initLongPress();
+  // Initialize long-press for touch devices (removed - using inline menu now)
 });
 
 // ============ SERVICE WORKER (PWA) ============
