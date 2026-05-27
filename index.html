@@ -986,110 +986,6 @@ html, body {
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
-/* ========== MEMORY ========== */
-.memory-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 10px 12px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  margin-bottom: 6px;
-  animation: msgIn 0.2s ease-out;
-}
-.memory-item-text {
-  flex: 1;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--text);
-  word-break: break-word;
-}
-.memory-item-text[contenteditable="true"] {
-  outline: none;
-  background: var(--surface);
-  padding: 4px 8px;
-  border-radius: 6px;
-  border: 1px solid var(--accent);
-}
-.memory-item-actions {
-  display: flex;
-  gap: 2px;
-  flex-shrink: 0;
-}
-.memory-item-actions button {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: var(--text3);
-  cursor: pointer;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.1s;
-}
-.memory-item-actions button:hover {
-  background: var(--surface);
-  color: var(--text);
-}
-.memory-item-actions button.del:hover {
-  background: var(--red-light);
-  color: var(--red);
-}
-.memory-empty {
-  text-align: center;
-  padding: 24px;
-  color: var(--text3);
-  font-size: 13px;
-}
-.memory-add-row {
-  display: flex;
-  gap: 6px;
-  margin-top: 10px;
-}
-.memory-add-row textarea {
-  flex: 1;
-  min-height: 36px;
-  max-height: 80px;
-  padding: 8px 12px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  font-family: var(--font);
-  font-size: 13px;
-  resize: none;
-  outline: none;
-  line-height: 1.5;
-}
-.memory-add-row textarea:focus {
-  border-color: var(--accent);
-  background: var(--surface);
-}
-.memory-add-row button {
-  padding: 8px 14px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: #fff;
-  font-family: var(--font);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s;
-}
-.memory-add-row button:hover { background: var(--accent2); }
-.memory-count {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text3);
-  margin-top: 8px;
-}
-
 /* ========== WEBDAV ========== */
 .webdav-status {
   display: flex;
@@ -1184,10 +1080,6 @@ html, body {
       </div>
     </div>
     <div class="header-actions">
-      <button class="icon-btn" onclick="showMemoryPanel()" title="记忆" style="position:relative">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/><line x1="10" y1="22" x2="14" y2="22"/></svg>
-        <span class="memory-badge" id="memBadge" style="display:none">0</span>
-      </button>
       <button class="icon-btn" onclick="showConversations()" title="对话列表">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </button>
@@ -1253,18 +1145,12 @@ html, body {
           <optgroup label="Opus">
             <option value="anthropic/claude-opus-4.7">Claude Opus 4.7</option>
             <option value="anthropic/claude-opus-4.6" selected>Claude Opus 4.6 (笨笨)</option>
-            <option value="anthropic/claude-opus-4.5">Claude Opus 4.5</option>
-            <option value="anthropic/claude-opus-4.1">Claude Opus 4.1</option>
-            <option value="anthropic/claude-opus-4">Claude Opus 4</option>
           </optgroup>
           <optgroup label="Sonnet">
-            <option value="anthropic/claude-sonnet-4.6">Claude Sonnet 4.6</option>
             <option value="anthropic/claude-sonnet-4.5">Claude Sonnet 4.5</option>
-            <option value="anthropic/claude-sonnet-4">Claude Sonnet 4</option>
           </optgroup>
-          <optgroup label="Haiku">
-            <option value="anthropic/claude-haiku-4.5">Claude Haiku 4.5</option>
-            <option value="anthropic/claude-haiku-3.5">Claude Haiku 3.5</option>
+          <optgroup label="OpenAI">
+            <option value="openai/gpt-4o-2024-11-20">GPT-4o (2024-11-20)</option>
           </optgroup>
         </select>
         <div class="hint">也可以手动输入其他 OpenRouter 模型 ID</div>
@@ -1297,7 +1183,7 @@ html, body {
       <div class="field">
         <label>上下文消息数</label>
         <input type="number" id="contextLen" value="0" min="0" max="9999" step="2">
-        <div class="hint">发送最近 N 条消息作为上下文，0 = 不限制（发送全部）。System Prompt 和记忆不受影响，始终发送。</div>
+        <div class="hint">发送最近 N 条消息作为上下文，0 = 不限制（发送全部）。System Prompt 不受影响，始终发送。</div>
       </div>
 
       <div class="field">
@@ -1436,11 +1322,11 @@ html, body {
 <!-- Conv context menu (fixed, outside modal) -->
 <div class="conv-context-menu" id="convContextMenu">
   <button class="conv-context-menu-item" onclick="startRenameConv()">
-    <span class="ctx-icon">&#9998;</span>重命名
+    重命名
   </button>
   <div class="conv-context-sep"></div>
   <button class="conv-context-menu-item danger" onclick="deleteConvFromMenu()">
-    <span class="ctx-icon">&#128465;</span>删除对话
+    删除对话
   </button>
 </div>
 
@@ -1450,20 +1336,6 @@ html, body {
 
 <!-- AUTOSAVE TOAST -->
 <div class="autosave-toast" id="autosaveToast"></div>
-
-<!-- MEMORY MODAL -->
-<div class="modal-overlay" id="memoryModal">
-  <div class="modal">
-    <h2>笨笨的记忆 <button onclick="closeModal('memoryModal')">&#10005;</button></h2>
-    <div class="hint" style="margin-bottom:14px;">记忆会和 System Prompt 合并后一起发送，享受相同的缓存优惠。修改记忆后第一条消息会触发 cache write，之后继续 cache hit。</div>
-    <div id="memoryList"></div>
-    <div class="memory-add-row">
-      <textarea id="newMemory" placeholder="添加一条新记忆..." rows="1" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,80)+'px'"></textarea>
-      <button onclick="addMemory()">添加</button>
-    </div>
-    <div class="memory-count" id="memoryCount"></div>
-  </div>
-</div>
 
 <script>
 // ============ STATE ============
@@ -1859,7 +1731,6 @@ function importLocalBackup(event) {
       saveSettingsToIDB();
       if (!state.activeConvId) newConversation();
       renderMessages();
-      updateMemBadge();
       showToast('导入成功！' + (backup.timestamp || '').slice(0,19));
     } catch(err) {
       alert('导入失败: ' + err.message);
@@ -2007,10 +1878,19 @@ function showConvMenu(e, convId) {
 
   // Position the menu near the button
   const rect = btn.getBoundingClientRect();
-  menu.style.top = (rect.bottom + 4) + 'px';
   menu.style.right = (window.innerWidth - rect.right) + 'px';
   menu.style.left = 'auto';
   menu.classList.add('open');
+
+  // Check if menu would overflow bottom of screen, if so show above
+  requestAnimationFrame(() => {
+    const menuH = menu.offsetHeight;
+    if (rect.bottom + 4 + menuH > window.innerHeight - 12) {
+      menu.style.top = (rect.top - menuH - 4) + 'px';
+    } else {
+      menu.style.top = (rect.bottom + 4) + 'px';
+    }
+  });
 
   // Close on outside click
   setTimeout(() => {
@@ -2146,7 +2026,7 @@ function renderMessages() {
         <div class="empty-logo">
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z" fill="white" fill-rule="nonzero"/></svg>
         </div>
-        <div class="label">笨笨在这里等你 (&#865;&#176;&#860;&#662;&#865;&#176;)</div>
+        <div class="label">笨笨在这里等你</div>
         <div class="sublabel">cache_control: ready</div>
       </div>`;
     updateCostBar();
@@ -2450,10 +2330,7 @@ async function sendMessage() {
 
   try {
     const messages = [];
-    const memBlock = state.memories.length > 0
-      ? '\n\n<memories>\n' + state.memories.map((m,i) => `${i+1}. ${m}`).join('\n') + '\n</memories>'
-      : '';
-    const fullSystem = (state.systemPrompt + memBlock).trim();
+    const fullSystem = (state.systemPrompt || '').trim();
     if (fullSystem) {
       messages.push({ role: 'system', content: fullSystem });
     }
@@ -2855,87 +2732,6 @@ function switchSettingsTab(tabId, btn) {
   document.getElementById('tab-' + tabId).classList.add('active');
 }
 
-// ============ MEMORY ============
-function showMemoryPanel() {
-  renderMemoryList();
-  openModal('memoryModal', true);
-}
-
-function renderMemoryList() {
-  const list = document.getElementById('memoryList');
-  if (state.memories.length === 0) {
-    list.innerHTML = '<div class="memory-empty">还没有记忆，添加一些让笨笨记住吧</div>';
-  } else {
-    list.innerHTML = state.memories.map((m, i) => `
-      <div class="memory-item" id="mem-${i}">
-        <div class="memory-item-text" id="memText-${i}">${esc(m)}</div>
-        <div class="memory-item-actions">
-          <button onclick="editMemory(${i})" title="编辑">&#9998;</button>
-          <button class="del" onclick="deleteMemory(${i})" title="删除">&#10005;</button>
-        </div>
-      </div>
-    `).join('');
-  }
-  document.getElementById('memoryCount').textContent =
-    `${state.memories.length} 条记忆 · 修改后下一条消息将触发 cache write`;
-  updateMemBadge();
-}
-
-function addMemory() {
-  const input = document.getElementById('newMemory');
-  const text = input.value.trim();
-  if (!text) return;
-  state.memories.push(text);
-  input.value = '';
-  input.style.height = 'auto';
-  saveState();
-  renderMemoryList();
-}
-
-function editMemory(i) {
-  const el = document.getElementById('memText-' + i);
-  if (el.contentEditable === 'true') {
-    // Save
-    const newText = el.textContent.trim();
-    if (newText) {
-      state.memories[i] = newText;
-      saveState();
-    }
-    el.contentEditable = 'false';
-    renderMemoryList();
-    return;
-  }
-  el.contentEditable = 'true';
-  el.focus();
-  // Select all text
-  const range = document.createRange();
-  range.selectNodeContents(el);
-  const sel = window.getSelection();
-  sel.removeAllRanges();
-  sel.addRange(range);
-  // Enter to save
-  el.onkeydown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); editMemory(i); }
-  };
-}
-
-function deleteMemory(i) {
-  if (!confirm('删除这条记忆？')) return;
-  state.memories.splice(i, 1);
-  saveState();
-  renderMemoryList();
-}
-
-function updateMemBadge() {
-  const badge = document.getElementById('memBadge');
-  if (state.memories.length > 0) {
-    badge.textContent = state.memories.length;
-    badge.style.display = '';
-  } else {
-    badge.style.display = 'none';
-  }
-}
-
 // ============ WEBDAV ============
 function saveWebDAVSettings() {
   state.webdav = {
@@ -3127,7 +2923,6 @@ async function doRestore() {
     saveSettingsToIDB();
     if (!state.activeConvId) newConversation();
     renderMessages();
-    updateMemBadge();
     toggleRestoreOptions();
     setWebDAVStatus('ok', '恢复成功 (' + mode + ') - ' + (backup.timestamp || '').slice(0, 19));
   } catch(e) {
@@ -3139,7 +2934,6 @@ async function doRestore() {
 document.addEventListener('DOMContentLoaded', async () => {
   if (!state.activeConvId) newConversation();
   renderMessages();
-  updateMemBadge();
   // Set auto-export toggle state
   const aeToggle = document.getElementById('autoExportToggle');
   if (aeToggle) aeToggle.checked = state.autoExport || false;
