@@ -130,6 +130,7 @@ html, body {
 }
 .msg-model.cache-active::before {
   background: var(--green);
+  animation: pulse 2s infinite;
 }
 .cache-indicator {
   display: flex;
@@ -885,12 +886,16 @@ html, body {
   align-items: center;
   gap: 3px;
 }
+.cost-bar .save-check {
+  color: var(--green);
+  font-size: 11px;
+  line-height: 1;
+}
 .cost-bar .pulse {
   width: 5px;
   height: 5px;
   border-radius: 50%;
   background: var(--green);
-  animation: pulse 2s infinite;
 }
 
 /* ========== STREAMING CURSOR ========== */
@@ -1199,7 +1204,7 @@ html, body {
   <!-- INPUT -->
   <div class="input-area">
     <div class="cost-bar" id="costBar">
-      <span class="cost-item"><span class="pulse"></span><span id="saveStatus">已保存</span></span>
+      <span class="cost-item"><span class="save-check">✓</span><span id="saveStatus">已保存</span></span>
       <span class="cost-item" id="costDisplay" style="display:none">
         <span id="costTotal">$0.00</span>
       </span>
