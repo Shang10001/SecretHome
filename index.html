@@ -114,6 +114,9 @@ html, body {
   display: flex;
   align-items: center;
   gap: 5px;
+  line-height: 1.55;
+  padding-top: 2px;
+  padding-bottom: 2px;
 }
 .msg-model::before {
   content: '';
@@ -123,6 +126,7 @@ html, body {
   background: var(--text3);
   border-radius: 50%;
   flex-shrink: 0;
+  margin-left: -13px;
 }
 .msg-model.cache-active::before {
   background: var(--green);
@@ -214,7 +218,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 2px;
+  margin-bottom: 0;
   padding-left: 16px;
 }
 
@@ -354,7 +358,7 @@ html, body {
 
 /* ========== INPUT ========== */
 .input-area {
-  padding: 6px 12px 8px;
+  padding: 4px 12px 4px;
   flex-shrink: 0;
 }
 .input-box {
@@ -761,11 +765,14 @@ html, body {
   font-size: 10px;
   color: var(--text3);
   flex-wrap: nowrap;
-  padding-left: 16px;
-  line-height: 1.6;
+  padding: 2px 16px 0 16px;
+  line-height: 1.55;
 }
 /* Hide footer when empty */
 .msg-footer:empty { display: none; }
+.msg-footer .meta-tag:last-child {
+  margin-left: auto;
+}
 .msg.user .msg-footer { display: none; }
 
 /* Old msg-menu (desktop click from "..." inline button) */
@@ -1155,7 +1162,7 @@ html, body {
   }
   .messages { padding: 16px 24px; }
   .header { padding: 12px 24px; }
-  .input-area { padding: 8px 24px 12px; }
+  .input-area { padding: 6px 24px 8px; }
 }
 </style>
 </head>
