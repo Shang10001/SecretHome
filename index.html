@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="笨笨家园">
@@ -72,6 +72,11 @@ html, body {
   padding-bottom: var(--safe-bottom);
   max-width: 820px;
   margin: 0 auto;
+  /* 贴住可视窗口，键盘弹出时由 JS 同步高度，避免整页上跳 */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
 }
 
 /* ========== HEADER ========== */
@@ -3088,6 +3093,33 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   // Initialize long-press for touch devices (removed - using inline menu now)
 });
+
+// ============ KEYBOARD / VIEWPORT PINNING (mobile) ============
+// 让整个界面紧贴"键盘上方的可见区域"，键盘弹出/收起都不再整页上跳
+(function () {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const app = document.querySelector('.app');
+  if (!app) return;
+  const pin = () => {
+    app.style.height = vv.height + 'px';
+    app.style.top = vv.offsetTop + 'px';
+  };
+  vv.addEventListener('resize', pin);
+  vv.addEventListener('scroll', pin);
+  pin();
+
+  // 键盘弹出后把对话滚到底，确保最新消息不被输入框/键盘遮住
+  const input = document.getElementById('userInput');
+  if (input) {
+    input.addEventListener('focus', () => {
+      setTimeout(() => {
+        const m = document.querySelector('.messages');
+        if (m) m.scrollTop = m.scrollHeight;
+      }, 300);
+    });
+  }
+})();
 
 // ============ SERVICE WORKER (PWA) ============
 if ('serviceWorker' in navigator) {
