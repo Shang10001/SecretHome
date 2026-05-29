@@ -1065,7 +1065,90 @@ html, body {
   .header { padding: 12px 24px; }
   .input-area { padding: 6px 24px 8px; }
 }
+
+/* ========== 夜间护眼模式 (warm low-blue dark theme) ========== */
+:root.night {
+  --bg: #1A1714;
+  --surface: #1F1B18;
+  --surface2: #262220;
+  --surface3: #322C28;
+  --border: #38322D;
+  --border2: #4A433C;
+  --text: #E6DCCE;
+  --text2: #A89C8C;
+  --text3: #756B5F;
+  --accent: #E08E6D;
+  --accent2: #C4623E;
+  --accent-light: #3A2A22;
+  --accent-dim: rgba(224,142,109,0.12);
+  --green: #5BBF6A;
+  --green-light: #1E2A1F;
+  --orange: #E0922F;
+  --orange-light: #2E2517;
+  --red: #E0584E;
+  --red-light: #2E1B19;
+  --user-bg: #2C2723;
+  --assistant-bg: transparent;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow: 0 2px 8px rgba(0,0,0,0.4);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.5);
+}
+/* 夜间模式下走硬编码浅色的元素，单独压暗 */
+:root.night .send-btn { background: var(--accent); }
+:root.night .send-btn:hover { background: var(--accent2); }
+
+/* ========== Sepia 米色模式 (warm paper, daytime reading) ========== */
+:root.sepia {
+  --bg: #F4ECD8;
+  --surface: #F4ECD8;
+  --surface2: #E4DCCB;
+  --surface3: #D3C4A5;
+  --border: #D3C4A5;
+  --border2: #B8A98A;
+  --text: #5B4636;
+  --text2: #8C7B70;
+  --text3: #B0A090;
+  --accent: #C4623E;
+  --accent2: #A84F2E;
+  --accent-light: #E4DCCB;
+  --accent-dim: rgba(196,98,62,0.10);
+  --green: #6B8A5C;
+  --green-light: #DDE2C9;
+  --orange: #B07A2C;
+  --orange-light: #ECDDB8;
+  --red: #A8554A;
+  --red-light: #E8CFC8;
+  --user-bg: #DDD0B5;
+  --assistant-bg: transparent;
+  --shadow-sm: 0 1px 2px rgba(91,70,54,0.06);
+  --shadow: 0 2px 8px rgba(91,70,54,0.10);
+  --shadow-lg: 0 4px 16px rgba(91,70,54,0.14);
+}
+:root.sepia .send-btn { background: var(--accent); }
+:root.sepia .send-btn:hover { background: var(--accent2); }
+/* 平滑过渡，切换时不刺眼 */
+html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indicator {
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
 </style>
+<script>
+// 主题：在 body 渲染前应用，避免闪烁；支持 day / sepia / night
+(function(){
+  try {
+    var t = localStorage.getItem('benben_theme');
+    // 从旧的 benben_night 键迁移
+    if (!t) {
+      var old = localStorage.getItem('benben_night');
+      if (old === '1') t = 'night';
+    }
+    if (t === 'sepia' || t === 'night') {
+      document.documentElement.classList.add(t);
+      var m = document.querySelector('meta[name="theme-color"]');
+      if (m) m.setAttribute('content', t === 'night' ? '#1A1714' : '#F5EBD6');
+    }
+  } catch(e){}
+})();
+</script>
 </head>
 <body>
 
@@ -1080,6 +1163,9 @@ html, body {
       </div>
     </div>
     <div class="header-actions">
+      <button class="icon-btn" id="nightToggleBtn" onclick="cycleTheme()" title="切换主题">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </button>
       <button class="icon-btn" onclick="showConversations()" title="对话列表">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </button>
@@ -1389,6 +1475,56 @@ function loadState() {
 }
 
 let state = loadState();
+
+// ============ 主题切换：白天 / Sepia / 夜间护眼 ============
+const THEMES = ['day', 'sepia', 'night'];
+const THEME_META = {
+  day: {
+    color: '#FAF6F1',
+    label: '白天',
+    nextLabel: 'Sepia 米色',
+    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
+  },
+  sepia: {
+    color: '#F5EBD6',
+    label: 'Sepia 米色',
+    nextLabel: '夜间护眼',
+    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>'
+  },
+  night: {
+    color: '#1A1714',
+    label: '夜间护眼',
+    nextLabel: '白天',
+    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+  }
+};
+
+function getCurrentTheme() {
+  const cl = document.documentElement.classList;
+  if (cl.contains('night')) return 'night';
+  if (cl.contains('sepia')) return 'sepia';
+  return 'day';
+}
+
+function syncThemeIcon() {
+  const btn = document.getElementById('nightToggleBtn');
+  if (!btn) return;
+  const cur = getCurrentTheme();
+  btn.innerHTML = THEME_META[cur].icon;
+  btn.title = '当前: ' + THEME_META[cur].label + ' · 点击切换到' + THEME_META[cur].nextLabel;
+}
+
+function cycleTheme() {
+  const cur = getCurrentTheme();
+  const next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
+  const cl = document.documentElement.classList;
+  cl.remove('day', 'sepia', 'night');
+  if (next !== 'day') cl.add(next);
+  try { localStorage.setItem('benben_theme', next); } catch(e){}
+  const m = document.querySelector('meta[name="theme-color"]');
+  if (m) m.setAttribute('content', THEME_META[next].color);
+  syncThemeIcon();
+}
 
 // ============ INDEXEDDB LAYER (v2 — split stores) ============
 const IDB_NAME = 'BenBenHomeDB';
@@ -2932,6 +3068,7 @@ async function doRestore() {
 
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', async () => {
+  syncThemeIcon();
   if (!state.activeConvId) newConversation();
   renderMessages();
   // Set auto-export toggle state
