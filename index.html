@@ -1097,35 +1097,35 @@ html, body {
 :root.night .send-btn { background: var(--accent); }
 :root.night .send-btn:hover { background: var(--accent2); }
 
-/* ========== Sepia 米色模式 (warm paper, daytime reading) ========== */
+/* ========== 奶油暖白模式 (Claude.ai-inspired warm cream) ========== */
 :root.sepia {
-  --bg: #F4ECD8;
-  --surface: #F4ECD8;
-  --surface2: #E4DCCB;
-  --surface3: #D3C4A5;
-  --border: #D3C4A5;
-  --border2: #B8A98A;
-  --text: #5B4636;
-  --text2: #8C7B70;
-  --text3: #B0A090;
-  --accent: #C4623E;
-  --accent2: #A84F2E;
-  --accent-light: #E4DCCB;
-  --accent-dim: rgba(196,98,62,0.10);
-  --green: #6B8A5C;
-  --green-light: #DDE2C9;
-  --orange: #B07A2C;
-  --orange-light: #ECDDB8;
-  --red: #A8554A;
-  --red-light: #E8CFC8;
-  --user-bg: #DDD0B5;
+  --bg: #F8F8F6;
+  --surface: #FFFFFF;
+  --surface2: #F0EFEC;
+  --surface3: #E5E3E0;
+  --border: #E5E3DF;
+  --border2: #D5D3CF;
+  --text: #2D2B28;
+  --text2: #6B6560;
+  --text3: #A39E98;
+  --accent: #DA7756;
+  --accent2: #C4623E;
+  --accent-light: #F0E8E2;
+  --accent-dim: rgba(218,119,86,0.08);
+  --green: #34C759;
+  --green-light: #E8F9ED;
+  --orange: #FF9500;
+  --orange-light: #FFF4E5;
+  --red: #FF3B30;
+  --red-light: #FFECEB;
+  --user-bg: #EFEEEB;
   --assistant-bg: transparent;
-  --shadow-sm: 0 1px 2px rgba(91,70,54,0.06);
-  --shadow: 0 2px 8px rgba(91,70,54,0.10);
-  --shadow-lg: 0 4px 16px rgba(91,70,54,0.14);
+  --shadow-sm: 0 1px 2px rgba(45,43,40,0.04);
+  --shadow: 0 2px 8px rgba(45,43,40,0.07);
+  --shadow-lg: 0 4px 16px rgba(45,43,40,0.10);
 }
-:root.sepia .send-btn { background: var(--accent); }
-:root.sepia .send-btn:hover { background: var(--accent2); }
+:root.sepia .send-btn { background: #C4A48C; }
+:root.sepia .send-btn:hover { background: #B5937A; }
 /* 平滑过渡，切换时不刺眼 */
 html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indicator {
   transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
@@ -1144,7 +1144,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     if (t === 'sepia' || t === 'night') {
       document.documentElement.classList.add(t);
       var m = document.querySelector('meta[name="theme-color"]');
-      if (m) m.setAttribute('content', t === 'night' ? '#1A1714' : '#F5EBD6');
+      if (m) m.setAttribute('content', t === 'night' ? '#1A1714' : '#F8F8F6');
     }
   } catch(e){}
 })();
@@ -1476,18 +1476,18 @@ function loadState() {
 
 let state = loadState();
 
-// ============ 主题切换：白天 / Sepia / 夜间护眼 ============
+// ============ 主题切换：白天 / 暖白 / 夜间护眼 ============
 const THEMES = ['day', 'sepia', 'night'];
 const THEME_META = {
   day: {
-    color: '#FAF6F1',
+    color: '#FFFFFF',
     label: '白天',
-    nextLabel: 'Sepia 米色',
+    nextLabel: '暖白',
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
   },
   sepia: {
-    color: '#F5EBD6',
-    label: 'Sepia 米色',
+    color: '#F8F8F6',
+    label: '暖白',
     nextLabel: '夜间护眼',
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>'
   },
@@ -1943,6 +1943,17 @@ function deleteConversation(id) {
   showConversations();
 }
 
+// Format assistant message timestamp: "2026-05-29 20:40"
+function formatMsgTs(ts) {
+  const d = new Date(ts);
+  const Y = d.getFullYear();
+  const M = String(d.getMonth()+1).padStart(2,'0');
+  const D = String(d.getDate()).padStart(2,'0');
+  const h = String(d.getHours()).padStart(2,'0');
+  const m = String(d.getMinutes()).padStart(2,'0');
+  return `${Y}-${M}-${D} ${h}:${m}`;
+}
+
 // Format date group label (Kelivo-style: "5月22日", "4月27日", etc.)
 function formatDateGroup(timestamp) {
   const d = new Date(timestamp);
@@ -2217,7 +2228,7 @@ function renderMessages() {
       return `
         <div class="msg assistant" data-index="${i}">
           <div class="msg-model-row">
-            <div class="msg-model">${esc(m.model || getModel())}</div>
+            <div class="msg-model">${esc(m.model || getModel())}${m.ts ? '<span class="msg-ts"> 丨 ' + formatMsgTs(m.ts) + '</span>' : ''}</div>
             ${menuBtn}
           </div>
           ${thinkingHtml}
@@ -2453,7 +2464,7 @@ async function sendMessage() {
   isStreaming = true;
   document.getElementById('sendBtn').disabled = true;
 
-  const assistantMsg = { role: 'assistant', content: '', thinking: '', usage: null, model: getModel() };
+  const assistantMsg = { role: 'assistant', content: '', thinking: '', usage: null, model: getModel(), ts: now.getTime() };
   conv.messages.push(assistantMsg);
   renderMessages();
 
