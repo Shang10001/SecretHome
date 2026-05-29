@@ -58,8 +58,4 @@ README.md
 ---
 
 ## 备忘
-
-- **图片 token 估算**：`宽 × 高 / 750`，一张 800×800 ≈ 853 tok
-- **缓存命中的图片**只花原价 10% 的输入费用
-- **上下文消息数**设为 0 表示发送全部历史；设一个偶数（比如 20）可以控制每轮发送的历史长度，省 token
 - iOS 上如果键盘弹出时页面跳动，确认 viewport meta 里有 `interactive-widget=resizes-content`
