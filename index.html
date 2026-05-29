@@ -3108,17 +3108,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   vv.addEventListener('resize', pin);
   vv.addEventListener('scroll', pin);
   pin();
-
-  // 键盘弹出后把对话滚到底，确保最新消息不被输入框/键盘遮住
-  const input = document.getElementById('userInput');
-  if (input) {
-    input.addEventListener('focus', () => {
-      setTimeout(() => {
-        const m = document.querySelector('.messages');
-        if (m) m.scrollTop = m.scrollHeight;
-      }, 300);
-    });
-  }
 })();
 
 // ============ SERVICE WORKER (PWA) ============
