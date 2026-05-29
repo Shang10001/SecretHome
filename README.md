@@ -1,87 +1,76 @@
-# 笨笨家园
+# 笨笨家园 BenBenHome
 
-单文件 AI 聊天前端，通过 OpenRouter API 调用 Claude 等模型。零后端，纯前端，一个 `index.html` 搞定一切。
+一个单 HTML 文件的 AI 聊天前端，通过 OpenRouter 调用 Claude / GPT 等模型。
+不需要构建、不需要服务器，传到 GitHub Pages 打开就能用，也可以添加到手机主屏幕当 PWA 用。
 
-## 功能
+---
 
-### 对话
+## 功能一览
 
+**聊天核心**
 - 流式输出（SSE streaming）
-- 多对话管理，按日期分组显示
-- 对话重命名、删除
-- 消息编辑（点击 `···` 菜单）
-- 对话分支：从任意消息处往上或往下拆分出新对话
-- 自动标题（取第一条消息前 30 字）
+- 发送图片（自动压缩到 800px / JPEG 70%，嵌入对话数据，备份时一起走）
+- 多对话管理（新建 / 切换 / 删除）
+- 消息编辑（点 `⋮` → 编辑，直接在气泡里改）
+- 对话分支（从任意消息往上或往下拆成新对话）
 
-### 模型与参数
+**模型 & 参数**
+- 支持 Claude Opus 4.7 / 4.6、Sonnet 4.5、GPT-4o，也可以手动输入任意 OpenRouter 模型 ID
+- Prompt Caching（5 分钟 / 1 小时 TTL），缓存状态实时显示
+- Extended Thinking / 思考链（Low / Medium / High / Max 四档力度）
+- System Prompt、Temperature、Max Tokens、上下文消息数 均可调
 
-- 预置模型：Claude Opus 4.7 / 4.6、Sonnet 4.5、GPT-4o
-- 支持自定义模型 ID（任何 OpenRouter 支持的模型）
-- 可调参数：Max Tokens、Temperature、上下文消息数
-- Extended Thinking（思考链）：支持开关和力度调节（low/medium/high/max），思考过程可折叠查看
+**数据 & 备份**
+- 自动保存到浏览器 IndexedDB，刷新不丢
+- WebDAV 备份 / 恢复（支持"完全覆盖"和"智能合并"两种模式）
+- 从 Kelivo 导入对话记录
+- 每条消息记录 token 用量、缓存命中、花费
 
-### Prompt Caching
+**外观**
+- 三套主题：默认白 / 奶油暖白 / 夜间护眼
+- 移动端适配，键盘弹出不跳页（VisualViewport 钉位）
 
-- 自动启用 OpenRouter 的 `cache_control: ephemeral`
-- 缓存 TTL 可选 5 分钟或 1 小时
-- 每条回复显示缓存状态：`cached` / `write` / `no cache`
-- 顶部缓存指示器 + 倒计时
-- 模型名旁绿色脉冲圆点 = 缓存在线，灰色 = 已过期
-
-### 费用追踪
-
-- 每条回复显示 input/output token 数、缓存命中数、单条费用
-- 底部状态栏显示当前对话累计费用、消息数、总 token 数
-
-### 数据存储
-
-- IndexedDB 存对话内容，localStorage 存设置索引
-- 自动从旧版 localStorage 迁移到 IndexedDB
-- 存储用量显示（设置 → 备份页）
-
-### 备份
-
-- **WebDAV 云备份**：支持 NextCloud、Synology、InfiniCLOUD 等，一键备份/恢复，支持完全覆盖和智能合并两种恢复模式（坚果云因 CORS 限制无法使用）
-- **本地文件备份**：导出/导入 JSON 文件
-- **自动备份**：每 10 条新消息自动下载备份文件（可开关）
-- **Kelivo 导入**：从 Kelivo 备份包迁移对话记录
-
-### PWA
-
-- 支持添加到主屏幕
-- 内联 Service Worker 和 manifest，无需额外文件
-
-## 部署
-
-是一个单独的 HTML 文件，随便怎么部署：
-
-- 直接浏览器打开 `index.html`
-- 放到 GitHub Pages
-- 扔到任何静态托管服务
-- 本地 `python -m http.server` 起个服务也行
-
-第一次打开去设置里填 OpenRouter API Key 就能用了。
-
-## 技术栈
-
-纯手写，无框架无构建：
-
-- HTML / CSS / Vanilla JS
-- 字体：Noto Sans SC + JetBrains Mono + Source Serif 4
-- 存储：IndexedDB + localStorage
-- API：OpenRouter（兼容 OpenAI 格式）
+---
 
 ## 文件结构
 
-就一个文件：
-
 ```
-index.html    ← 所有 HTML + CSS + JS 都在这里
+index.html   ← 全部代码都在这一个文件里
+icon.png     ← 主屏幕图标（正方形 PNG，换图标只需替换这个文件）
+README.md
 ```
 
-## 缓存省钱小贴士
+---
 
-- System Prompt 改动会触发一次 cache write，之后持续 cache hit
-- 缓存有效期内连续对话，prompt 部分按缓存价计费（通常便宜 90%）
-- 上下文消息数设置可以控制发送量，减少不必要的 token 消耗
-- 底部状态栏和每条回复的 token 信息帮你随时掌握用量
+## 使用方法
+
+1. 在 GitHub 上开启 Pages（Settings → Pages → Source 选 `main` 分支）
+2. 用手机 Safari 打开 `https://你的用户名.github.io/BenBenHome/`
+3. 点"添加到主屏幕"就变成全屏 App
+4. 进 App 后打开设置，填入 OpenRouter API Key，选模型，开聊
+
+---
+
+## 换图标
+
+1. 准备一张**正方形 PNG**（建议 1024×1024，铺实色底，别留透明，别自己磨圆角）
+2. 命名为 `icon.png`，在 GitHub 上覆盖掉旧的
+3. 手机上删掉旧的主屏幕图标 → 重新"添加到主屏幕"（iOS 会缓存旧图标）
+
+---
+
+## WebDAV 备份
+
+在设置 → 备份页填入 WebDAV 地址、用户名、密码，点测试确认连通，然后：
+- **备份**：把所有对话 + 设置 + 记忆打包成 `benben_backup.json` 上传到 WebDAV
+- **恢复 — 智能合并**：只补充本地没有的对话和记忆，不碰已有数据
+- **恢复 — 完全覆盖**：用备份内容替换本地所有数据（WebDAV 配置本身不受影响）
+
+---
+
+## 备忘
+
+- **图片 token 估算**：`宽 × 高 / 750`，一张 800×800 ≈ 853 tok
+- **缓存命中的图片**只花原价 10% 的输入费用
+- **上下文消息数**设为 0 表示发送全部历史；设一个偶数（比如 20）可以控制每轮发送的历史长度，省 token
+- iOS 上如果键盘弹出时页面跳动，确认 viewport meta 里有 `interactive-widget=resizes-content`
