@@ -1132,20 +1132,20 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
 }
 </style>
 <script>
-// 主题：在 body 渲染前应用，避免闪烁；支持 day / sepia / night
+// 主题：在 body 渲染前应用，避免闪烁；暖白（默认）/ 夜间
 (function(){
   try {
     var t = localStorage.getItem('benben_theme');
     // 从旧的 benben_night 键迁移
     if (!t) {
       var old = localStorage.getItem('benben_night');
-      if (old === '1') t = 'night';
+      t = old === '1' ? 'night' : 'sepia';
     }
-    if (t === 'sepia' || t === 'night') {
-      document.documentElement.classList.add(t);
-      var m = document.querySelector('meta[name="theme-color"]');
-      if (m) m.setAttribute('content', t === 'night' ? '#1A1714' : '#F8F8F6');
-    }
+    // day 已移除，旧的 day 值当作 sepia
+    if (t === 'day') t = 'sepia';
+    document.documentElement.classList.add(t);
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute('content', t === 'night' ? '#1A1714' : '#F8F8F6');
   } catch(e){}
 })();
 </script>
@@ -1163,8 +1163,8 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       </div>
     </div>
     <div class="header-actions">
-      <button class="icon-btn" id="nightToggleBtn" onclick="cycleTheme()" title="切换主题">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <button class="icon-btn" id="nightToggleBtn" onclick="cycleTheme()" title="切换到夜间护眼">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       </button>
       <button class="icon-btn" onclick="showConversations()" title="对话列表">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -1476,34 +1476,24 @@ function loadState() {
 
 let state = loadState();
 
-// ============ 主题切换：白天 / 暖白 / 夜间护眼 ============
-const THEMES = ['day', 'sepia', 'night'];
+// ============ 主题切换：暖白 ↔ 夜间护眼 ============
 const THEME_META = {
-  day: {
-    color: '#FFFFFF',
-    label: '白天',
-    nextLabel: '暖白',
-    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
-  },
   sepia: {
     color: '#F8F8F6',
     label: '暖白',
-    nextLabel: '夜间护眼',
-    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>'
+    otherLabel: '夜间护眼',
+    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
   },
   night: {
     color: '#1A1714',
     label: '夜间护眼',
-    nextLabel: '白天',
-    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+    otherLabel: '暖白',
+    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
   }
 };
 
 function getCurrentTheme() {
-  const cl = document.documentElement.classList;
-  if (cl.contains('night')) return 'night';
-  if (cl.contains('sepia')) return 'sepia';
-  return 'day';
+  return document.documentElement.classList.contains('night') ? 'night' : 'sepia';
 }
 
 function syncThemeIcon() {
@@ -1511,15 +1501,20 @@ function syncThemeIcon() {
   if (!btn) return;
   const cur = getCurrentTheme();
   btn.innerHTML = THEME_META[cur].icon;
-  btn.title = '当前: ' + THEME_META[cur].label + ' · 点击切换到' + THEME_META[cur].nextLabel;
+  btn.title = '切换到' + THEME_META[cur].otherLabel;
 }
 
 function cycleTheme() {
-  const cur = getCurrentTheme();
-  const next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
   const cl = document.documentElement.classList;
-  cl.remove('day', 'sepia', 'night');
-  if (next !== 'day') cl.add(next);
+  const isNight = cl.contains('night');
+  cl.remove('night');
+  if (!isNight) {
+    cl.remove('sepia');
+    cl.add('night');
+  } else {
+    cl.add('sepia');
+  }
+  const next = getCurrentTheme();
   try { localStorage.setItem('benben_theme', next); } catch(e){}
   const m = document.querySelector('meta[name="theme-color"]');
   if (m) m.setAttribute('content', THEME_META[next].color);
@@ -1788,6 +1783,7 @@ async function exportLocalBackup(silent) {
     version: 1,
     timestamp: new Date().toISOString(),
     data: {
+      apiKey: state.apiKey,
       model: state.model,
       customModel: state.customModel,
       systemPrompt: state.systemPrompt,
@@ -1826,10 +1822,10 @@ function importLocalBackup(event) {
       const backup = JSON.parse(e.target.result);
       const data = backup.data;
       if (!data) { alert('文件格式无效'); return; }
-      if (!confirm('导入将覆盖当前所有数据（API Key 和 WebDAV 配置不受影响），确定？')) return;
-      const keepApiKey = state.apiKey;
+      if (!confirm('导入将覆盖当前所有数据（包括 API Key，WebDAV 配置不受影响），确定？')) return;
       const keepWebdav = state.webdav;
       const keepAutoExport = state.autoExport;
+      state.apiKey = data.apiKey || state.apiKey;
       state.model = data.model || state.model;
       state.customModel = data.customModel || '';
       state.systemPrompt = data.systemPrompt || '';
@@ -1839,7 +1835,6 @@ function importLocalBackup(event) {
       state.reasoningEnabled = data.reasoningEnabled ?? false;
       state.reasoningEffort = data.reasoningEffort || 'medium';
       state.memories = data.memories || [];
-      state.apiKey = keepApiKey;
       state.webdav = keepWebdav;
       state.autoExport = keepAutoExport;
 
@@ -2962,11 +2957,12 @@ async function doBackup() {
     setWebDAVStatus('idle', '正在备份...');
     // Load all conversations from IDB
     const allConvs = await loadAllConvsFromIDB();
-    // Prepare backup data (exclude apiKey and webdav pass for security)
+    // Prepare backup data
     const backup = {
       version: 1,
       timestamp: new Date().toISOString(),
       data: {
+        apiKey: state.apiKey,
         model: state.model,
         customModel: state.customModel,
         systemPrompt: state.systemPrompt,
@@ -2999,7 +2995,7 @@ function toggleRestoreOptions() {
 async function doRestore() {
   try {
     const mode = document.querySelector('input[name="restoreMode"]:checked').value;
-    if (mode === 'overwrite' && !confirm('完全覆盖将替换所有本地数据（API Key 和 WebDAV 配置不受影响），确定继续？')) return;
+    if (mode === 'overwrite' && !confirm('完全覆盖将替换所有本地数据（包括 API Key，WebDAV 配置不受影响），确定继续？')) return;
     setWebDAVStatus('idle', '正在恢复...');
     const resp = await webdavRequest('GET', 'benben_backup.json');
     if (!resp.ok) {
@@ -3014,9 +3010,9 @@ async function doRestore() {
     }
 
     if (mode === 'overwrite') {
-      // Full overwrite (keep apiKey and webdav)
-      const keepApiKey = state.apiKey;
+      // Full overwrite (restore apiKey from backup, keep webdav)
       const keepWebdav = state.webdav;
+      state.apiKey = data.apiKey || state.apiKey;
       state.model = data.model || state.model;
       state.customModel = data.customModel || '';
       state.systemPrompt = data.systemPrompt || '';
@@ -3026,7 +3022,6 @@ async function doRestore() {
       state.reasoningEnabled = data.reasoningEnabled ?? false;
       state.reasoningEffort = data.reasoningEffort || 'medium';
       state.memories = data.memories || [];
-      state.apiKey = keepApiKey;
       state.webdav = keepWebdav;
 
       // Import conversations to IDB
