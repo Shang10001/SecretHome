@@ -2353,7 +2353,8 @@ function importLocalBackup(event) {
           id: conv.id,
           title: conv.title,
           created: conv.created,
-          msgCount: (conv.messages || []).length
+          msgCount: conv.messages.length,
+          totalCost: conv.messages.reduce((s, m) => s + (m.usage?.cost || 0), 0)
         };
       }
 
