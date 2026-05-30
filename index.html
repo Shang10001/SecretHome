@@ -2254,6 +2254,13 @@ function checkAutoExport() {
 async function exportLocalBackup(silent) {
   // Load all conversations from IDB for export
   const allConvs = await loadAllConvsFromIDB();
+  // Filter out empty conversations (no messages)
+  const filteredConvs = {};
+  for (const [id, conv] of Object.entries(allConvs)) {
+    if (conv.messages && conv.messages.length > 0) {
+      filteredConvs[id] = conv;
+    }
+  }
   const backup = {
     version: 1,
     timestamp: new Date().toISOString(),
@@ -2267,7 +2274,7 @@ async function exportLocalBackup(silent) {
       temperature: state.temperature,
       reasoningEnabled: state.reasoningEnabled,
       reasoningEffort: state.reasoningEffort,
-      conversations: allConvs,
+      conversations: filteredConvs,
       memories: state.memories
     }
   };
@@ -2313,10 +2320,23 @@ function importLocalBackup(event) {
       state.webdav = keepWebdav;
       state.autoExport = keepAutoExport;
 
-      // Import conversations: save each to IDB, keep only metadata in state
+      // Import conversations: clear IDB first, then save each to IDB
       const importedConvs = data.conversations || {};
+      // Clear all old conversations from IDB to prevent orphan data
+      try {
+        if (!idb) await openIDB();
+        const clearTx = idb.transaction('conversations', 'readwrite');
+        await new Promise((resolve, reject) => {
+          const req = clearTx.objectStore('conversations').clear();
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      } catch(e) { console.warn('IDB clear failed:', e); }
+
       state.conversations = {};
       for (const [id, conv] of Object.entries(importedConvs)) {
+        // Skip empty conversations
+        if (!conv.messages || conv.messages.length === 0) continue;
         await saveConvToIDB(conv);
         state.conversations[id] = {
           id: conv.id,
@@ -2551,6 +2571,14 @@ function startRenameConv() {
       // Also update active conv data if it's the same
       if (state._activeConvData && state._activeConvData.id === targetId) {
         state._activeConvData.title = newTitle;
+      } else {
+        // Non-active conv: update its title in IDB directly
+        loadConvFromIDB(targetId).then(convData => {
+          if (convData) {
+            convData.title = newTitle;
+            saveConvToIDB(convData);
+          }
+        });
       }
       saveState();
     }
