@@ -4238,25 +4238,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ============ KEYBOARD / VIEWPORT PINNING (mobile) ============
 // 让整个界面紧贴"键盘上方的可见区域"，键盘弹出/收起都不再整页上跳
+// 只监听 resize（键盘弹出/收起），不监听 scroll（会和手指滚动打架导致反向滚动）
 (function () {
   const vv = window.visualViewport;
   if (!vv) return;
   const app = document.querySelector('.app');
   if (!app) return;
-  let rafId = 0;
   const pin = () => {
-    if (rafId) return;
-    rafId = requestAnimationFrame(() => {
-      rafId = 0;
-      app.style.height = vv.height + 'px';
-      // Only apply offsetTop when keyboard is likely open
-      // (viewport significantly shorter than window), otherwise keep at 0
-      const keyboardLikely = vv.height < window.innerHeight - 100;
-      app.style.top = keyboardLikely ? vv.offsetTop + 'px' : '0px';
-    });
+    app.style.height = vv.height + 'px';
+    app.style.top = vv.offsetTop + 'px';
   };
   vv.addEventListener('resize', pin);
-  vv.addEventListener('scroll', pin);
   pin();
 })();
 
