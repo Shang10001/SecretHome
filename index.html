@@ -203,6 +203,7 @@ html, body {
   padding: 8px 16px 16px;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 .messages::-webkit-scrollbar { width: 4px; }
 .messages::-webkit-scrollbar-track { background: transparent; }
@@ -4242,9 +4243,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!vv) return;
   const app = document.querySelector('.app');
   if (!app) return;
+  let rafId = 0;
   const pin = () => {
-    app.style.height = vv.height + 'px';
-    app.style.top = vv.offsetTop + 'px';
+    if (rafId) return;
+    rafId = requestAnimationFrame(() => {
+      rafId = 0;
+      app.style.height = vv.height + 'px';
+      // Only apply offsetTop when keyboard is likely open
+      // (viewport significantly shorter than window), otherwise keep at 0
+      const keyboardLikely = vv.height < window.innerHeight - 100;
+      app.style.top = keyboardLikely ? vv.offsetTop + 'px' : '0px';
+    });
   };
   vv.addEventListener('resize', pin);
   vv.addEventListener('scroll', pin);
