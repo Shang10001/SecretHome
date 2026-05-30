@@ -933,6 +933,32 @@ html, body {
   margin-top: 6px;
   padding-left: 4px;
 }
+.regen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  margin-top: 10px;
+  margin-left: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  font-family: var(--font);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.regen-btn:hover, .regen-btn:active {
+  background: var(--surface3);
+  color: var(--text);
+  border-color: var(--border2);
+}
+.regen-btn svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
 
 /* ========== COST DASHBOARD ========== */
 .cost-bar {
@@ -1560,11 +1586,14 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       <button class="icon-btn" id="nightToggleBtn" onclick="cycleTheme()" title="切换到夜间护眼">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       </button>
+      <button class="icon-btn" onclick="showConversations()" title="对话列表">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </button>
       <button class="icon-btn" onclick="showStats()" title="统计">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
       </button>
-      <button class="icon-btn" onclick="showConversations()" title="对话列表">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <button class="icon-btn" id="quickBackupBtn" onclick="exportLocalBackup()" title="快速备份">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       </button>
       <button class="icon-btn" onclick="showSettings()" title="设置">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -1657,7 +1686,11 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
 
       <div class="field">
         <label>System Prompt</label>
-        <textarea id="systemPrompt" placeholder="角色设定..."></textarea>
+        <textarea id="systemPrompt" placeholder="角色设定..." oninput="updateSPCounter()"></textarea>
+        <div class="hint" id="spCounter" style="display:flex;justify-content:space-between;align-items:center;">
+          <span id="spCounterText">0 字符 · ~0 tokens</span>
+          <span id="spCounterBar" style="font-family:var(--mono);font-size:11px;color:var(--text3);"></span>
+        </div>
       </div>
 
       <div class="field">
@@ -2542,6 +2575,32 @@ function deleteConvFromMenu() {
   deleteConversation(convMenuTargetId);
 }
 
+// ============ SYSTEM PROMPT COUNTER ============
+function updateSPCounter() {
+  const ta = document.getElementById('systemPrompt');
+  const text = ta ? ta.value : '';
+  const chars = text.length;
+  // Estimate tokens: count CJK chars individually (~1-2 tokens each),
+  // and split the rest by whitespace (~1 token per word), plus some overhead
+  let tokens = 0;
+  let nonCJK = '';
+  for (const ch of text) {
+    // CJK Unified Ideographs + common CJK ranges
+    if (/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uffef]/.test(ch)) {
+      tokens += 1.5; // CJK chars average ~1.5 tokens
+    } else {
+      nonCJK += ch;
+    }
+  }
+  // English/Latin words
+  const words = nonCJK.trim().split(/\s+/).filter(w => w.length > 0);
+  tokens += words.length * 1.3; // ~1.3 tokens per word on average
+  tokens = Math.round(tokens);
+
+  const el = document.getElementById('spCounterText');
+  if (el) el.textContent = `${chars} 字符 · ~${tokens} tokens`;
+}
+
 // ============ SETTINGS ============
 function showSettings() {
   document.getElementById('apiKey').value = state.apiKey;
@@ -2563,6 +2622,7 @@ function showSettings() {
   document.getElementById('reasoningEffort').value = state.reasoningEffort || 'medium';
   openModal('settingsModal', true);
   updateStorageUsage();
+  updateSPCounter();
 }
 
 function saveSettings() {
@@ -2652,6 +2712,9 @@ function renderMessages() {
       `;
     } else {
       // Assistant: model row with "..." on right, then content, then meta footer
+      const isLast = i === conv.messages.length - 1;
+      const isError = m.content.startsWith('[错误]');
+      const regenBtn = (isLast || isError) ? `<button class="regen-btn" onclick="regenerateResponse(${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>重新生成</button>` : '';
       return `
         <div class="msg assistant" data-index="${i}">
           <div class="msg-model-row">
@@ -2661,6 +2724,7 @@ function renderMessages() {
           ${thinkingHtml}
           <div class="msg-content" id="msgContent-${i}">${esc(m.content)}</div>
           ${footerHtml}
+          ${regenBtn}
         </div>
       `;
     }
@@ -2734,10 +2798,14 @@ function toggleMsgMenu(index, event) {
 
   // Build menu content
   const menu = document.getElementById('msgMenuPopup');
+  const isAssistant = conv.messages[index]?.role === 'assistant';
   menu.innerHTML = `
     <button class="conv-context-menu-item" onclick="startEdit(${index}); closeMsgMenus();">
       <span class="ctx-icon">&#9998;</span>编辑
     </button>
+    ${isAssistant ? `<button class="conv-context-menu-item" onclick="regenerateResponse(${index}); closeMsgMenus();">
+      <span class="ctx-icon">&#8635;</span>重新生成
+    </button>` : ''}
     ${canBranchUp ? `<div class="conv-context-sep"></div>
     <button class="conv-context-menu-item" onclick="branchUp(${index}); closeMsgMenus();">
       <span class="ctx-icon">&#8598;</span>从这里往上分支
@@ -2907,6 +2975,48 @@ function removeImage() {
 
 // ============ SEND ============
 let isStreaming = false;
+
+async function regenerateResponse(index) {
+  if (isStreaming) return;
+  const conv = getActiveConv();
+  if (!conv.messages.length) return;
+
+  // If no index given, use last assistant message
+  if (index === undefined) {
+    for (let i = conv.messages.length - 1; i >= 0; i--) {
+      if (conv.messages[i].role === 'assistant') { index = i; break; }
+    }
+  }
+  if (index === undefined || index < 1) return;
+
+  // Find the user message right before this assistant message
+  let userIdx = index - 1;
+  while (userIdx >= 0 && conv.messages[userIdx].role !== 'user') userIdx--;
+  if (userIdx < 0) return;
+
+  const userMsg = conv.messages[userIdx];
+
+  // Remove everything from the assistant message onward
+  conv.messages.splice(index);
+  // Also remove the user message (sendMessage will re-add it)
+  conv.messages.splice(userIdx, 1);
+
+  // Put user message back into input
+  const input = document.getElementById('userInput');
+  input.value = userMsg.content || '';
+  autoResize(input);
+
+  // Restore image if any
+  if (userMsg.image) {
+    pendingImage = userMsg.image;
+    document.getElementById('imgPreviewImg').src = userMsg.image;
+    document.getElementById('imgPreview').style.display = '';
+  }
+
+  saveState();
+  renderMessages();
+  await sendMessage();
+}
 
 async function sendMessage() {
   const input = document.getElementById('userInput');
