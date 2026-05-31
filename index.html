@@ -782,11 +782,15 @@ html, body {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
-  max-width: 120px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: 140px;
 }
+.header-asst-btn > span:not(.header-asst-dot) {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.header-asst-btn > svg { flex-shrink: 0; }
 .header-asst-btn:hover { background: var(--surface3); }
 .header-asst-dot {
   width: 7px;
@@ -3450,6 +3454,36 @@ async function createBranchConv(messages, title) {
   renderMessages();
 }
 
+// ============ FALLBACK COST ESTIMATION ============
+// Used when OpenRouter doesn't return cost in SSE response.
+// Prices are per-token (not per-million). Based on Anthropic official pricing (Jun 2026).
+// Cache write uses 1-hr TTL price (Shang's usual setting).
+// This is an approximation — actual billing may differ slightly.
+const MODEL_PRICING = {
+  'anthropic/claude-opus-4.6':       { input: 5e-6,  output: 25e-6, cacheRead: 0.5e-6,  cacheWrite: 10e-6 },
+  'anthropic/claude-opus-4.7':       { input: 5e-6,  output: 25e-6, cacheRead: 0.5e-6,  cacheWrite: 10e-6 },
+  'anthropic/claude-opus-4.5':       { input: 5e-6,  output: 25e-6, cacheRead: 0.5e-6,  cacheWrite: 10e-6 },
+  'anthropic/claude-sonnet-4.6':     { input: 3e-6,  output: 15e-6, cacheRead: 0.3e-6,  cacheWrite: 6e-6 },
+  'anthropic/claude-sonnet-4.5':     { input: 3e-6,  output: 15e-6, cacheRead: 0.3e-6,  cacheWrite: 6e-6 },
+  'anthropic/claude-sonnet-4-20250514': { input: 3e-6, output: 15e-6, cacheRead: 0.3e-6, cacheWrite: 6e-6 },
+  'anthropic/claude-haiku-4.5':      { input: 1e-6,  output: 5e-6,  cacheRead: 0.1e-6,  cacheWrite: 2e-6 },
+};
+
+function estimateCost(model, promptTokens, completionTokens, cachedTokens, cacheWriteTokens) {
+  const p = MODEL_PRICING[model];
+  if (!p) {
+    // Unknown model: use Opus pricing as conservative upper bound
+    const fallback = MODEL_PRICING['anthropic/claude-opus-4.6'];
+    return promptTokens * fallback.input + completionTokens * fallback.output;
+  }
+  // Normal input tokens = total prompt - cached - cache_write
+  const normalInput = Math.max(0, promptTokens - cachedTokens - cacheWriteTokens);
+  return normalInput * p.input
+       + cachedTokens * p.cacheRead
+       + cacheWriteTokens * p.cacheWrite
+       + completionTokens * p.output;
+}
+
 // ============ COST DASHBOARD ============
 function updateCostBar() {
   const conv = getActiveConv();
@@ -3617,6 +3651,7 @@ async function sendMessage() {
   container.appendChild(typingEl);
   container.scrollTop = container.scrollHeight;
 
+  let usage = {};
   try {
     const messages = [];
     const asst = getActiveAssistant();
@@ -3685,7 +3720,6 @@ async function sendMessage() {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
-    let usage = {};
     let isThinking = false;
 
     while (true) {
@@ -3737,18 +3771,41 @@ async function sendMessage() {
       }
     }
 
+    // Fix: process any remaining data left in the buffer after stream ends
+    if (buffer.trim()) {
+      for (const line of buffer.split('\n')) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const chunk = JSON.parse(data);
+          if (chunk.usage) usage = chunk.usage;
+          const delta = chunk.choices?.[0]?.delta;
+          if (delta?.content) assistantMsg.content += delta.content;
+        } catch(e) {}
+      }
+    }
+
     // Clean up: remove thinking field if empty
     if (!assistantMsg.thinking) delete assistantMsg.thinking;
 
     const cached = usage.prompt_tokens_details?.cached_tokens || 0;
     const cacheWrite = usage.prompt_tokens_details?.cache_write_tokens || 0;
+    const promptTokens = usage.prompt_tokens || 0;
+    const completionTokens = usage.completion_tokens || 0;
+    let cost = usage.total_cost ?? usage.cost ?? null;
+
+    // Fix: fallback cost estimation when OpenRouter doesn't return cost
+    if (cost === null && (promptTokens > 0 || completionTokens > 0)) {
+      cost = estimateCost(getModel(), promptTokens, completionTokens, cached, cacheWrite);
+    }
 
     assistantMsg.usage = {
-      prompt_tokens: usage.prompt_tokens || 0,
-      completion_tokens: usage.completion_tokens || 0,
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
       cached_tokens: cached,
       cache_write_tokens: cacheWrite,
-      cost: usage.total_cost ?? usage.cost ?? null
+      cost: cost
     };
 
     updateCacheIndicator(cached, cacheWrite);
@@ -3759,6 +3816,24 @@ async function sendMessage() {
   } catch(err) {
     typingEl.remove();
     assistantMsg.content = `[错误] ${err.message}`;
+    // Fix: save any partial usage data from before the error
+    if (usage && (usage.prompt_tokens || usage.completion_tokens)) {
+      const cached = usage.prompt_tokens_details?.cached_tokens || 0;
+      const cacheWrite = usage.prompt_tokens_details?.cache_write_tokens || 0;
+      const promptTokens = usage.prompt_tokens || 0;
+      const completionTokens = usage.completion_tokens || 0;
+      let cost = usage.total_cost ?? usage.cost ?? null;
+      if (cost === null && (promptTokens > 0 || completionTokens > 0)) {
+        cost = estimateCost(getModel(), promptTokens, completionTokens, cached, cacheWrite);
+      }
+      assistantMsg.usage = {
+        prompt_tokens: promptTokens,
+        completion_tokens: completionTokens,
+        cached_tokens: cached,
+        cache_write_tokens: cacheWrite,
+        cost: cost
+      };
+    }
     saveState();
     renderMessages();
   }
