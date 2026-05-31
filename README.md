@@ -1,6 +1,6 @@
 # 笨笨家园 BenBenHome
 
-一个单 HTML 文件的 AI 聊天前端，通过 OpenRouter 调用 Claude / GPT 等模型。
+一个单 HTML 文件的 AI 聊天前端，通过 OpenRouter 调用 Claude / GPT / Gemini 等模型。
 不需要构建、不需要服务器，传到 GitHub Pages 打开就能用，也可以添加到手机主屏幕当 PWA 用。
 
 ---
