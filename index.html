@@ -622,6 +622,179 @@ html, body {
 }
 
 /* ========== CONVERSATIONS LIST ========== */
+/* ========== ASSISTANT LIST ========== */
+.asst-list {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.asst-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.1s;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+.asst-item:hover { background: var(--surface2); }
+.asst-item.active { background: var(--accent-light); }
+.asst-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.asst-item-info {
+  min-width: 0;
+  flex: 1;
+}
+.asst-item-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.asst-item-meta {
+  font-size: 12px;
+  color: var(--text3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.asst-item-more {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  letter-spacing: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.asst-item:hover .asst-item-more { opacity: 1; pointer-events: auto; }
+@media (hover: none) { .asst-item-more { opacity: 1; pointer-events: auto; } }
+.asst-item-more:hover { background: var(--surface3); color: var(--text); }
+
+/* Assistant panel nav header */
+.panel-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.panel-back-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.panel-back-btn:hover { background: var(--surface2); color: var(--text); }
+.panel-nav-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.panel-nav-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Assistant edit form */
+.asst-edit-form .field { margin-bottom: 16px; }
+.asst-edit-form label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text2);
+  margin-bottom: 5px;
+}
+.asst-edit-form input[type="text"],
+.asst-edit-form textarea,
+.asst-edit-form select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+}
+.asst-edit-form textarea {
+  min-height: 100px;
+  resize: vertical;
+  line-height: 1.4;
+}
+.asst-color-picker {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.asst-color-opt {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.asst-color-opt:hover { transform: scale(1.15); }
+.asst-color-opt.selected { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg); }
+
+/* Header assistant name button */
+.header-asst-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: none;
+  background: var(--surface2);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.header-asst-btn:hover { background: var(--surface3); }
+.header-asst-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .conv-list {
   max-height: 50vh;
   overflow-y: auto;
@@ -1248,28 +1421,32 @@ html, body {
 .stats-bar-col {
   flex: 1;
   min-width: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  height: 100%;
   justify-content: flex-end;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.stats-bar-col.active .stats-bar {
+.stats-bar-col.active .stats-bar-stack {
   opacity: 1;
-  box-shadow: 0 0 0 1px var(--accent);
+  box-shadow: 0 0 0 1px var(--text2);
 }
-.stats-bar {
+.stats-bar-stack {
   width: 100%;
   min-height: 2px;
   border-radius: 3px 3px 1px 1px;
-  background: var(--accent);
-  opacity: 0.6;
+  opacity: 0.85;
   transition: opacity 0.15s;
+  display: flex;
+  flex-direction: column-reverse;
+  overflow: hidden;
 }
-.stats-bar:hover { opacity: 1; }
+.stats-bar-stack:hover { opacity: 1; }
+.stats-bar-seg {
+  width: 100%;
+  min-height: 0;
+}
 .stats-bar-label {
   font-size: 9px;
   color: var(--text3);
@@ -1595,11 +1772,13 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       </div>
     </div>
     <div class="header-actions">
+      <button class="header-asst-btn" id="headerAsstBtn" onclick="showAssistants()" title="助手">
+        <span class="header-asst-dot" id="headerAsstDot" style="background:#DA7756"></span>
+        <span id="headerAsstName">笨笨</span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
       <button class="icon-btn" id="nightToggleBtn" onclick="cycleTheme()" title="切换到夜间护眼">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      </button>
-      <button class="icon-btn" onclick="showConversations()" title="对话列表">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </button>
       <button class="icon-btn" onclick="showStats()" title="统计">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
@@ -1671,38 +1850,6 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       <div class="field">
         <label>OpenRouter API Key</label>
         <input type="password" id="apiKey" placeholder="sk-or-v1-..." autocomplete="off">
-      </div>
-
-      <div class="field">
-        <label>模型</label>
-        <select id="modelSelect">
-          <optgroup label="Opus">
-            <option value="anthropic/claude-opus-4.7">Claude Opus 4.7</option>
-            <option value="anthropic/claude-opus-4.6" selected>Claude Opus 4.6 (笨笨)</option>
-          </optgroup>
-          <optgroup label="Sonnet">
-            <option value="anthropic/claude-sonnet-4.5">Claude Sonnet 4.5</option>
-          </optgroup>
-          <optgroup label="OpenAI">
-            <option value="openai/gpt-4o-2024-11-20">GPT-4o (2024-11-20)</option>
-          </optgroup>
-        </select>
-        <div class="hint">也可以手动输入其他 OpenRouter 模型 ID</div>
-      </div>
-
-      <div class="field">
-        <label>自定义模型 ID (可选)</label>
-        <input type="text" id="customModel" placeholder="留空则使用上面选择的模型">
-        <div class="hint">如需使用列表中没有的模型，在此输入完整 ID</div>
-      </div>
-
-      <div class="field">
-        <label>System Prompt</label>
-        <textarea id="systemPrompt" placeholder="角色设定..." oninput="updateSPCounter()"></textarea>
-        <div class="hint" id="spCounter" style="display:flex;justify-content:space-between;align-items:center;">
-          <span id="spCounterText">0 字符 · ~0 tokens</span>
-          <span id="spCounterBar" style="font-family:var(--mono);font-size:11px;color:var(--text3);"></span>
-        </div>
       </div>
 
       <div class="field">
@@ -1851,14 +1998,85 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
   </div>
 </div>
 
-<!-- CONVERSATIONS MODAL -->
+<!-- ASSISTANT & CONVERSATIONS MODAL -->
 <div class="modal-overlay" id="convModal">
   <div class="modal">
-    <h2>对话 <button onclick="closeModal('convModal')">&#10005;</button></h2>
-    <div class="btn-row" style="margin-top:0;margin-bottom:14px;">
-      <button class="btn primary" onclick="newConversation()">+ 新对话</button>
+    <!-- Level 1: Assistant list -->
+    <div id="asstListPanel">
+      <h2>助手 <button onclick="closeModal('convModal')">&#10005;</button></h2>
+      <div class="btn-row" style="margin-top:0;margin-bottom:14px;">
+        <button class="btn primary" onclick="showAsstEdit()">+ 新助手</button>
+      </div>
+      <div class="asst-list" id="asstList"></div>
     </div>
-    <div class="conv-list" id="convList"></div>
+    <!-- Level 2: Conversations for an assistant -->
+    <div id="asstConvPanel" style="display:none">
+      <div class="panel-nav">
+        <button class="panel-back-btn" onclick="showAssistantListPanel()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="panel-nav-dot" id="asstConvDot"></span>
+        <span class="panel-nav-title" id="asstConvTitle">对话</span>
+        <button class="icon-btn" style="width:28px;height:28px;" onclick="showAsstEdit(state.activeAssistantId)" title="编辑助手">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+      </div>
+      <div class="btn-row" style="margin-top:0;margin-bottom:14px;">
+        <button class="btn primary" onclick="newConversation()">+ 新对话</button>
+      </div>
+      <div class="conv-list" id="convList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ASSISTANT EDIT MODAL -->
+<div class="modal-overlay" id="asstEditModal">
+  <div class="modal">
+    <h2 id="asstEditTitle">新助手 <button onclick="closeModal('asstEditModal')">&#10005;</button></h2>
+    <div class="asst-edit-form">
+      <div class="field">
+        <label>名称</label>
+        <input type="text" id="asstEditName" placeholder="给助手起个名字...">
+      </div>
+      <div class="field">
+        <label>颜色</label>
+        <div class="asst-color-picker" id="asstColorPicker"></div>
+      </div>
+      <div class="field">
+        <label>模型</label>
+        <select id="asstEditModel">
+          <optgroup label="Opus">
+            <option value="anthropic/claude-opus-4.7">Claude Opus 4.7</option>
+            <option value="anthropic/claude-opus-4.6" selected>Claude Opus 4.6 (笨笨)</option>
+          </optgroup>
+          <optgroup label="Sonnet">
+            <option value="anthropic/claude-sonnet-4.5">Claude Sonnet 4.5</option>
+          </optgroup>
+          <optgroup label="Google">
+            <option value="google/gemini-2.5-pro-preview">Gemini 2.5 Pro Preview</option>
+          </optgroup>
+          <optgroup label="OpenAI">
+            <option value="openai/gpt-4o-2024-11-20">GPT-4o (2024-11-20)</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="field">
+        <label>自定义模型 ID (可选)</label>
+        <input type="text" id="asstEditCustomModel" placeholder="留空则使用上面选择的模型">
+        <div class="hint">如需使用列表中没有的模型，在此输入完整 ID</div>
+      </div>
+      <div class="field">
+        <label>System Prompt</label>
+        <textarea id="asstEditSP" placeholder="角色设定..." oninput="updateAsstSPCounter()"></textarea>
+        <div class="hint" style="display:flex;justify-content:space-between;align-items:center;">
+          <span id="asstSPCounterText">0 字符 · ~0 tokens</span>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" onclick="saveAsstEdit()">保存</button>
+        <button class="btn" id="asstDeleteBtn" onclick="deleteAssistant()" style="display:none;color:var(--red);">删除助手</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1898,17 +2116,27 @@ const DB_KEY = 'benben_data';
 // Full conversation data (with messages) lives in IndexedDB, loaded on demand.
 // state._activeConvData holds the currently loaded conversation's full data (with messages).
 
+const ASST_COLORS = ['#DA7756','#228CC7','#379A8B','#3EBCD2','#DB444B','#EBB434','#9467BD','#D27AB7'];
+
 function defaultState() {
   return {
     apiKey: '',
-    model: 'anthropic/claude-opus-4.6',
-    customModel: '',
-    systemPrompt: '',
     cacheTTL: '1h',
     maxTokens: 4096,
     contextLen: 0,
     temperature: 0.7,
-    conversations: {},   // { id: { id, title, created, msgCount } } — NO messages
+    assistants: {
+      'asst_default': {
+        id: 'asst_default',
+        name: '笨笨',
+        systemPrompt: '',
+        model: 'anthropic/claude-opus-4.6',
+        customModel: '',
+        color: '#DA7756'
+      }
+    },
+    activeAssistantId: 'asst_default',
+    conversations: {},   // { id: { id, title, created, msgCount, assistantId } } — NO messages
     activeConvId: null,
     memories: [],
     webdav: { url: '', user: '', pass: '', path: '/BenBenHome/' },
@@ -1936,7 +2164,31 @@ function loadState() {
           }
         }
       }
-      return { ...defaultState(), ...parsed, _activeConvData: null };
+      const merged = { ...defaultState(), ...parsed, _activeConvData: null };
+      // Migration: old format had global model/systemPrompt/customModel but no assistants
+      if (!parsed.assistants) {
+        const defaultAsst = {
+          id: 'asst_default',
+          name: '笨笨',
+          systemPrompt: parsed.systemPrompt || '',
+          model: parsed.model || 'anthropic/claude-opus-4.6',
+          customModel: parsed.customModel || '',
+          color: '#DA7756'
+        };
+        merged.assistants = { 'asst_default': defaultAsst };
+        merged.activeAssistantId = 'asst_default';
+        // Assign all existing conversations to default assistant
+        for (const id in merged.conversations) {
+          if (!merged.conversations[id].assistantId) {
+            merged.conversations[id].assistantId = 'asst_default';
+          }
+        }
+        // Clean up old global fields
+        delete merged.systemPrompt;
+        delete merged.model;
+        delete merged.customModel;
+      }
+      return merged;
     }
   } catch(e) {}
   return { ...defaultState(), _activeConvData: null };
@@ -2145,7 +2397,8 @@ async function tryLoadFromIDB() {
                 id: conv.id,
                 title: conv.title,
                 created: conv.created,
-                msgCount: conv.messages.length
+                msgCount: conv.messages.length,
+                assistantId: conv.assistantId || 'asst_default'
               };
               migrated++;
             }
@@ -2179,7 +2432,8 @@ async function tryLoadFromIDB() {
           id: conv.id,
           title: conv.title,
           created: conv.created,
-          msgCount: (conv.messages || []).length
+          msgCount: (conv.messages || []).length,
+          assistantId: conv.assistantId || 'asst_default'
         };
       }
       saveSettingsToLS();
@@ -2271,13 +2525,12 @@ async function exportLocalBackup(silent) {
     }
   }
   const backup = {
-    version: 1,
+    version: 2,
     timestamp: new Date().toISOString(),
     data: {
       apiKey: state.apiKey,
-      model: state.model,
-      customModel: state.customModel,
-      systemPrompt: state.systemPrompt,
+      assistants: state.assistants,
+      activeAssistantId: state.activeAssistantId,
       cacheTTL: state.cacheTTL,
       maxTokens: state.maxTokens,
       temperature: state.temperature,
@@ -2319,9 +2572,6 @@ function importLocalBackup(event) {
       const keepWebdav = state.webdav;
       const keepAutoExport = state.autoExport;
       state.apiKey = data.apiKey || state.apiKey;
-      state.model = data.model || state.model;
-      state.customModel = data.customModel || '';
-      state.systemPrompt = data.systemPrompt || '';
       state.cacheTTL = data.cacheTTL || '1h';
       state.maxTokens = data.maxTokens || 4096;
       state.temperature = data.temperature ?? 0.7;
@@ -2330,6 +2580,24 @@ function importLocalBackup(event) {
       state.memories = data.memories || [];
       state.webdav = keepWebdav;
       state.autoExport = keepAutoExport;
+
+      // Import assistants (v2) or migrate from v1
+      if (data.assistants) {
+        state.assistants = data.assistants;
+        state.activeAssistantId = data.activeAssistantId || Object.keys(data.assistants)[0] || 'asst_default';
+      } else {
+        // v1 format: create default assistant from global model/systemPrompt
+        state.assistants = {
+          'asst_default': {
+            id: 'asst_default', name: '笨笨',
+            systemPrompt: data.systemPrompt || '',
+            model: data.model || 'anthropic/claude-opus-4.6',
+            customModel: data.customModel || '',
+            color: '#DA7756'
+          }
+        };
+        state.activeAssistantId = 'asst_default';
+      }
 
       // Import conversations: clear IDB first, then save each to IDB
       const importedConvs = data.conversations || {};
@@ -2354,7 +2622,8 @@ function importLocalBackup(event) {
           title: conv.title,
           created: conv.created,
           msgCount: conv.messages.length,
-          totalCost: conv.messages.reduce((s, m) => s + (m.usage?.cost || 0), 0)
+          totalCost: conv.messages.reduce((s, m) => s + (m.usage?.cost || 0), 0),
+          assistantId: conv.assistantId || 'asst_default'
         };
       }
 
@@ -2369,6 +2638,7 @@ function importLocalBackup(event) {
       saveSettingsToIDB();
       if (!state.activeConvId) newConversation();
       renderMessages();
+      updateHeaderAssistant();
       showToast('导入成功！' + (backup.timestamp || '').slice(0,19));
     } catch(err) {
       alert('导入失败: ' + err.message);
@@ -2387,22 +2657,38 @@ function getActiveConv() {
       id: state.activeConvId,
       title: state.conversations[state.activeConvId]?.title || '新对话',
       messages: [],
-      created: state.conversations[state.activeConvId]?.created || Date.now()
+      created: state.conversations[state.activeConvId]?.created || Date.now(),
+      assistantId: state.conversations[state.activeConvId]?.assistantId || state.activeAssistantId || 'asst_default'
     };
   }
   return state._activeConvData;
 }
 
+function getActiveAssistant() {
+  const id = state.activeAssistantId;
+  if (id && state.assistants[id]) return state.assistants[id];
+  // Fallback to first assistant
+  const first = Object.values(state.assistants)[0];
+  if (first) { state.activeAssistantId = first.id; return first; }
+  // Create default if none exist
+  const def = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: '#DA7756' };
+  state.assistants['asst_default'] = def;
+  state.activeAssistantId = 'asst_default';
+  return def;
+}
+
 function getModel() {
-  return state.customModel.trim() || state.model;
+  const asst = getActiveAssistant();
+  return (asst.customModel || '').trim() || asst.model;
 }
 
 // ============ CONVERSATIONS ============
 function newConversation() {
   const id = 'c_' + Date.now();
-  const convData = { id, title: '新对话', messages: [], created: Date.now() };
+  const asstId = state.activeAssistantId || 'asst_default';
+  const convData = { id, title: '新对话', messages: [], created: Date.now(), assistantId: asstId };
   // Save index metadata (no messages)
-  state.conversations[id] = { id, title: '新对话', created: Date.now(), msgCount: 0 };
+  state.conversations[id] = { id, title: '新对话', created: Date.now(), msgCount: 0, assistantId: asstId };
   state.activeConvId = id;
   state._activeConvData = convData;
   saveState();
@@ -2412,6 +2698,12 @@ function newConversation() {
 
 async function switchConversation(id) {
   state.activeConvId = id;
+  // Also sync active assistant to match this conversation
+  const convMeta = state.conversations[id];
+  if (convMeta?.assistantId && state.assistants[convMeta.assistantId]) {
+    state.activeAssistantId = convMeta.assistantId;
+    updateHeaderAssistant();
+  }
   // Load full conversation data from IDB
   const convData = await loadConvFromIDB(id);
   if (convData) {
@@ -2420,9 +2712,10 @@ async function switchConversation(id) {
     // Fallback: create empty
     state._activeConvData = {
       id,
-      title: state.conversations[id]?.title || '新对话',
+      title: convMeta?.title || '新对话',
       messages: [],
-      created: state.conversations[id]?.created || Date.now()
+      created: convMeta?.created || Date.now(),
+      assistantId: convMeta?.assistantId || state.activeAssistantId || 'asst_default'
     };
   }
   saveState();
@@ -2432,17 +2725,21 @@ async function switchConversation(id) {
 
 function deleteConversation(id) {
   if (!confirm('删除这个对话？')) return;
+  const asstId = state.conversations[id]?.assistantId || state.activeAssistantId || 'asst_default';
   delete state.conversations[id];
   deleteConvFromIDB(id);
   if (state.activeConvId === id) {
-    const ids = Object.keys(state.conversations);
-    state.activeConvId = ids.length > 0 ? ids[ids.length - 1] : null;
+    // Find next conversation within same assistant
+    const asstConvs = Object.values(state.conversations)
+      .filter(c => (c.assistantId || 'asst_default') === asstId)
+      .sort((a, b) => b.created - a.created);
+    state.activeConvId = asstConvs.length > 0 ? asstConvs[0].id : null;
     state._activeConvData = null;
   }
   saveState();
   if (!state.activeConvId) newConversation();
   else switchConversation(state.activeConvId);
-  showConversations();
+  showAssistantConvs();
 }
 
 // Format assistant message timestamp: "2026-05-29 20:40"
@@ -2482,9 +2779,83 @@ function formatDateGroupKey(timestamp) {
 // Context menu state
 let convMenuTargetId = null;
 
-function showConversations() {
+function showAssistants() {
+  renderAssistantList();
+  document.getElementById('asstListPanel').style.display = '';
+  document.getElementById('asstConvPanel').style.display = 'none';
+  openModal('convModal', true);
+}
+
+function renderAssistantList() {
+  const list = document.getElementById('asstList');
+  const assts = Object.values(state.assistants);
+  // Count conversations per assistant
+  const convCounts = {};
+  for (const c of Object.values(state.conversations)) {
+    const aid = c.assistantId || 'asst_default';
+    convCounts[aid] = (convCounts[aid] || 0) + 1;
+  }
+  list.innerHTML = assts.map(a => `
+    <div class="asst-item ${a.id === state.activeAssistantId ? 'active' : ''}" onclick="drillIntoAssistant('${a.id}')">
+      <span class="asst-dot" style="background:${a.color || '#DA7756'}"></span>
+      <div class="asst-item-info">
+        <div class="asst-item-name">${esc(a.name)}</div>
+        <div class="asst-item-meta">${shortModelName(a.model || '')}${convCounts[a.id] ? ' · ' + convCounts[a.id] + ' 个对话' : ''}</div>
+      </div>
+      <button class="asst-item-more" onclick="event.stopPropagation();showAsstEdit('${a.id}')">&#8943;</button>
+    </div>
+  `).join('');
+}
+
+async function drillIntoAssistant(asstId) {
+  await switchAssistant(asstId);
+  showAssistantConvs();
+}
+
+async function switchAssistant(asstId) {
+  if (!state.assistants[asstId]) return;
+  state.activeAssistantId = asstId;
+  // Find the most recent conversation for this assistant, or create one
+  const asstConvs = Object.values(state.conversations)
+    .filter(c => (c.assistantId || 'asst_default') === asstId)
+    .sort((a, b) => b.created - a.created);
+  if (asstConvs.length > 0) {
+    state.activeConvId = asstConvs[0].id;
+    const convData = await loadConvFromIDB(asstConvs[0].id);
+    state._activeConvData = convData || {
+      id: asstConvs[0].id, title: asstConvs[0].title, messages: [],
+      created: asstConvs[0].created, assistantId: asstId
+    };
+  } else {
+    // Create a new conversation for this assistant
+    const id = 'c_' + Date.now();
+    const convData = { id, title: '新对话', messages: [], created: Date.now(), assistantId: asstId };
+    state.conversations[id] = { id, title: '新对话', created: Date.now(), msgCount: 0, assistantId: asstId };
+    state.activeConvId = id;
+    state._activeConvData = convData;
+  }
+  updateHeaderAssistant();
+  saveState();
+  renderMessages();
+}
+
+function showAssistantListPanel() {
+  document.getElementById('asstListPanel').style.display = '';
+  document.getElementById('asstConvPanel').style.display = 'none';
+  renderAssistantList();
+}
+
+function showAssistantConvs() {
+  const asst = getActiveAssistant();
+  document.getElementById('asstListPanel').style.display = 'none';
+  document.getElementById('asstConvPanel').style.display = '';
+  document.getElementById('asstConvDot').style.background = asst.color || '#DA7756';
+  document.getElementById('asstConvTitle').textContent = asst.name;
+
   const list = document.getElementById('convList');
-  const convs = Object.values(state.conversations).sort((a,b) => b.created - a.created);
+  const convs = Object.values(state.conversations)
+    .filter(c => (c.assistantId || 'asst_default') === asst.id)
+    .sort((a,b) => b.created - a.created);
 
   // Group by date
   const groups = [];
@@ -2513,7 +2884,149 @@ function showConversations() {
       </div>
     `;
   }).join('');
+
+  if (convs.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px;">还没有对话</div>';
+  }
   openModal('convModal', true);
+}
+
+function showConversations() {
+  // Legacy compat: drill into current assistant's convs
+  showAssistantConvs();
+  openModal('convModal', true);
+}
+
+// ============ ASSISTANT EDIT ============
+let editingAsstId = null;
+
+function showAsstEdit(asstId) {
+  editingAsstId = asstId || null;
+  const isNew = !asstId;
+  document.getElementById('asstEditTitle').innerHTML = (isNew ? '新助手' : '编辑助手') + ' <button onclick="closeModal(\'asstEditModal\')">&#10005;</button>';
+
+  const asst = isNew ? { name: '', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: ASST_COLORS[Object.keys(state.assistants).length % ASST_COLORS.length] } : state.assistants[asstId];
+
+  document.getElementById('asstEditName').value = asst.name || '';
+  document.getElementById('asstEditModel').value = asst.model || 'anthropic/claude-opus-4.6';
+  document.getElementById('asstEditCustomModel').value = asst.customModel || '';
+  document.getElementById('asstEditSP').value = asst.systemPrompt || '';
+  document.getElementById('asstDeleteBtn').style.display = (isNew || asstId === 'asst_default') ? 'none' : '';
+
+  // Render color picker
+  const picker = document.getElementById('asstColorPicker');
+  const selColor = asst.color || '#DA7756';
+  picker.innerHTML = ASST_COLORS.map(c =>
+    `<div class="asst-color-opt ${c === selColor ? 'selected' : ''}" style="background:${c}" onclick="pickAsstColor(this,'${c}')"></div>`
+  ).join('');
+
+  updateAsstSPCounter();
+  openModal('asstEditModal', true);
+}
+
+function pickAsstColor(el, color) {
+  document.querySelectorAll('.asst-color-opt').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function getSelectedAsstColor() {
+  const sel = document.querySelector('.asst-color-opt.selected');
+  return sel ? sel.style.background : '#DA7756';
+}
+
+function updateAsstSPCounter() {
+  const ta = document.getElementById('asstEditSP');
+  const text = ta ? ta.value : '';
+  const chars = text.length;
+  let tokens = 0;
+  let nonCJK = '';
+  for (const ch of text) {
+    if (/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uffef]/.test(ch)) {
+      tokens += 1.5;
+    } else {
+      nonCJK += ch;
+    }
+  }
+  const words = nonCJK.trim().split(/\s+/).filter(w => w.length > 0);
+  tokens += words.length * 1.3;
+  tokens = Math.round(tokens);
+  const el = document.getElementById('asstSPCounterText');
+  if (el) el.textContent = `${chars} 字符 · ~${tokens} tokens`;
+}
+
+function saveAsstEdit() {
+  const name = document.getElementById('asstEditName').value.trim();
+  if (!name) { alert('请输入助手名称'); return; }
+
+  const model = document.getElementById('asstEditModel').value;
+  const customModel = document.getElementById('asstEditCustomModel').value.trim();
+  const systemPrompt = document.getElementById('asstEditSP').value;
+  const color = getSelectedAsstColor();
+
+  if (editingAsstId && state.assistants[editingAsstId]) {
+    // Update existing
+    const asst = state.assistants[editingAsstId];
+    asst.name = name;
+    asst.model = model;
+    asst.customModel = customModel;
+    asst.systemPrompt = systemPrompt;
+    asst.color = color;
+  } else {
+    // Create new
+    const id = 'asst_' + Date.now();
+    state.assistants[id] = { id, name, model, customModel, systemPrompt, color };
+    editingAsstId = id;
+    // Switch to the new assistant
+    switchAssistant(id);
+  }
+
+  saveState();
+  updateHeaderAssistant();
+  closeModal('asstEditModal');
+  renderAssistantList();
+}
+
+function deleteAssistant() {
+  if (!editingAsstId || editingAsstId === 'asst_default') return;
+  const asst = state.assistants[editingAsstId];
+  if (!confirm(`确定删除助手「${asst.name}」及其所有对话？`)) return;
+
+  // Delete all conversations belonging to this assistant
+  for (const id in state.conversations) {
+    if ((state.conversations[id].assistantId || 'asst_default') === editingAsstId) {
+      deleteConvFromIDB(id);
+      delete state.conversations[id];
+    }
+  }
+
+  delete state.assistants[editingAsstId];
+
+  // Switch to default assistant
+  if (state.activeAssistantId === editingAsstId) {
+    const first = Object.values(state.assistants)[0];
+    if (first) switchAssistant(first.id);
+    else {
+      // Recreate default
+      state.assistants['asst_default'] = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: '#DA7756' };
+      switchAssistant('asst_default');
+    }
+  }
+
+  saveState();
+  updateHeaderAssistant();
+  closeModal('asstEditModal');
+  renderAssistantList();
+  renderMessages();
+}
+
+function updateHeaderAssistant() {
+  const asst = getActiveAssistant();
+  const nameEl = document.getElementById('headerAsstName');
+  const dotEl = document.getElementById('headerAsstDot');
+  const inputEl = document.getElementById('userInput');
+  if (nameEl) nameEl.textContent = asst.name;
+  if (dotEl) dotEl.style.background = asst.color || '#DA7756';
+  if (inputEl) inputEl.placeholder = `跟${asst.name}说点什么...`;
 }
 
 function showConvMenu(e, convId) {
@@ -2655,9 +3168,6 @@ function updateSPCounter() {
 // ============ SETTINGS ============
 function showSettings() {
   document.getElementById('apiKey').value = state.apiKey;
-  document.getElementById('modelSelect').value = state.model;
-  document.getElementById('customModel').value = state.customModel || '';
-  document.getElementById('systemPrompt').value = state.systemPrompt;
   document.getElementById('cacheTTL').value = state.cacheTTL;
   document.getElementById('maxTokens').value = state.maxTokens;
   document.getElementById('contextLen').value = state.contextLen || 0;
@@ -2674,14 +3184,10 @@ function showSettings() {
   document.getElementById('reasoningEffort').value = state.reasoningEffort || 'medium';
   openModal('settingsModal', true);
   updateStorageUsage();
-  updateSPCounter();
 }
 
 function saveSettings() {
   state.apiKey = document.getElementById('apiKey').value.trim();
-  state.model = document.getElementById('modelSelect').value;
-  state.customModel = document.getElementById('customModel').value.trim();
-  state.systemPrompt = document.getElementById('systemPrompt').value;
   state.cacheTTL = document.getElementById('cacheTTL').value;
   state.maxTokens = parseInt(document.getElementById('maxTokens').value) || 4096;
   state.contextLen = parseInt(document.getElementById('contextLen').value) || 0;
@@ -2712,7 +3218,7 @@ function renderMessages() {
         <div class="empty-logo">
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z" fill="white" fill-rule="nonzero"/></svg>
         </div>
-        <div class="label">笨笨在这里等你</div>
+        <div class="label">${esc(getActiveAssistant().name)}在这里等你</div>
         <div class="sublabel">cache_control: ready</div>
       </div>`;
     updateCostBar();
@@ -3113,7 +3619,8 @@ async function sendMessage() {
 
   try {
     const messages = [];
-    const fullSystem = (state.systemPrompt || '').trim();
+    const asst = getActiveAssistant();
+    const fullSystem = (asst.systemPrompt || '').trim();
     if (fullSystem) {
       messages.push({ role: 'system', content: fullSystem });
     }
@@ -3486,7 +3993,8 @@ function importKelivo(event) {
           id: newId,
           title: conv.title || '(Kelivo) 未命名对话',
           messages,
-          created: new Date(conv.createdAt || conv.updatedAt || Date.now()).getTime()
+          created: new Date(conv.createdAt || conv.updatedAt || Date.now()).getTime(),
+          assistantId: state.activeAssistantId || 'asst_default'
         };
         // Save full conv to IDB
         await saveConvToIDB(convData);
@@ -3495,7 +4003,8 @@ function importKelivo(event) {
           id: newId,
           title: convData.title,
           created: convData.created,
-          msgCount: messages.length
+          msgCount: messages.length,
+          assistantId: convData.assistantId
         };
         importedCount++;
       }
@@ -3607,13 +4116,12 @@ async function doBackup() {
     const allConvs = await loadAllConvsFromIDB();
     // Prepare backup data
     const backup = {
-      version: 1,
+      version: 2,
       timestamp: new Date().toISOString(),
       data: {
         apiKey: state.apiKey,
-        model: state.model,
-        customModel: state.customModel,
-        systemPrompt: state.systemPrompt,
+        assistants: state.assistants,
+        activeAssistantId: state.activeAssistantId,
         cacheTTL: state.cacheTTL,
         maxTokens: state.maxTokens,
         temperature: state.temperature,
@@ -3661,9 +4169,6 @@ async function doRestore() {
       // Full overwrite (restore apiKey from backup, keep webdav)
       const keepWebdav = state.webdav;
       state.apiKey = data.apiKey || state.apiKey;
-      state.model = data.model || state.model;
-      state.customModel = data.customModel || '';
-      state.systemPrompt = data.systemPrompt || '';
       state.cacheTTL = data.cacheTTL || '1h';
       state.maxTokens = data.maxTokens || 4096;
       state.temperature = data.temperature ?? 0.7;
@@ -3672,6 +4177,23 @@ async function doRestore() {
       state.memories = data.memories || [];
       state.webdav = keepWebdav;
 
+      // Import assistants (v2) or migrate from v1
+      if (data.assistants) {
+        state.assistants = data.assistants;
+        state.activeAssistantId = data.activeAssistantId || Object.keys(data.assistants)[0] || 'asst_default';
+      } else {
+        state.assistants = {
+          'asst_default': {
+            id: 'asst_default', name: '笨笨',
+            systemPrompt: data.systemPrompt || '',
+            model: data.model || 'anthropic/claude-opus-4.6',
+            customModel: data.customModel || '',
+            color: '#DA7756'
+          }
+        };
+        state.activeAssistantId = 'asst_default';
+      }
+
       // Import conversations to IDB
       const importedConvs = data.conversations || {};
       state.conversations = {};
@@ -3679,19 +4201,26 @@ async function doRestore() {
         await saveConvToIDB(conv);
         state.conversations[id] = {
           id: conv.id, title: conv.title, created: conv.created,
-          msgCount: (conv.messages || []).length
+          msgCount: (conv.messages || []).length,
+          assistantId: conv.assistantId || 'asst_default'
         };
       }
       state.activeConvId = Object.keys(state.conversations)[0] || null;
     } else {
-      // Smart merge: only add missing conversations and memories
+      // Smart merge: only add missing conversations, assistants, and memories
+      if (data.assistants) {
+        for (const [id, asst] of Object.entries(data.assistants)) {
+          if (!state.assistants[id]) state.assistants[id] = asst;
+        }
+      }
       const backupConvs = data.conversations || {};
       for (const [id, conv] of Object.entries(backupConvs)) {
         if (!state.conversations[id]) {
           await saveConvToIDB(conv);
           state.conversations[id] = {
             id: conv.id, title: conv.title, created: conv.created,
-            msgCount: (conv.messages || []).length
+            msgCount: (conv.messages || []).length,
+            assistantId: conv.assistantId || 'asst_default'
           };
         }
       }
@@ -3713,6 +4242,7 @@ async function doRestore() {
     saveSettingsToIDB();
     if (!state.activeConvId) newConversation();
     renderMessages();
+    updateHeaderAssistant();
     toggleRestoreOptions();
     setWebDAVStatus('ok', '恢复成功 (' + mode + ') - ' + (backup.timestamp || '').slice(0, 19));
   } catch(e) {
@@ -3733,11 +4263,33 @@ async function showStats() {
   // Gather all messages
   let allMsgs = [];
   for (const conv of convList) {
+    const asstId = conv.assistantId || state.conversations[conv.id]?.assistantId || 'asst_default';
     for (const m of (conv.messages || [])) {
       m._convId = conv.id;
       m._convTitle = conv.title;
+      m._assistantId = asstId;
       allMsgs.push(m);
     }
+  }
+
+  // Build per-day dominant assistant color map
+  const dailyAsstCounts = {}; // { dateKey: { assistantId: count } }
+  for (const m of allMsgs) {
+    if (m.role !== 'user') continue;
+    const ts = extractTimestamp(m);
+    if (!ts) continue;
+    const key = localDateKey(ts);
+    if (!dailyAsstCounts[key]) dailyAsstCounts[key] = {};
+    dailyAsstCounts[key][m._assistantId] = (dailyAsstCounts[key][m._assistantId] || 0) + 1;
+  }
+  function getDayColor(dateKey) {
+    const counts = dailyAsstCounts[dateKey];
+    if (!counts) return 'var(--accent)';
+    let maxId = null, maxN = 0;
+    for (const [id, n] of Object.entries(counts)) {
+      if (n > maxN) { maxN = n; maxId = id; }
+    }
+    return (maxId && state.assistants[maxId]?.color) || 'var(--accent)';
   }
 
   // ---- Compute overview for 3 periods ----
@@ -3919,9 +4471,18 @@ async function showStats() {
           ${dailyData.map(([d, c], idx) => {
             const h = Math.max(2, (c / maxDaily) * 90);
             const cost = dailyCosts[d] || 0;
+            const asstCounts = dailyAsstCounts[d] || {};
+            // Build segments sorted by count descending (largest at bottom via column-reverse)
+            const segs = Object.entries(asstCounts)
+              .sort((a, b) => b[1] - a[1])
+              .map(([aid, n]) => {
+                const color = (state.assistants[aid]?.color) || 'var(--accent)';
+                return `<div class="stats-bar-seg" style="flex:${n};background:${color}"></div>`;
+              }).join('');
             return `<div class="stats-bar-col" data-date="${d}" data-count="${c}" data-cost="${cost.toFixed(4)}" onclick="showBarTip(this,event)">
-              <div class="stats-bar" style="height:${h}%"></div>
+              <div class="stats-bar-stack" style="height:${h}%">${segs || `<div class="stats-bar-seg" style="flex:1;background:var(--surface3)"></div>`}</div>
             </div>`;
+          }).join('')}
           }).join('')}
           <div class="stats-bar-tip" id="statsBarTip"></div>
         </div>
@@ -3934,7 +4495,7 @@ async function showStats() {
 
       <div class="stats-section">
         <div class="stats-section-title">活跃热力图</div>
-        ${buildCalendarHeatmap(userMsgs)}
+        ${buildCalendarHeatmap(userMsgs, getDayColor)}
       </div>
 
       <div class="stats-section">
@@ -4082,7 +4643,7 @@ async function jumpToConv(id) {
   }
 }
 
-function buildCalendarHeatmap(userMsgs) {
+function buildCalendarHeatmap(userMsgs, getDayColor) {
   if (userMsgs.length === 0) return '<div style="color:var(--text3);font-size:13px;">暂无数据</div>';
 
   // Compute daily counts from ALL user messages
@@ -4151,6 +4712,15 @@ function buildCalendarHeatmap(userMsgs) {
   const labelW = 16;
   const gridW = labelW + totalCols * (cellSize + gap);
 
+  // Helper: convert hex color to rgba with opacity
+  function hexToRgba(hex, opacity) {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.substring(0, 2), 16);
+    const g = parseInt(h.substring(2, 4), 16);
+    const b = parseInt(h.substring(4, 6), 16);
+    return `rgba(${r},${g},${b},${opacity})`;
+  }
+
   let html = '<div class="stats-cal-wrap">';
 
   // Month labels
@@ -4169,10 +4739,14 @@ function buildCalendarHeatmap(userMsgs) {
       const cell = weeks[w][row];
       if (cell.empty) {
         html += '<span class="stats-cal-cell empty"></span>';
+      } else if (cell.count === 0) {
+        html += `<span class="stats-cal-cell" title="${cell.key}: 0 条"></span>`;
       } else {
         const ratio = cell.count / maxCount;
-        const level = cell.count === 0 ? '' : ratio <= 0.25 ? 'h1' : ratio <= 0.5 ? 'h2' : ratio <= 0.75 ? 'h3' : 'h4';
-        html += `<span class="stats-cal-cell ${level}" title="${cell.key}: ${cell.count} 条"></span>`;
+        const opacity = ratio <= 0.25 ? 0.2 : ratio <= 0.5 ? 0.4 : ratio <= 0.75 ? 0.65 : 1;
+        const color = getDayColor ? getDayColor(cell.key) : 'var(--accent)';
+        const bg = color.startsWith('#') ? hexToRgba(color, opacity) : color;
+        html += `<span class="stats-cal-cell" style="background:${bg}" title="${cell.key}: ${cell.count} 条"></span>`;
       }
     }
   }
@@ -4180,9 +4754,9 @@ function buildCalendarHeatmap(userMsgs) {
 
   html += `<div class="stats-heatmap-legend">
     少 <span class="swatch" style="background:var(--surface3)"></span>
-    <span class="swatch" style="background:var(--accent-dim)"></span>
-    <span class="swatch" style="background:rgba(218,119,86,0.22)"></span>
-    <span class="swatch" style="background:rgba(218,119,86,0.45)"></span>
+    <span class="swatch" style="opacity:0.2;background:var(--accent)"></span>
+    <span class="swatch" style="opacity:0.4;background:var(--accent)"></span>
+    <span class="swatch" style="opacity:0.65;background:var(--accent)"></span>
     <span class="swatch" style="background:var(--accent)"></span> 多
   </div>`;
 
@@ -4223,6 +4797,7 @@ function showBarTip(el, event) {
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', async () => {
   syncThemeIcon();
+  updateHeaderAssistant();
   if (!state.activeConvId) newConversation();
   renderMessages();
   // Set auto-export toggle state
