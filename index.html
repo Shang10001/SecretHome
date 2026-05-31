@@ -148,6 +148,7 @@ html, body {
   background: var(--surface2);
   border: none;
   border-radius: 20px;
+  flex-shrink: 0;
 }
 .cache-dot {
   width: 6px;
@@ -163,7 +164,8 @@ html, body {
 .header-actions {
   display: flex;
   gap: 4px;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
 }
 .icon-btn {
   width: 36px;
@@ -178,6 +180,7 @@ html, body {
   cursor: pointer;
   font-size: 16px;
   transition: all 0.15s;
+  flex-shrink: 0;
 }
 .icon-btn:hover, .icon-btn:active {
   background: var(--surface2);
@@ -193,6 +196,7 @@ html, body {
   .logo { font-size: 15px; }
   .logo-icon { width: 20px; height: 20px; margin-right: 4px; }
   .cache-indicator { padding: 2px 7px; font-size: 10px; }
+  .header-asst-btn { max-width: 110px; }
 }
 
 /* ========== MESSAGES ========== */
@@ -783,6 +787,7 @@ html, body {
   cursor: pointer;
   transition: all 0.15s;
   max-width: 140px;
+  min-width: 0;
 }
 .header-asst-btn > span:not(.header-asst-dot) {
   overflow: hidden;
