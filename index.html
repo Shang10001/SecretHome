@@ -2509,7 +2509,11 @@ function showToast(msg) {
 // ============ AUTO EXPORT ============
 function toggleAutoExport() {
   state.autoExport = document.getElementById('autoExportToggle').checked;
-  state.autoExportInterval = parseInt(document.getElementById('autoExportInterval').value) || 50;
+  const newInterval = parseInt(document.getElementById('autoExportInterval').value) || 50;
+  if (newInterval !== state.autoExportInterval) {
+    state.msgsSinceExport = 0; // 间隔变了，计数归零
+  }
+  state.autoExportInterval = newInterval;
   saveState();
 }
 
@@ -3203,7 +3207,11 @@ function saveSettings() {
   state.temperature = parseFloat(document.getElementById('temperature').value) || 0.7;
   state.reasoningEnabled = document.getElementById('reasoningEnabled').checked;
   state.reasoningEffort = document.getElementById('reasoningEffort').value;
-  state.autoExportInterval = parseInt(document.getElementById('autoExportInterval').value) || 50;
+  const newAutoInterval = parseInt(document.getElementById('autoExportInterval').value) || 50;
+  if (newAutoInterval !== state.autoExportInterval) {
+    state.msgsSinceExport = 0;
+  }
+  state.autoExportInterval = newAutoInterval;
   saveState();
   closeModal('settingsModal');
 }
