@@ -102,15 +102,15 @@ html, body {
   color: var(--text);
   white-space: nowrap;
   letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
 }
 .logo-icon {
-  display: inline-block;
-  width: 22px;
-  height: 22px;
-  margin-right: 6px;
-  vertical-align: middle;
-  position: relative;
-  top: -1px;
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin-right: 5px;
+  flex-shrink: 0;
 }
 .msg-model {
   font-family: var(--mono);
@@ -193,8 +193,9 @@ html, body {
   .header-actions { gap: 0; }
   .icon-btn { width: 32px; height: 32px; border-radius: 8px; }
   .icon-btn svg { width: 16px; height: 16px; }
+  .header-asst-btn { width: 32px; height: 32px; border-radius: 8px; }
   .logo { font-size: 15px; }
-  .logo-icon { width: 20px; height: 20px; margin-right: 4px; }
+  .logo-icon { width: 16px; height: 16px; margin-right: 4px; }
   .cache-indicator { padding: 2px 7px; font-size: 10px; }
 }
 
@@ -775,12 +776,15 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
   border: none;
   background: transparent;
   cursor: pointer;
   transition: all 0.15s;
+  flex-shrink: 0;
 }
 .header-asst-btn:hover { background: var(--surface2); }
 .header-asst-dot {
@@ -2275,8 +2279,12 @@ async function saveSettingsToIDB() {
 async function saveConvToIDB(convData) {
   try {
     if (!idb) await openIDB();
+    // Strip internal flags before persisting
+    const toSave = { ...convData };
+    delete toSave._dataLost;
+    delete toSave._expectedMsgCount;
     const tx = idb.transaction('conversations', 'readwrite');
-    tx.objectStore('conversations').put(JSON.stringify(convData), convData.id);
+    tx.objectStore('conversations').put(JSON.stringify(toSave), toSave.id);
   } catch(e) { console.warn('IDB conv save failed:', e); }
 }
 
@@ -2345,8 +2353,12 @@ function saveSettingsToLS() {
 
 // Save state: writes settings to both LS and IDB, and writes the active conv to IDB
 function saveState() {
+  // Guard: if the active conv has a data-loss flag and is still empty, don't overwrite IDB or metadata
+  const isDataLost = state._activeConvData && state._activeConvData._dataLost
+    && state._activeConvData.messages.length === 0;
+
   // Update conversation index metadata from active conv data
-  if (state._activeConvData && state.conversations[state._activeConvData.id]) {
+  if (state._activeConvData && state.conversations[state._activeConvData.id] && !isDataLost) {
     const meta = state.conversations[state._activeConvData.id];
     meta.title = state._activeConvData.title;
     meta.msgCount = state._activeConvData.messages.length;
@@ -2354,8 +2366,8 @@ function saveState() {
   }
   saveSettingsToLS();
   saveSettingsToIDB();
-  // Save active conversation's full data to IDB
-  if (state._activeConvData) {
+  // Save active conversation's full data to IDB (skip if data loss detected and still empty)
+  if (state._activeConvData && !isDataLost) {
     saveConvToIDB(state._activeConvData);
   }
   updateSaveStatus('已保存');
@@ -2411,11 +2423,25 @@ async function tryLoadFromIDB() {
       }
     } catch(e) { console.warn('Migration failed:', e); }
   } else {
-    // IDB has conversations — if we're missing _activeConvData, load it
-    if (state.activeConvId && !state._activeConvData) {
-      state._activeConvData = await loadConvFromIDB(state.activeConvId);
-      if (state._activeConvData) {
+    // IDB has conversations — always (re)load the active conversation from IDB,
+    // because renderMessages() may have already created an empty fallback before IDB was ready
+    if (state.activeConvId) {
+      const convFromIDB = await loadConvFromIDB(state.activeConvId);
+      if (convFromIDB) {
+        state._activeConvData = convFromIDB;
         renderMessages();
+      } else {
+        // IDB has other conversations but NOT this one — possible data loss
+        const meta = state.conversations[state.activeConvId];
+        if (meta && (meta.msgCount || 0) > 0) {
+          console.warn(`[数据异常] 对话 "${meta.title}" 索引记录 ${meta.msgCount} 条消息，但 IDB 中找不到`);
+          showToast(`⚠ 对话「${meta.title}」的消息未能从存储中加载，请检查备份`, 5000);
+          // Mark to prevent overwriting
+          if (state._activeConvData && state._activeConvData.id === state.activeConvId) {
+            state._activeConvData._dataLost = true;
+            state._activeConvData._expectedMsgCount = meta.msgCount;
+          }
+        }
       }
     }
     // Also sync conversation index from IDB (in case localStorage was cleared)
@@ -2449,6 +2475,21 @@ async function tryLoadFromIDB() {
     }
   }
   if (needsSave) saveSettingsToLS();
+
+  // Request persistent storage to prevent browser from evicting IDB data
+  try {
+    if (navigator.storage && navigator.storage.persist) {
+      const isPersisted = await navigator.storage.persisted();
+      if (!isPersisted) {
+        const granted = await navigator.storage.persist();
+        if (granted) {
+          console.log('[存储] 已获得持久化存储权限');
+        } else {
+          console.warn('[存储] 持久化存储请求被拒绝，数据可能在长期不使用后被浏览器清除');
+        }
+      }
+    }
+  } catch(e) { /* ignore */ }
 }
 
 function updateSaveStatus(text) {
@@ -2482,12 +2523,12 @@ async function updateStorageUsage() {
   }
 }
 
-function showToast(msg) {
+function showToast(msg, duration) {
   const t = document.getElementById('autosaveToast');
   if (!t) return;
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
+  setTimeout(() => t.classList.remove('show'), duration || 2500);
 }
 
 // ============ AUTO EXPORT ============
@@ -2519,6 +2560,27 @@ async function exportLocalBackup(silent) {
   for (const [id, conv] of Object.entries(allConvs)) {
     if (conv.messages && conv.messages.length > 0) {
       filteredConvs[id] = conv;
+    }
+  }
+
+  // Data integrity check: compare LS index vs IDB
+  const lsConvsWithMsgs = Object.entries(state.conversations)
+    .filter(([_, m]) => (m.msgCount || 0) > 0);
+  const idbConvCount = Object.keys(filteredConvs).length;
+  const missingConvs = lsConvsWithMsgs.filter(([id]) => !filteredConvs[id]);
+
+  if (missingConvs.length > 0) {
+    const missingNames = missingConvs.map(([_, m]) => `「${m.title}」(${m.msgCount}条)`).join('、');
+    if (!silent) {
+      const proceed = confirm(
+        `⚠ 数据完整性警告\n\n以下 ${missingConvs.length} 个对话在索引中有记录但消息数据缺失:\n${missingNames}\n\n导出的备份将不包含这些对话的消息。确定继续导出吗？`
+      );
+      if (!proceed) return;
+    } else {
+      // Silent auto-export: skip if data is incomplete to avoid overwriting good backups
+      console.warn(`[自动备份跳过] ${missingConvs.length} 个对话数据缺失，跳过本次自动备份以保护现有备份`);
+      showToast(`⚠ 检测到数据缺失，已跳过自动备份`, 4000);
+      return;
     }
   }
   const backup = {
@@ -2650,13 +2712,21 @@ function getActiveConv() {
   // Return the full conversation data (with messages)
   if (!state._activeConvData || state._activeConvData.id !== state.activeConvId) {
     // Fallback: create empty conv data if not loaded yet
+    const meta = state.conversations[state.activeConvId];
+    const expectedMsgs = meta?.msgCount || 0;
     state._activeConvData = {
       id: state.activeConvId,
-      title: state.conversations[state.activeConvId]?.title || '新对话',
+      title: meta?.title || '新对话',
       messages: [],
-      created: state.conversations[state.activeConvId]?.created || Date.now(),
-      assistantId: state.conversations[state.activeConvId]?.assistantId || state.activeAssistantId || 'asst_default'
+      created: meta?.created || Date.now(),
+      assistantId: meta?.assistantId || state.activeAssistantId || 'asst_default'
     };
+    // If metadata says this conv should have messages, mark as data loss
+    // to prevent saveState() from overwriting IDB with empty data
+    if (expectedMsgs > 0) {
+      state._activeConvData._dataLost = true;
+      state._activeConvData._expectedMsgCount = expectedMsgs;
+    }
   }
   return state._activeConvData;
 }
@@ -2706,7 +2776,7 @@ async function switchConversation(id) {
   if (convData) {
     state._activeConvData = convData;
   } else {
-    // Fallback: create empty
+    const expectedMsgs = convMeta?.msgCount || 0;
     state._activeConvData = {
       id,
       title: convMeta?.title || '新对话',
@@ -2714,6 +2784,12 @@ async function switchConversation(id) {
       created: convMeta?.created || Date.now(),
       assistantId: convMeta?.assistantId || state.activeAssistantId || 'asst_default'
     };
+    if (expectedMsgs > 0) {
+      // Data loss: metadata says messages exist but IDB has nothing
+      state._activeConvData._dataLost = true;
+      state._activeConvData._expectedMsgCount = expectedMsgs;
+      showToast(`⚠ 对话「${convMeta.title}」的 ${expectedMsgs} 条消息未能加载`, 5000);
+    }
   }
   saveState();
   renderMessages();
@@ -3630,6 +3706,11 @@ async function sendMessage() {
   const sendTs = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 周${days[now.getDay()]}`;
   const userMsg = { role: 'user', content: text, ts: sendTs };
   if (pendingImage) { userMsg.image = pendingImage; pendingImage = null; document.getElementById('imgPreview').style.display = 'none'; }
+  // Clear data-loss flag: user is actively sending messages, accept current state
+  if (conv._dataLost) {
+    delete conv._dataLost;
+    delete conv._expectedMsgCount;
+  }
   conv.messages.push(userMsg);
   if (conv.messages.length === 1) conv.title = text.slice(0, 30) + (text.length > 30 ? '...' : '');
 
@@ -4344,6 +4425,7 @@ async function showStats() {
       m._convId = conv.id;
       m._convTitle = conv.title;
       m._assistantId = asstId;
+      m._convCreated = conv.created;  // fallback timestamp for messages without ts
       allMsgs.push(m);
     }
   }
@@ -4693,6 +4775,8 @@ function extractTimestamp(msg) {
     const match = msg.ts.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/);
     if (match) return new Date(+match[1], +match[2] - 1, +match[3], +match[4], +match[5]);
   }
+  // Fallback: use conversation creation time (attached in showStats)
+  if (typeof msg._convCreated === 'number') return new Date(msg._convCreated);
   return null;
 }
 
