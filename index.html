@@ -102,15 +102,15 @@ html, body {
   color: var(--text);
   white-space: nowrap;
   letter-spacing: -0.3px;
-  display: flex;
-  align-items: center;
 }
 .logo-icon {
-  display: block;
-  width: 18px;
-  height: 18px;
-  margin-right: 5px;
-  flex-shrink: 0;
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  margin-right: 6px;
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
 }
 .msg-model {
   font-family: var(--mono);
@@ -193,9 +193,8 @@ html, body {
   .header-actions { gap: 0; }
   .icon-btn { width: 32px; height: 32px; border-radius: 8px; }
   .icon-btn svg { width: 16px; height: 16px; }
-  .header-asst-btn { width: 32px; height: 32px; border-radius: 8px; }
   .logo { font-size: 15px; }
-  .logo-icon { width: 16px; height: 16px; margin-right: 4px; }
+  .logo-icon { width: 20px; height: 20px; margin-right: 4px; }
   .cache-indicator { padding: 2px 7px; font-size: 10px; }
 }
 
@@ -776,15 +775,12 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border-radius: 10px;
+  padding: 4px;
+  border-radius: 8px;
   border: none;
   background: transparent;
   cursor: pointer;
   transition: all 0.15s;
-  flex-shrink: 0;
 }
 .header-asst-btn:hover { background: var(--surface2); }
 .header-asst-dot {
@@ -842,6 +838,113 @@ html, body {
   border-radius: 6px;
 }
 .conv-item-del:hover { color: var(--red); background: var(--red-light); }
+
+/* ========== MESSAGE SEARCH ========== */
+.search-box {
+  position: relative;
+  margin-bottom: 12px;
+}
+.search-box input {
+  width: 100%;
+  padding: 9px 14px 9px 34px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.search-box input:focus {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.search-box input::placeholder { color: var(--text3); }
+.search-box .search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text3);
+  pointer-events: none;
+}
+.search-box .search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface3);
+  color: var(--text3);
+  font-size: 12px;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.search-box .search-clear.show { display: flex; }
+.search-results {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.search-result-item {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.1s;
+  margin-bottom: 2px;
+}
+.search-result-item:hover { background: var(--surface2); }
+.search-result-item:active { background: var(--surface3); }
+.search-result-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 3px;
+}
+.search-result-snippet {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.search-result-snippet mark {
+  background: var(--accent-light);
+  color: var(--accent2);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+.search-result-meta {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--mono);
+  margin-top: 3px;
+}
+.search-empty {
+  text-align: center;
+  padding: 24px;
+  color: var(--text3);
+  font-size: 13px;
+}
+/* Message highlight animation */
+@keyframes msgHighlight {
+  0% { background: var(--accent-light); }
+  100% { background: transparent; }
+}
+.msg.highlight {
+  animation: msgHighlight 2s ease-out forwards;
+  border-radius: var(--radius-sm);
+}
 
 /* ========== CONV DATE GROUP (Kelivo-style) ========== */
 .conv-date-group {
@@ -2021,7 +2124,13 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       <div class="btn-row" style="margin-top:0;margin-bottom:14px;">
         <button class="btn primary" onclick="newConversation()">+ 新对话</button>
       </div>
+      <div class="search-box">
+        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="msgSearchInput" placeholder="搜索消息内容..." oninput="onSearchInput(this.value)">
+        <button class="search-clear" id="searchClearBtn" onclick="clearSearch()">&#10005;</button>
+      </div>
       <div class="conv-list" id="convList"></div>
+      <div class="search-results" id="searchResults" style="display:none"></div>
     </div>
   </div>
 </div>
@@ -2279,12 +2388,8 @@ async function saveSettingsToIDB() {
 async function saveConvToIDB(convData) {
   try {
     if (!idb) await openIDB();
-    // Strip internal flags before persisting
-    const toSave = { ...convData };
-    delete toSave._dataLost;
-    delete toSave._expectedMsgCount;
     const tx = idb.transaction('conversations', 'readwrite');
-    tx.objectStore('conversations').put(JSON.stringify(toSave), toSave.id);
+    tx.objectStore('conversations').put(JSON.stringify(convData), convData.id);
   } catch(e) { console.warn('IDB conv save failed:', e); }
 }
 
@@ -2353,12 +2458,8 @@ function saveSettingsToLS() {
 
 // Save state: writes settings to both LS and IDB, and writes the active conv to IDB
 function saveState() {
-  // Guard: if the active conv has a data-loss flag and is still empty, don't overwrite IDB or metadata
-  const isDataLost = state._activeConvData && state._activeConvData._dataLost
-    && state._activeConvData.messages.length === 0;
-
   // Update conversation index metadata from active conv data
-  if (state._activeConvData && state.conversations[state._activeConvData.id] && !isDataLost) {
+  if (state._activeConvData && state.conversations[state._activeConvData.id]) {
     const meta = state.conversations[state._activeConvData.id];
     meta.title = state._activeConvData.title;
     meta.msgCount = state._activeConvData.messages.length;
@@ -2366,8 +2467,8 @@ function saveState() {
   }
   saveSettingsToLS();
   saveSettingsToIDB();
-  // Save active conversation's full data to IDB (skip if data loss detected and still empty)
-  if (state._activeConvData && !isDataLost) {
+  // Save active conversation's full data to IDB
+  if (state._activeConvData) {
     saveConvToIDB(state._activeConvData);
   }
   updateSaveStatus('已保存');
@@ -2423,25 +2524,11 @@ async function tryLoadFromIDB() {
       }
     } catch(e) { console.warn('Migration failed:', e); }
   } else {
-    // IDB has conversations — always (re)load the active conversation from IDB,
-    // because renderMessages() may have already created an empty fallback before IDB was ready
-    if (state.activeConvId) {
-      const convFromIDB = await loadConvFromIDB(state.activeConvId);
-      if (convFromIDB) {
-        state._activeConvData = convFromIDB;
+    // IDB has conversations — if we're missing _activeConvData, load it
+    if (state.activeConvId && !state._activeConvData) {
+      state._activeConvData = await loadConvFromIDB(state.activeConvId);
+      if (state._activeConvData) {
         renderMessages();
-      } else {
-        // IDB has other conversations but NOT this one — possible data loss
-        const meta = state.conversations[state.activeConvId];
-        if (meta && (meta.msgCount || 0) > 0) {
-          console.warn(`[数据异常] 对话 "${meta.title}" 索引记录 ${meta.msgCount} 条消息，但 IDB 中找不到`);
-          showToast(`⚠ 对话「${meta.title}」的消息未能从存储中加载，请检查备份`, 5000);
-          // Mark to prevent overwriting
-          if (state._activeConvData && state._activeConvData.id === state.activeConvId) {
-            state._activeConvData._dataLost = true;
-            state._activeConvData._expectedMsgCount = meta.msgCount;
-          }
-        }
       }
     }
     // Also sync conversation index from IDB (in case localStorage was cleared)
@@ -2475,21 +2562,6 @@ async function tryLoadFromIDB() {
     }
   }
   if (needsSave) saveSettingsToLS();
-
-  // Request persistent storage to prevent browser from evicting IDB data
-  try {
-    if (navigator.storage && navigator.storage.persist) {
-      const isPersisted = await navigator.storage.persisted();
-      if (!isPersisted) {
-        const granted = await navigator.storage.persist();
-        if (granted) {
-          console.log('[存储] 已获得持久化存储权限');
-        } else {
-          console.warn('[存储] 持久化存储请求被拒绝，数据可能在长期不使用后被浏览器清除');
-        }
-      }
-    }
-  } catch(e) { /* ignore */ }
 }
 
 function updateSaveStatus(text) {
@@ -2523,12 +2595,12 @@ async function updateStorageUsage() {
   }
 }
 
-function showToast(msg, duration) {
+function showToast(msg) {
   const t = document.getElementById('autosaveToast');
   if (!t) return;
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), duration || 2500);
+  setTimeout(() => t.classList.remove('show'), 2500);
 }
 
 // ============ AUTO EXPORT ============
@@ -2560,27 +2632,6 @@ async function exportLocalBackup(silent) {
   for (const [id, conv] of Object.entries(allConvs)) {
     if (conv.messages && conv.messages.length > 0) {
       filteredConvs[id] = conv;
-    }
-  }
-
-  // Data integrity check: compare LS index vs IDB
-  const lsConvsWithMsgs = Object.entries(state.conversations)
-    .filter(([_, m]) => (m.msgCount || 0) > 0);
-  const idbConvCount = Object.keys(filteredConvs).length;
-  const missingConvs = lsConvsWithMsgs.filter(([id]) => !filteredConvs[id]);
-
-  if (missingConvs.length > 0) {
-    const missingNames = missingConvs.map(([_, m]) => `「${m.title}」(${m.msgCount}条)`).join('、');
-    if (!silent) {
-      const proceed = confirm(
-        `⚠ 数据完整性警告\n\n以下 ${missingConvs.length} 个对话在索引中有记录但消息数据缺失:\n${missingNames}\n\n导出的备份将不包含这些对话的消息。确定继续导出吗？`
-      );
-      if (!proceed) return;
-    } else {
-      // Silent auto-export: skip if data is incomplete to avoid overwriting good backups
-      console.warn(`[自动备份跳过] ${missingConvs.length} 个对话数据缺失，跳过本次自动备份以保护现有备份`);
-      showToast(`⚠ 检测到数据缺失，已跳过自动备份`, 4000);
-      return;
     }
   }
   const backup = {
@@ -2712,21 +2763,13 @@ function getActiveConv() {
   // Return the full conversation data (with messages)
   if (!state._activeConvData || state._activeConvData.id !== state.activeConvId) {
     // Fallback: create empty conv data if not loaded yet
-    const meta = state.conversations[state.activeConvId];
-    const expectedMsgs = meta?.msgCount || 0;
     state._activeConvData = {
       id: state.activeConvId,
-      title: meta?.title || '新对话',
+      title: state.conversations[state.activeConvId]?.title || '新对话',
       messages: [],
-      created: meta?.created || Date.now(),
-      assistantId: meta?.assistantId || state.activeAssistantId || 'asst_default'
+      created: state.conversations[state.activeConvId]?.created || Date.now(),
+      assistantId: state.conversations[state.activeConvId]?.assistantId || state.activeAssistantId || 'asst_default'
     };
-    // If metadata says this conv should have messages, mark as data loss
-    // to prevent saveState() from overwriting IDB with empty data
-    if (expectedMsgs > 0) {
-      state._activeConvData._dataLost = true;
-      state._activeConvData._expectedMsgCount = expectedMsgs;
-    }
   }
   return state._activeConvData;
 }
@@ -2776,7 +2819,7 @@ async function switchConversation(id) {
   if (convData) {
     state._activeConvData = convData;
   } else {
-    const expectedMsgs = convMeta?.msgCount || 0;
+    // Fallback: create empty
     state._activeConvData = {
       id,
       title: convMeta?.title || '新对话',
@@ -2784,12 +2827,6 @@ async function switchConversation(id) {
       created: convMeta?.created || Date.now(),
       assistantId: convMeta?.assistantId || state.activeAssistantId || 'asst_default'
     };
-    if (expectedMsgs > 0) {
-      // Data loss: metadata says messages exist but IDB has nothing
-      state._activeConvData._dataLost = true;
-      state._activeConvData._expectedMsgCount = expectedMsgs;
-      showToast(`⚠ 对话「${convMeta.title}」的 ${expectedMsgs} 条消息未能加载`, 5000);
-    }
   }
   saveState();
   renderMessages();
@@ -2919,6 +2956,7 @@ function showAssistantListPanel() {
 }
 
 function showAssistantConvs() {
+  clearSearch(); // Reset search state when reopening sidebar
   const asst = getActiveAssistant();
   document.getElementById('asstListPanel').style.display = 'none';
   document.getElementById('asstConvPanel').style.display = '';
@@ -2968,6 +3006,127 @@ function showConversations() {
   // Legacy compat: drill into current assistant's convs
   showAssistantConvs();
   openModal('convModal', true);
+}
+
+// ============ MESSAGE SEARCH ============
+let _searchTimer = null;
+let _searchCache = null; // { convs: allConvs } - avoid reloading on every keystroke
+
+function onSearchInput(val) {
+  const clearBtn = document.getElementById('searchClearBtn');
+  clearBtn.classList.toggle('show', val.length > 0);
+
+  clearTimeout(_searchTimer);
+  if (!val.trim()) {
+    clearSearch();
+    return;
+  }
+  _searchTimer = setTimeout(() => doSearch(val.trim()), 300);
+}
+
+async function doSearch(query) {
+  const convList = document.getElementById('convList');
+  const resultsEl = document.getElementById('searchResults');
+
+  // Load all conversations (cache for the session)
+  if (!_searchCache) {
+    resultsEl.style.display = '';
+    resultsEl.innerHTML = '<div class="search-empty">正在加载对话...</div>';
+    convList.style.display = 'none';
+    _searchCache = await loadAllConvsFromIDB();
+  }
+
+  const q = query.toLowerCase();
+  const results = [];
+  const allConvs = Object.values(_searchCache);
+
+  for (const conv of allConvs) {
+    const msgs = conv.messages || [];
+    for (let i = 0; i < msgs.length; i++) {
+      const m = msgs[i];
+      if (!m.content) continue;
+      const idx = m.content.toLowerCase().indexOf(q);
+      if (idx === -1) continue;
+
+      // Build snippet: ~30 chars before, keyword, ~50 chars after
+      const start = Math.max(0, idx - 30);
+      const end = Math.min(m.content.length, idx + query.length + 50);
+      let snippet = (start > 0 ? '...' : '') +
+        m.content.slice(start, idx) +
+        '\x00MARK_S\x00' + m.content.slice(idx, idx + query.length) + '\x00MARK_E\x00' +
+        m.content.slice(idx + query.length, end) +
+        (end < m.content.length ? '...' : '');
+
+      // Get timestamp
+      const ts = extractTimestamp(m);
+      const tsStr = ts ? formatMsgTs(ts.getTime()) : '';
+      const role = m.role === 'user' ? '我' : '助手';
+
+      results.push({
+        convId: conv.id,
+        convTitle: conv.title || '(无标题)',
+        msgIndex: i,
+        snippet,
+        role,
+        tsStr
+      });
+
+      if (results.length >= 50) break; // cap results
+    }
+    if (results.length >= 50) break;
+  }
+
+  convList.style.display = 'none';
+  resultsEl.style.display = '';
+
+  if (results.length === 0) {
+    resultsEl.innerHTML = '<div class="search-empty">没有找到相关消息</div>';
+    return;
+  }
+
+  resultsEl.innerHTML = results.map((r, i) => {
+    const safeSnippet = esc(r.snippet)
+      .replace(/\x00MARK_S\x00/g, '<mark>')
+      .replace(/\x00MARK_E\x00/g, '</mark>');
+    return `
+      <div class="search-result-item" onclick="jumpToSearchResult('${r.convId}', ${r.msgIndex})">
+        <div class="search-result-title">${esc(r.convTitle)}</div>
+        <div class="search-result-snippet">${safeSnippet}</div>
+        <div class="search-result-meta">${r.role} · ${r.tsStr}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function clearSearch() {
+  const input = document.getElementById('msgSearchInput');
+  const convList = document.getElementById('convList');
+  const resultsEl = document.getElementById('searchResults');
+  const clearBtn = document.getElementById('searchClearBtn');
+  if (input) input.value = '';
+  if (clearBtn) clearBtn.classList.remove('show');
+  if (resultsEl) { resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; }
+  if (convList) convList.style.display = '';
+  _searchCache = null;
+}
+
+let _highlightMsgIndex = -1;
+
+async function jumpToSearchResult(convId, msgIndex) {
+  _highlightMsgIndex = msgIndex;
+  clearSearch();
+  closeModal('convModal');
+  await switchConversation(convId);
+  // renderMessages was called by switchConversation; now scroll & highlight
+  requestAnimationFrame(() => {
+    const msgEl = document.querySelector(`.msg[data-index="${msgIndex}"]`);
+    if (msgEl) {
+      msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      msgEl.classList.add('highlight');
+      setTimeout(() => msgEl.classList.remove('highlight'), 2500);
+    }
+    _highlightMsgIndex = -1;
+  });
 }
 
 // ============ ASSISTANT EDIT ============
@@ -3370,9 +3529,11 @@ function renderMessages() {
     }
   }).join('');
 
-  container.scrollTop = container.scrollHeight;
+  // Skip auto-scroll when jumping from search result
+  if (typeof _highlightMsgIndex === 'undefined' || _highlightMsgIndex < 0) {
+    container.scrollTop = container.scrollHeight;
+  }
   updateCostBar();
-  // Update model dots based on current cache state
   if (cacheState.lastRefresh && cacheState.tokens) {
     const elapsed = Date.now() - cacheState.lastRefresh;
     const remaining = cacheState.ttlMs - elapsed;
@@ -3706,11 +3867,6 @@ async function sendMessage() {
   const sendTs = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 周${days[now.getDay()]}`;
   const userMsg = { role: 'user', content: text, ts: sendTs };
   if (pendingImage) { userMsg.image = pendingImage; pendingImage = null; document.getElementById('imgPreview').style.display = 'none'; }
-  // Clear data-loss flag: user is actively sending messages, accept current state
-  if (conv._dataLost) {
-    delete conv._dataLost;
-    delete conv._expectedMsgCount;
-  }
   conv.messages.push(userMsg);
   if (conv.messages.length === 1) conv.title = text.slice(0, 30) + (text.length > 30 ? '...' : '');
 
@@ -4425,7 +4581,6 @@ async function showStats() {
       m._convId = conv.id;
       m._convTitle = conv.title;
       m._assistantId = asstId;
-      m._convCreated = conv.created;  // fallback timestamp for messages without ts
       allMsgs.push(m);
     }
   }
@@ -4549,6 +4704,46 @@ async function showStats() {
   const dailyData = Object.entries(dailyCounts);
   const maxDaily = Math.max(1, ...dailyData.map(d => d[1]));
 
+  // ---- Daily chat duration (60-min session gap) ----
+  const SESSION_GAP = 60 * 60 * 1000; // 60 minutes
+  const dailyDurations = {}; // dateKey -> minutes
+  for (const key of Object.keys(dailyCounts)) dailyDurations[key] = 0;
+  // Collect all timestamped messages, sort globally
+  const allTimed = allMsgs
+    .map(m => ({ ts: extractTimestamp(m) }))
+    .filter(m => m.ts)
+    .sort((a, b) => a.ts - b.ts);
+  // Walk through and detect sessions
+  if (allTimed.length > 0) {
+    let sessionStart = allTimed[0].ts;
+    let sessionEnd = allTimed[0].ts;
+    const flushSession = () => {
+      // Distribute session time to the day of sessionStart
+      const key = localDateKey(sessionStart);
+      const mins = (sessionEnd - sessionStart) / 60000;
+      if (key in dailyDurations) dailyDurations[key] += mins;
+    };
+    for (let i = 1; i < allTimed.length; i++) {
+      const cur = allTimed[i].ts;
+      if (cur - sessionEnd > SESSION_GAP) {
+        flushSession();
+        sessionStart = cur;
+        sessionEnd = cur;
+      } else {
+        sessionEnd = cur;
+      }
+    }
+    flushSession(); // flush last session
+  }
+  const durationData = Object.entries(dailyDurations);
+  const maxDuration = Math.max(1, ...durationData.map(d => d[1]));
+  function fmtDuration(mins) {
+    if (mins < 1) return '< 1 分钟';
+    const h = Math.floor(mins / 60);
+    const m = Math.round(mins % 60);
+    return h > 0 ? h + 'h ' + m + 'm' : m + ' 分钟';
+  }
+
   // ---- Model usage ----
   const modelStats = {};
   for (const m of assistMsgs) {
@@ -4647,6 +4842,28 @@ async function showStats() {
           ${dailyData.filter((_, i) => i % 5 === 0 || i === dailyData.length - 1).map(([d]) =>
             `<span>${d.slice(5)}</span>`
           ).join('')}
+        </div>
+      </div>
+
+      <div class="stats-section">
+        <div class="stats-section-title">近 30 天聊天时间</div>
+        <div class="stats-bar-chart" id="statsTimeChart">
+          ${durationData.map(([d, mins]) => {
+            const h = Math.max(2, (mins / maxDuration) * 90);
+            const color = mins > 0 ? 'var(--accent)' : 'var(--surface3)';
+            return `<div class="stats-bar-col" data-date="${d}" data-duration="${mins.toFixed(1)}" onclick="showTimeTip(this,event)">
+              <div class="stats-bar-stack" style="height:${h}%"><div class="stats-bar-seg" style="flex:1;background:${color}"></div></div>
+            </div>`;
+          }).join('')}
+          <div class="stats-bar-tip" id="statsTimeTip"></div>
+        </div>
+        <div class="stats-bar-chart-labels">
+          ${durationData.filter((_, i) => i % 5 === 0 || i === durationData.length - 1).map(([d]) =>
+            `<span>${d.slice(5)}</span>`
+          ).join('')}
+        </div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:6px;">
+          30 天合计: ${fmtDuration(durationData.reduce((s, [, m]) => s + m, 0))}
         </div>
       </div>
 
@@ -4775,8 +4992,6 @@ function extractTimestamp(msg) {
     const match = msg.ts.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/);
     if (match) return new Date(+match[1], +match[2] - 1, +match[3], +match[4], +match[5]);
   }
-  // Fallback: use conversation creation time (attached in showStats)
-  if (typeof msg._convCreated === 'number') return new Date(msg._convCreated);
   return null;
 }
 
@@ -4946,6 +5161,35 @@ function showBarTip(el, event) {
   el.classList.add('active');
 
   // Auto-hide after 3s
+  clearTimeout(tip._timer);
+  tip._timer = setTimeout(() => {
+    tip.classList.remove('show');
+    el.classList.remove('active');
+  }, 3000);
+}
+
+function showTimeTip(el, event) {
+  event.stopPropagation();
+  const tip = document.getElementById('statsTimeTip');
+  const date = el.dataset.date;
+  const mins = parseFloat(el.dataset.duration || 0);
+  const h = Math.floor(mins / 60);
+  const m = Math.round(mins % 60);
+  const fmt = mins < 1 ? '< 1 分钟' : h > 0 ? h + 'h ' + m + 'm' : m + ' 分钟';
+
+  tip.innerHTML = `<span>${date}</span><span>${fmt}</span>`;
+  tip.classList.add('show');
+
+  const chartRect = el.closest('.stats-bar-chart').getBoundingClientRect();
+  const barRect = el.getBoundingClientRect();
+  const tipW = tip.offsetWidth;
+  let left = barRect.left + barRect.width / 2 - chartRect.left - tipW / 2;
+  left = Math.max(0, Math.min(left, chartRect.width - tipW));
+  tip.style.left = left + 'px';
+
+  el.closest('.stats-bar-chart').querySelectorAll('.stats-bar-col').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+
   clearTimeout(tip._timer);
   tip._timer = setTimeout(() => {
     tip.classList.remove('show');
