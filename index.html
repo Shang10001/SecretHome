@@ -105,12 +105,12 @@ html, body {
 }
 .logo-icon {
   display: inline-block;
-  width: 22px;
-  height: 22px;
-  margin-right: 6px;
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
   vertical-align: middle;
   position: relative;
-  top: -1px;
+  top: -5px;
 }
 .msg-model {
   font-family: var(--mono);
@@ -194,8 +194,9 @@ html, body {
   .icon-btn { width: 32px; height: 32px; border-radius: 8px; }
   .icon-btn svg { width: 16px; height: 16px; }
   .logo { font-size: 15px; }
-  .logo-icon { width: 20px; height: 20px; margin-right: 4px; }
+  .logo-icon { width: 14px; height: 14px; margin-right: 4px; }
   .cache-indicator { padding: 2px 7px; font-size: 10px; }
+  .header-asst-btn { width: 32px; height: 32px; border-radius: 8px; }
 }
 
 /* ========== MESSAGES ========== */
@@ -775,12 +776,15 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
   border: none;
   background: transparent;
   cursor: pointer;
   transition: all 0.15s;
+  flex-shrink: 0;
 }
 .header-asst-btn:hover { background: var(--surface2); }
 .header-asst-dot {
@@ -3675,16 +3679,17 @@ async function branchDown(index) {
 
 async function createBranchConv(messages, title) {
   const id = 'c_' + Date.now();
+  const asstId = getActiveConv().assistantId || state.activeAssistantId || 'asst_default';
   // Deep copy messages, strip usage data (cost belongs to original conversation)
   const msgsCopy = JSON.parse(JSON.stringify(messages));
   for (const m of msgsCopy) {
     delete m.usage;
   }
-  const convData = { id, title, messages: msgsCopy, created: Date.now() };
+  const convData = { id, title, messages: msgsCopy, created: Date.now(), assistantId: asstId };
   // Save to IDB
   await saveConvToIDB(convData);
   // Update state index
-  state.conversations[id] = { id, title, created: Date.now(), msgCount: msgsCopy.length };
+  state.conversations[id] = { id, title, created: Date.now(), msgCount: msgsCopy.length, assistantId: asstId };
   // Switch to the new conversation
   state.activeConvId = id;
   state._activeConvData = convData;
@@ -3920,15 +3925,18 @@ async function sendMessage() {
       }
     }
 
+    const cacheCtl = { type: 'ephemeral' };
+    if (state.cacheTTL) cacheCtl.ttl = state.cacheTTL;
+
     const body = {
       model: getModel(),
       messages,
       max_tokens: state.maxTokens,
       temperature: state.temperature,
       stream: true,
-      cache_control: { type: 'ephemeral' }
+      cache_control: cacheCtl,
+      provider: { order: ['Anthropic'] }
     };
-    if (state.cacheTTL) body.cache_control.ttl = state.cacheTTL;
 
     // Add reasoning (extended thinking) if enabled
     if (state.reasoningEnabled) {
@@ -4581,6 +4589,7 @@ async function showStats() {
       m._convId = conv.id;
       m._convTitle = conv.title;
       m._assistantId = asstId;
+      m._convCreated = conv.created || 0;
       allMsgs.push(m);
     }
   }
@@ -4632,7 +4641,7 @@ async function showStats() {
       cutoff.setDate(cutoff.getDate() - daysBack);
       cutoff.setHours(0, 0, 0, 0);
       filtered = msgs.filter(m => {
-        const ts = extractTimestamp(m);
+        const ts = extractTimestamp(m) || (m._convCreated ? new Date(m._convCreated) : null);
         return ts && ts >= cutoff;
       });
       filteredAssist = filtered.filter(m => m.role === 'assistant');
@@ -5202,17 +5211,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   syncThemeIcon();
   updateHeaderAssistant();
   if (!state.activeConvId) newConversation();
-  renderMessages();
   // Set auto-export toggle state
   const aeToggle = document.getElementById('autoExportToggle');
   if (aeToggle) aeToggle.checked = state.autoExport || false;
-  // Initialize IDB and migrate/load data
+  // CRITICAL: Load IDB data BEFORE rendering to avoid race condition
+  // (renderMessages → getActiveConv would create empty fallback, blocking IDB load)
   await tryLoadFromIDB();
+  renderMessages();
   // Modal close on overlay click
   document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); });
   });
-  // Initialize long-press for touch devices (removed - using inline menu now)
 });
 
 // ============ KEYBOARD / VIEWPORT PINNING (mobile) ============
