@@ -2014,8 +2014,14 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
 
       <div class="field">
         <label>WebDAV 服务器地址</label>
-        <input type="text" id="webdavUrl" placeholder="https://dav.example.com/remote.php/webdav">
-        <div class="hint">支持 NextCloud, Synology, InfiniCLOUD 等。坚果云因 CORS 限制无法使用。</div>
+        <input type="text" id="webdavUrl" placeholder="https://dav.jianguoyun.com/dav">
+        <div class="hint">支持坚果云（需配合 CORS 代理）、NextCloud、Synology 等</div>
+      </div>
+
+      <div class="field">
+        <label>CORS 代理地址</label>
+        <input type="text" id="webdavProxy" placeholder="https://your-proxy.onrender.com">
+        <div class="hint">坚果云等不支持 CORS 的服务需要通过代理中转，部署方法见 GitHub 说明</div>
       </div>
 
       <div class="field">
@@ -2072,8 +2078,9 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       <div class="field">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
           <input type="checkbox" id="autoExportToggle" onchange="toggleAutoExport()" style="accent-color:var(--accent);width:16px;height:16px;">
-          启用自动本地备份
+          启用自动备份
         </label>
+        <div class="hint" style="margin:4px 0 0 24px;">配置了 WebDAV + 代理后，自动备份将静默同步到云端，无需手动操作</div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:8px;">
           <span style="font-size:12px;color:var(--text2);white-space:nowrap;">每</span>
           <input type="number" id="autoExportInterval" value="50" min="10" max="999" style="width:64px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:13px;text-align:center;outline:none;">
@@ -2249,7 +2256,7 @@ function defaultState() {
     conversations: {},   // { id: { id, title, created, msgCount, assistantId } } — NO messages
     activeConvId: null,
     memories: [],
-    webdav: { url: '', user: '', pass: '', path: '/BenBenHome/' },
+    webdav: { url: '', user: '', pass: '', path: '/BenBenHome/', proxy: '' },
     autoExport: false,
     autoExportInterval: 50,
     msgsSinceExport: 0,
@@ -2624,7 +2631,14 @@ function checkAutoExport() {
   const interval = state.autoExportInterval || 50;
   if (state.msgsSinceExport >= interval) {
     state.msgsSinceExport = 0;
-    exportLocalBackup(true);
+    // WebDAV + 代理已配置 → 静默云端备份（无弹窗）
+    const cfg = getWebDAVConfig();
+    if (cfg && cfg.proxy) {
+      silentWebDAVBackup();
+    } else {
+      // 降级到本地文件导出（需要用户手动保存）
+      exportLocalBackup(true);
+    }
   }
 }
 
@@ -3418,6 +3432,7 @@ function showSettings() {
   document.getElementById('webdavUser').value = wd.user || '';
   document.getElementById('webdavPass').value = wd.pass || '';
   document.getElementById('webdavPath').value = wd.path || '/BenBenHome/';
+  document.getElementById('webdavProxy').value = wd.proxy || '';
   document.getElementById('autoExportToggle').checked = state.autoExport || false;
   document.getElementById('autoExportInterval').value = state.autoExportInterval || 50;
   document.getElementById('reasoningEnabled').checked = state.reasoningEnabled || false;
@@ -4358,7 +4373,8 @@ function saveWebDAVSettings() {
     url: document.getElementById('webdavUrl').value.trim(),
     user: document.getElementById('webdavUser').value.trim(),
     pass: document.getElementById('webdavPass').value,
-    path: document.getElementById('webdavPath').value.trim() || '/BenBenHome/'
+    path: document.getElementById('webdavPath').value.trim() || '/BenBenHome/',
+    proxy: document.getElementById('webdavProxy').value.trim()
   };
   saveState();
   setWebDAVStatus('idle', '配置已保存');
@@ -4374,51 +4390,55 @@ function setWebDAVStatus(type, text) {
 function getWebDAVConfig() {
   const wd = state.webdav || {};
   if (!wd.url || !wd.user || !wd.pass) {
-    alert('请先填写 WebDAV 配置');
     return null;
   }
   let base = wd.url.replace(/\/+$/, '');
   let path = wd.path || '/BenBenHome/';
   if (!path.startsWith('/')) path = '/' + path;
   if (!path.endsWith('/')) path += '/';
-  return { base, path, user: wd.user, pass: wd.pass };
+  return { base, path, user: wd.user, pass: wd.pass, proxy: (wd.proxy || '').replace(/\/+$/, '') };
 }
 
 async function webdavRequest(method, url, body, contentType) {
   const cfg = getWebDAVConfig();
-  if (!cfg) throw new Error('未配置');
-  const headers = {
-    'Authorization': 'Basic ' + btoa(cfg.user + ':' + cfg.pass)
-  };
+  if (!cfg) throw new Error('未配置 WebDAV');
+  const auth = 'Basic ' + btoa(cfg.user + ':' + cfg.pass);
+  const targetUrl = cfg.base + cfg.path + (url || '');
+
+  const headers = { 'Authorization': auth };
   if (contentType) headers['Content-Type'] = contentType;
-  const fullUrl = cfg.base + cfg.path + (url || '');
-  const resp = await fetch(fullUrl, { method, headers, body });
-  return resp;
+  if (method === 'PROPFIND') headers['Depth'] = '1';
+
+  // 有代理 → 走代理中转
+  if (cfg.proxy) {
+    headers['X-Target-URL'] = targetUrl;
+    return await fetch(cfg.proxy + '/proxy', { method, headers, body: body || undefined });
+  }
+  // 无代理 → 直连
+  return await fetch(targetUrl, { method, headers, body: body || undefined });
 }
 
 async function testWebDAV() {
   try {
     setWebDAVStatus('idle', '测试中...');
     const cfg = getWebDAVConfig();
-    if (!cfg) return;
-    // PROPFIND to check connection
-    const resp = await fetch(cfg.base + cfg.path, {
-      method: 'PROPFIND',
-      headers: {
-        'Authorization': 'Basic ' + btoa(cfg.user + ':' + cfg.pass),
-        'Depth': '0'
-      }
-    });
+    if (!cfg) { setWebDAVStatus('err', '请先填写 WebDAV 配置'); return; }
+    if (cfg.proxy) {
+      // 先检查代理是否在线
+      try {
+        const ping = await fetch(cfg.proxy + '/', { method: 'GET' });
+        if (!ping.ok) { setWebDAVStatus('err', '代理不可达 (' + ping.status + ')'); return; }
+      } catch(e) { setWebDAVStatus('err', '代理连接失败: ' + e.message); return; }
+    }
+    // PROPFIND 测试 WebDAV 连接
+    const resp = await webdavRequest('PROPFIND', '', null, null);
     if (resp.ok || resp.status === 207) {
-      setWebDAVStatus('ok', '连接成功 (' + resp.status + ')');
+      setWebDAVStatus('ok', '连接成功 (' + resp.status + ')' + (cfg.proxy ? ' [经代理]' : ''));
     } else if (resp.status === 404) {
-      // Try MKCOL to create directory
-      const mkResp = await fetch(cfg.base + cfg.path, {
-        method: 'MKCOL',
-        headers: { 'Authorization': 'Basic ' + btoa(cfg.user + ':' + cfg.pass) }
-      });
+      // 目录不存在，尝试创建
+      const mkResp = await webdavRequest('MKCOL', '', null, null);
       if (mkResp.ok || mkResp.status === 201) {
-        setWebDAVStatus('ok', '连接成功，已创建目录');
+        setWebDAVStatus('ok', '连接成功，已创建目录' + (cfg.proxy ? ' [经代理]' : ''));
       } else {
         setWebDAVStatus('err', '目录不存在且无法创建 (' + mkResp.status + ')');
       }
@@ -4430,38 +4450,108 @@ async function testWebDAV() {
   }
 }
 
+// 构建备份数据（共用逻辑）
+async function buildBackupData() {
+  const allConvs = await loadAllConvsFromIDB();
+  const filteredConvs = {};
+  for (const [id, conv] of Object.entries(allConvs)) {
+    if (conv.messages && conv.messages.length > 0) {
+      filteredConvs[id] = conv;
+    }
+  }
+  return {
+    version: 2,
+    timestamp: new Date().toISOString(),
+    data: {
+      apiKey: state.apiKey,
+      assistants: state.assistants,
+      activeAssistantId: state.activeAssistantId,
+      cacheTTL: state.cacheTTL,
+      maxTokens: state.maxTokens,
+      temperature: state.temperature,
+      reasoningEnabled: state.reasoningEnabled,
+      reasoningEffort: state.reasoningEffort,
+      conversations: filteredConvs,
+      memories: state.memories
+    }
+  };
+}
+
+// 生成带时间戳的文件名
+function backupFilename() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `backup_${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`;
+}
+
+// 手动备份（点"立即备份"按钮）
 async function doBackup() {
   try {
+    const cfg = getWebDAVConfig();
+    if (!cfg) { setWebDAVStatus('err', '请先填写 WebDAV 配置'); return; }
     setWebDAVStatus('idle', '正在备份...');
-    // Load all conversations from IDB
-    const allConvs = await loadAllConvsFromIDB();
-    // Prepare backup data
-    const backup = {
-      version: 2,
-      timestamp: new Date().toISOString(),
-      data: {
-        apiKey: state.apiKey,
-        assistants: state.assistants,
-        activeAssistantId: state.activeAssistantId,
-        cacheTTL: state.cacheTTL,
-        maxTokens: state.maxTokens,
-        temperature: state.temperature,
-        reasoningEnabled: state.reasoningEnabled,
-        reasoningEffort: state.reasoningEffort,
-        conversations: allConvs,
-        memories: state.memories
-      }
-    };
+    const backup = await buildBackupData();
     const json = JSON.stringify(backup, null, 2);
-    const filename = 'benben_backup.json';
+    const filename = backupFilename();
     const resp = await webdavRequest('PUT', filename, json, 'application/json');
     if (resp.ok || resp.status === 201 || resp.status === 204) {
+      await cleanupOldBackups(5);
       setWebDAVStatus('ok', '备份成功 (' + new Date().toLocaleTimeString() + ')');
     } else {
       setWebDAVStatus('err', '备份失败 (' + resp.status + ')');
     }
   } catch(e) {
     setWebDAVStatus('err', '备份错误: ' + e.message);
+  }
+}
+
+// 静默自动备份（后台执行，不弹窗）
+async function silentWebDAVBackup() {
+  const cfg = getWebDAVConfig();
+  if (!cfg || !cfg.proxy) return; // 未配置代理则跳过
+  try {
+    const backup = await buildBackupData();
+    const json = JSON.stringify(backup);
+    const filename = backupFilename();
+    const resp = await webdavRequest('PUT', filename, json, 'application/json');
+    if (resp.ok || resp.status === 201 || resp.status === 204) {
+      await cleanupOldBackups(5);
+      setWebDAVStatus('ok', '自动备份 ' + new Date().toLocaleTimeString());
+      showToast('已同步到云端');
+    } else {
+      setWebDAVStatus('err', '自动备份失败 (' + resp.status + ')');
+    }
+  } catch(e) {
+    console.warn('Silent WebDAV backup failed:', e);
+    setWebDAVStatus('err', '自动备份错误');
+  }
+}
+
+// 滚动清理：只保留最近 N 份备份
+async function cleanupOldBackups(keep) {
+  try {
+    const resp = await webdavRequest('PROPFIND', '', null, null);
+    if (!resp.ok && resp.status !== 207) return;
+    const text = await resp.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text, 'application/xml');
+    // WebDAV 响应的 namespace 可能不同，用通配符匹配
+    const hrefs = doc.querySelectorAll('response href, response *|href');
+    const backupFiles = [];
+    hrefs.forEach(el => {
+      const href = el.textContent || '';
+      const name = decodeURIComponent(href.split('/').filter(Boolean).pop() || '');
+      if (name.startsWith('backup_') && name.endsWith('.json')) {
+        backupFiles.push(name);
+      }
+    });
+    backupFiles.sort(); // 按文件名排序即按时间排序
+    while (backupFiles.length > keep) {
+      const oldest = backupFiles.shift();
+      try { await webdavRequest('DELETE', oldest); } catch(e) {}
+    }
+  } catch(e) {
+    console.warn('Backup cleanup failed:', e);
   }
 }
 
@@ -4473,8 +4563,34 @@ async function doRestore() {
   try {
     const mode = document.querySelector('input[name="restoreMode"]:checked').value;
     if (mode === 'overwrite' && !confirm('完全覆盖将替换所有本地数据（包括 API Key，WebDAV 配置不受影响），确定继续？')) return;
-    setWebDAVStatus('idle', '正在恢复...');
-    const resp = await webdavRequest('GET', 'benben_backup.json');
+    setWebDAVStatus('idle', '正在查找备份...');
+
+    // 列出所有备份文件，找最新的
+    let targetFile = null;
+    try {
+      const listResp = await webdavRequest('PROPFIND', '', null, null);
+      if (listResp.ok || listResp.status === 207) {
+        const text = await listResp.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'application/xml');
+        const hrefs = doc.querySelectorAll('response href, response *|href');
+        const files = [];
+        hrefs.forEach(el => {
+          const href = el.textContent || '';
+          const name = decodeURIComponent(href.split('/').filter(Boolean).pop() || '');
+          if (name.startsWith('backup_') && name.endsWith('.json')) files.push(name);
+          if (name === 'benben_backup.json') files.push(name); // 兼容旧格式
+        });
+        files.sort();
+        if (files.length > 0) targetFile = files[files.length - 1]; // 最新的
+      }
+    } catch(e) {}
+
+    // 找不到滚动备份就试旧文件名
+    if (!targetFile) targetFile = 'benben_backup.json';
+
+    setWebDAVStatus('idle', '正在恢复 ' + targetFile + '...');
+    const resp = await webdavRequest('GET', targetFile);
     if (!resp.ok) {
       setWebDAVStatus('err', '找不到备份文件 (' + resp.status + ')');
       return;
@@ -5221,6 +5337,40 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Modal close on overlay click
   document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); });
+  });
+
+  // ============ 持久化存储请求 ============
+  // 请求浏览器不要自动清理 IndexedDB 数据（iOS/Safari 在存储压力下会清理未持久化的数据）
+  if (navigator.storage && navigator.storage.persist) {
+    try {
+      const granted = await navigator.storage.persist();
+      console.log('Persistent storage:', granted ? 'granted' : 'denied');
+    } catch(e) { console.warn('storage.persist() failed:', e); }
+  }
+
+  // ============ 页面生命周期保护 ============
+  // iOS PWA 切后台/锁屏时，系统可能随时终止进程
+  // 在 visibilitychange 时立刻保存，确保数据不丢失
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && state._activeConvData) {
+      saveState();
+      console.log('[lifecycle] saved on visibility hidden');
+    }
+  });
+
+  // pagehide 是 iOS Safari 最可靠的"页面即将被终止"信号
+  window.addEventListener('pagehide', () => {
+    if (state._activeConvData) {
+      saveState();
+      console.log('[lifecycle] saved on pagehide');
+    }
+  });
+
+  // beforeunload 作为额外保险（桌面浏览器适用，iOS 上不一定触发）
+  window.addEventListener('beforeunload', () => {
+    if (state._activeConvData) {
+      saveState();
+    }
   });
 });
 
