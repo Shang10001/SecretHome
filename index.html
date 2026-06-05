@@ -103,15 +103,6 @@ html, body {
   white-space: nowrap;
   letter-spacing: -0.3px;
 }
-.logo-icon {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  margin-right: 5px;
-  vertical-align: middle;
-  position: relative;
-  top: -5px;
-}
 .msg-model {
   font-family: var(--mono);
   font-size: 11px;
@@ -194,7 +185,6 @@ html, body {
   .icon-btn { width: 32px; height: 32px; border-radius: 8px; }
   .icon-btn svg { width: 16px; height: 16px; }
   .logo { font-size: 15px; }
-  .logo-icon { width: 14px; height: 14px; margin-right: 4px; }
   .cache-indicator { padding: 2px 7px; font-size: 10px; }
   .header-asst-btn { width: 32px; height: 32px; border-radius: 8px; }
 }
@@ -792,6 +782,171 @@ html, body {
   height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+/* ========== MEMORY BANK ========== */
+#memoryBtn { position: relative; }
+.memory-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  border: 1.5px solid var(--surface);
+}
+.mem-list { margin-bottom: 16px; }
+.mem-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+  margin-bottom: 8px;
+  transition: background 0.15s;
+}
+.mem-item:last-child { margin-bottom: 0; }
+.mem-item-toggle {
+  margin-top: 3px;
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.mem-item-body {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+.mem-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.mem-item-title .mem-match-count {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--green);
+  background: var(--green-light);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+.mem-item-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.mem-kw-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  background: var(--surface3);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.mem-item-preview {
+  font-size: 12px;
+  color: var(--text3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mem-item-disabled { opacity: 0.45; }
+.mem-item-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.mem-item-actions button {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+.mem-item-actions button:hover { background: var(--surface3); color: var(--text2); }
+.mem-empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text3);
+  font-size: 13px;
+}
+.mem-empty-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  opacity: 0.4;
+}
+/* Memory edit form (inline in modal) */
+.mem-edit-form { margin-top: 12px; }
+.mem-edit-form .field { margin-bottom: 12px; }
+.mem-edit-form .field label { font-size: 12px; }
+.mem-edit-form .field textarea { min-height: 80px; font-size: 13px; }
+.mem-edit-form .field input { font-size: 13px; }
+.mem-inject-info {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  background: var(--surface2);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Memory tags on user messages */
+.mem-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+  margin-top: 4px;
+  padding-right: 2px;
+}
+.mem-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  background: var(--surface2);
+  padding: 2px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+.mem-tag:hover, .mem-tag:active {
+  background: var(--surface3);
+  color: var(--text2);
+}
+.mem-popup {
+  font-size: 12px;
+  color: var(--text2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-top: 4px;
+  box-shadow: var(--shadow);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  animation: fadeIn 0.15s;
+  text-align: left;
 }
 
 .conv-list {
@@ -1871,7 +2026,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
   <!-- HEADER -->
   <div class="header">
     <div class="header-left">
-      <span class="logo"><span class="logo-icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z" fill="#D97757" fill-rule="nonzero"/></svg></span>笨笨家园</span>
+      <span class="logo">笨笨家园</span>
       <div class="cache-indicator" id="cacheStatus">
         <span class="cache-dot" id="cacheDot"></span>
         <span id="cacheLabel">--</span>
@@ -1880,6 +2035,9 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     <div class="header-actions">
       <button class="header-asst-btn" id="headerAsstBtn" onclick="showAssistants()" title="助手">
         <span class="header-asst-dot" id="headerAsstDot" style="background:#DA7756"></span>
+      </button>
+      <button class="icon-btn" id="memoryBtn" onclick="showMemoryBank()" title="记忆库">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       </button>
       <button class="icon-btn" id="nightToggleBtn" onclick="cycleTheme()" title="切换到夜间护眼">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -2053,10 +2211,10 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       </div>
 
       <div class="btn-row-wrap" style="flex-wrap:nowrap;">
+        <button class="btn" onclick="confirmRestore()" style="padding:8px 10px;font-size:12px;color:var(--red);">恢复备份</button>
         <button class="btn" onclick="saveWebDAVSettings()" style="padding:8px 10px;font-size:12px;">保存配置</button>
         <button class="btn" onclick="testWebDAV()" style="padding:8px 10px;font-size:12px;">测试连接</button>
         <button class="btn primary" onclick="doBackup()" style="padding:8px 10px;font-size:12px;">立即备份</button>
-        <button class="btn" onclick="toggleRestoreOptions()" style="padding:8px 10px;font-size:12px;">恢复备份</button>
       </div>
 
       <div class="restore-options" id="restoreOptions">
@@ -2094,6 +2252,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
           <input type="number" id="autoExportInterval" value="50" min="10" max="999" style="width:64px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:13px;text-align:center;outline:none;">
           <span style="font-size:12px;color:var(--text2);white-space:nowrap;">条消息自动备份一次</span>
         </div>
+        <div id="lastBackupInfo" style="font-size:11px;color:var(--text3);margin-top:6px;font-family:var(--mono);"></div>
       </div>
 
       <hr style="border:none;border-top:1px solid var(--border);margin:20px 0;">
@@ -2217,6 +2376,45 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     <h2>统计 <button onclick="closeModal('statsModal')">&#10005;</button></h2>
     <div id="statsContent">
       <div style="text-align:center;padding:40px;color:var(--text3);">加载中...</div>
+    </div>
+  </div>
+</div>
+
+<!-- MEMORY BANK MODAL -->
+<div class="modal-overlay" id="memoryModal">
+  <div class="modal">
+    <h2>记忆库 <button onclick="closeModal('memoryModal')">&#10005;</button></h2>
+    <div class="mem-inject-info" id="memInjectInfo" style="display:none">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <span id="memInjectText"></span>
+    </div>
+    <div id="memListView">
+      <div class="mem-list" id="memList"></div>
+      <div class="btn-row">
+        <button class="btn primary" onclick="showMemEditForm()">+ 新增记忆</button>
+      </div>
+    </div>
+    <div id="memEditView" style="display:none">
+      <div class="mem-edit-form">
+        <input type="hidden" id="memEditId">
+        <div class="field">
+          <label>标题</label>
+          <input type="text" id="memEditTitle" placeholder="例：莉莉的沙漠旅途">
+        </div>
+        <div class="field">
+          <label>触发关键词（用逗号分隔）</label>
+          <input type="text" id="memEditKeywords" placeholder="例：莉莉, 魔法师, 沙漠">
+          <div class="hint">当消息中出现任一关键词时，此条记忆会被注入上下文</div>
+        </div>
+        <div class="field">
+          <label>内容</label>
+          <textarea id="memEditContent" placeholder="完整记忆内容，会在关键词匹配时注入 system prompt"></textarea>
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="cancelMemEdit()">取消</button>
+          <button class="btn primary" onclick="saveMemEntry()">保存</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -2645,6 +2843,18 @@ function checkAutoExport() {
   }
 }
 
+function updateLastBackupInfo() {
+  const el = document.getElementById('lastBackupInfo');
+  if (!el) return;
+  if (!state.lastBackupTime) {
+    el.textContent = '尚未备份';
+    return;
+  }
+  const d = new Date(state.lastBackupTime);
+  const pad = n => String(n).padStart(2, '0');
+  el.textContent = `上次备份: ${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 async function exportLocalBackup(silent) {
   // Load all conversations from IDB for export
   const allConvs = await loadAllConvsFromIDB();
@@ -2688,6 +2898,8 @@ async function exportLocalBackup(silent) {
   } else {
     showToast('备份文件已导出');
   }
+  state.lastBackupTime = Date.now(); saveState();
+  updateLastBackupInfo();
 }
 
 function importLocalBackup(event) {
@@ -3443,6 +3655,199 @@ function closeQuickBackupMenu() {
   document.getElementById('quickBackupMenu').classList.remove('open');
 }
 
+// ============ MEMORY BANK (世界书) ============
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function getMemories() {
+  return state.memories || [];
+}
+
+function showMemoryBank() {
+  renderMemList();
+  document.getElementById('memEditView').style.display = 'none';
+  document.getElementById('memListView').style.display = '';
+  document.getElementById('memoryModal').classList.add('active');
+  updateMemInjectInfo();
+}
+
+function renderMemList() {
+  const mems = getMemories();
+  const el = document.getElementById('memList');
+  if (mems.length === 0) {
+    el.innerHTML = '<div class="mem-empty"><div class="mem-empty-icon">📖</div>还没有记忆条目<br><span style="font-size:12px;color:var(--text3)">添加记忆后，聊天中提到关键词时会自动注入上下文</span></div>';
+    return;
+  }
+  el.innerHTML = mems.map((m, i) => {
+    const kwHtml = (m.keywords || []).map(k => `<span class="mem-kw-tag">${escapeHtml(k)}</span>`).join('');
+    const preview = (m.content || '').slice(0, 60) + ((m.content || '').length > 60 ? '...' : '');
+    const disabledCls = m.enabled === false ? ' mem-item-disabled' : '';
+    return `<div class="mem-item${disabledCls}">
+      <input type="checkbox" class="mem-item-toggle" ${m.enabled !== false ? 'checked' : ''} onchange="toggleMemEntry(${i}, this.checked)">
+      <div class="mem-item-body" onclick="editMemEntry(${i})">
+        <div class="mem-item-title">${escapeHtml(m.title || '未命名')}</div>
+        <div class="mem-item-keywords">${kwHtml}</div>
+        <div class="mem-item-preview">${escapeHtml(preview)}</div>
+      </div>
+      <div class="mem-item-actions">
+        <button onclick="deleteMemEntry(${i})" title="删除"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleMemEntry(index, checked) {
+  const mems = getMemories();
+  if (mems[index]) {
+    mems[index].enabled = checked;
+    saveState();
+    renderMemList();
+    updateMemBadge();
+  }
+}
+
+function showMemEditForm(index) {
+  const isEdit = index !== undefined;
+  const mem = isEdit ? getMemories()[index] : { title: '', keywords: [], content: '', enabled: true };
+  document.getElementById('memEditId').value = isEdit ? index : '-1';
+  document.getElementById('memEditTitle').value = mem.title || '';
+  document.getElementById('memEditKeywords').value = (mem.keywords || []).join(', ');
+  document.getElementById('memEditContent').value = mem.content || '';
+  document.getElementById('memListView').style.display = 'none';
+  document.getElementById('memEditView').style.display = '';
+}
+
+function cancelMemEdit() {
+  document.getElementById('memEditView').style.display = 'none';
+  document.getElementById('memListView').style.display = '';
+}
+
+function saveMemEntry() {
+  const idx = parseInt(document.getElementById('memEditId').value);
+  const title = document.getElementById('memEditTitle').value.trim();
+  const kwRaw = document.getElementById('memEditKeywords').value;
+  const content = document.getElementById('memEditContent').value.trim();
+  if (!title) { alert('请填写标题'); return; }
+  if (!content) { alert('请填写内容'); return; }
+
+  // Parse keywords: split by Chinese/English comma, trim, dedupe, filter empty
+  const keywords = [...new Set(kwRaw.split(/[,，、]/).map(k => k.trim()).filter(Boolean))];
+  if (keywords.length === 0) { alert('请至少设置一个触发关键词'); return; }
+
+  if (!state.memories) state.memories = [];
+  const entry = { title, keywords, content, enabled: true };
+  if (idx >= 0 && idx < state.memories.length) {
+    entry.enabled = state.memories[idx].enabled !== false;
+    state.memories[idx] = entry;
+  } else {
+    state.memories.push(entry);
+  }
+  saveState();
+  cancelMemEdit();
+  renderMemList();
+  updateMemBadge();
+}
+
+function editMemEntry(index) {
+  showMemEditForm(index);
+}
+
+function deleteMemEntry(index) {
+  if (!confirm('确定删除这条记忆？')) return;
+  state.memories.splice(index, 1);
+  saveState();
+  renderMemList();
+  updateMemBadge();
+}
+
+// Keyword matching: scan text for memory keywords, return matched entries
+function matchMemories(text) {
+  const mems = getMemories();
+  if (!mems.length) return [];
+  const matched = [];
+  const lowerText = text.toLowerCase();
+  for (const mem of mems) {
+    if (mem.enabled === false) continue;
+    if (!mem.keywords || !mem.keywords.length) continue;
+    const hits = mem.keywords.filter(kw => lowerText.includes(kw.toLowerCase()));
+    if (hits.length > 0) {
+      matched.push({ ...mem, _hits: hits });
+    }
+  }
+  return matched;
+}
+
+// Build memory injection string
+function buildMemoryInjection(matchedMems) {
+  if (!matchedMems.length) return '';
+  const lines = matchedMems.map(m => `【${m.title}】\n${m.content}`);
+  return '\n\n---\n📖 以下是与当前话题相关的记忆条目：\n\n' + lines.join('\n\n');
+}
+
+// Update the green badge on memory button
+function updateMemBadge() {
+  const btn = document.getElementById('memoryBtn');
+  if (!btn) return;
+  const mems = getMemories().filter(m => m.enabled !== false);
+  let badge = btn.querySelector('.memory-badge');
+  if (mems.length > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'memory-badge';
+      btn.appendChild(badge);
+    }
+  } else {
+    if (badge) badge.remove();
+  }
+}
+
+function updateMemInjectInfo() {
+  const info = document.getElementById('memInjectInfo');
+  const text = document.getElementById('memInjectText');
+  const mems = getMemories().filter(m => m.enabled !== false);
+  if (mems.length === 0) {
+    info.style.display = 'none';
+    return;
+  }
+  const totalKw = mems.reduce((sum, m) => sum + (m.keywords || []).length, 0);
+  text.textContent = `${mems.length} 条记忆启用中，共 ${totalKw} 个关键词`;
+  info.style.display = 'flex';
+}
+
+// Toggle memory content popup on user messages
+function toggleMemPopup(tagEl, msgIndex, memIndex) {
+  // Close any existing popup
+  const existing = document.querySelector('.mem-popup');
+  if (existing) {
+    const wasFromSameTag = existing._tagEl === tagEl;
+    existing.remove();
+    if (wasFromSameTag) return; // clicking same tag = close
+  }
+  // Get memory content from message data
+  const conv = getActiveConv();
+  const m = conv.messages[msgIndex];
+  if (!m || !m._mems || !m._mems[memIndex]) return;
+  // Create popup
+  const popup = document.createElement('div');
+  popup.className = 'mem-popup';
+  popup.textContent = m._mems[memIndex].content;
+  popup._tagEl = tagEl;
+  // Insert after the mem-tags container
+  const tagsContainer = tagEl.closest('.mem-tags');
+  tagsContainer.parentNode.insertBefore(popup, tagsContainer.nextSibling);
+}
+
+// Close mem popup on outside click
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.mem-tag') && !e.target.closest('.mem-popup')) {
+    const popup = document.querySelector('.mem-popup');
+    if (popup) popup.remove();
+  }
+});
+
 // ============ SETTINGS ============
 function showSettings() {
   document.getElementById('apiKey').value = state.apiKey;
@@ -3463,6 +3868,7 @@ function showSettings() {
   document.getElementById('reasoningEffort').value = state.reasoningEffort || 'medium';
   openModal('settingsModal', true);
   updateStorageUsage();
+  updateLastBackupInfo();
 }
 
 function saveSettings() {
@@ -3544,12 +3950,16 @@ function renderMessages() {
     if (m.role === 'user') {
       // User: "..." on the left, bubble on the right
       const imgHtml = m.image ? `<img class="msg-image" src="${m.image}">` : '';
+      const memTagsHtml = m._mems && m._mems.length > 0
+        ? `<div class="mem-tags">${m._mems.map((mem, mi) => `<span class="mem-tag" onclick="toggleMemPopup(this, ${i}, ${mi})">📖 ${esc(mem.title)}</span>`).join('')}</div>`
+        : '';
       return `
         <div class="msg user" data-index="${i}">
           <div class="msg-top-row">
             ${menuBtn}
             <div class="msg-content" id="msgContent-${i}">${imgHtml}${esc(m.content)}</div>
           </div>
+          ${memTagsHtml}
         </div>
       `;
     } else {
@@ -3938,6 +4348,17 @@ async function sendMessage() {
     const messages = [];
     const asst = getActiveAssistant();
     const fullSystem = (asst.systemPrompt || '').trim();
+
+    // Memory Bank: keyword matching (inject into user message below, NOT here)
+    const matchedMems = matchMemories(text);
+    const memInjection = matchedMems.length > 0 ? buildMemoryInjection(matchedMems) : '';
+
+    // Store matched memory titles on user message for UI display
+    if (matchedMems.length > 0) {
+      userMsg._mems = matchedMems.map(m => ({ title: m.title, content: m.content }));
+      saveState();
+    }
+
     if (fullSystem) {
       messages.push({ role: 'system', content: fullSystem });
     }
@@ -3953,6 +4374,10 @@ async function sendMessage() {
       // Append stored timestamp to every user message
       if (m.role === 'user' && m.ts) {
         content = content + `\n\n[当前时间: ${m.ts}]`;
+      }
+      // Inject matched memories into the LAST user message only (preserves SP cache prefix)
+      if (m.role === 'user' && mi === historyMsgs.length - 1 && memInjection) {
+        content += memInjection;
       }
       if (m.image) {
         messages.push({ role: m.role, content: [
@@ -4526,7 +4951,9 @@ async function doBackup() {
     const resp = await webdavRequest('PUT', filename, json, 'application/json');
     if (resp.ok || resp.status === 201 || resp.status === 204) {
       await cleanupOldBackups(5);
+      state.lastBackupTime = Date.now(); saveState();
       setWebDAVStatus('ok', '备份成功 (' + new Date().toLocaleTimeString() + ')');
+      updateLastBackupInfo();
     } else {
       setWebDAVStatus('err', '备份失败 (' + resp.status + ')');
     }
@@ -4546,8 +4973,10 @@ async function silentWebDAVBackup() {
     const resp = await webdavRequest('PUT', filename, json, 'application/json');
     if (resp.ok || resp.status === 201 || resp.status === 204) {
       await cleanupOldBackups(5);
+      state.lastBackupTime = Date.now(); saveState();
       setWebDAVStatus('ok', '自动备份 ' + new Date().toLocaleTimeString());
       showToast('已同步到云端');
+      updateLastBackupInfo();
     } else {
       setWebDAVStatus('err', '自动备份失败 (' + resp.status + ')');
     }
@@ -4583,6 +5012,11 @@ async function cleanupOldBackups(keep) {
   } catch(e) {
     console.warn('Backup cleanup failed:', e);
   }
+}
+
+function confirmRestore() {
+  if (!confirm('确定要恢复备份吗？此操作可能覆盖当前数据。')) return;
+  toggleRestoreOptions();
 }
 
 function toggleRestoreOptions() {
@@ -5356,6 +5790,7 @@ function showTimeTip(el, event) {
 document.addEventListener('DOMContentLoaded', async () => {
   syncThemeIcon();
   updateHeaderAssistant();
+  updateMemBadge();
   if (!state.activeConvId) newConversation();
   // Set auto-export toggle state
   const aeToggle = document.getElementById('autoExportToggle');
