@@ -4405,16 +4405,22 @@ async function webdavRequest(method, url, body, contentType) {
   const auth = 'Basic ' + btoa(cfg.user + ':' + cfg.pass);
   const targetUrl = cfg.base + cfg.path + (url || '');
 
+  // 有代理 → 统一用 POST 发给代理，真正的方法通过 X-Method 传递
+  // （Safari 不支持跨域发送 PROPFIND 等非标准方法）
+  if (cfg.proxy) {
+    const headers = {
+      'X-Target-URL': targetUrl,
+      'X-Method': method,
+      'Authorization': auth
+    };
+    if (contentType) headers['Content-Type'] = contentType;
+    if (method === 'PROPFIND') headers['Depth'] = '1';
+    return await fetch(cfg.proxy + '/proxy', { method: 'POST', headers, body: body || undefined });
+  }
+  // 无代理 → 直连
   const headers = { 'Authorization': auth };
   if (contentType) headers['Content-Type'] = contentType;
   if (method === 'PROPFIND') headers['Depth'] = '1';
-
-  // 有代理 → 走代理中转
-  if (cfg.proxy) {
-    headers['X-Target-URL'] = targetUrl;
-    return await fetch(cfg.proxy + '/proxy', { method, headers, body: body || undefined });
-  }
-  // 无代理 → 直连
   return await fetch(targetUrl, { method, headers, body: body || undefined });
 }
 
