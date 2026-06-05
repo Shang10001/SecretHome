@@ -2052,11 +2052,11 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
         <div class="hint">备份文件将保存到此目录下</div>
       </div>
 
-      <div class="btn-row-wrap">
-        <button class="btn" onclick="saveWebDAVSettings()">保存配置</button>
-        <button class="btn" onclick="testWebDAV()">测试连接</button>
-        <button class="btn primary" onclick="doBackup()">立即备份</button>
-        <button class="btn" onclick="toggleRestoreOptions()">恢复备份</button>
+      <div class="btn-row-wrap" style="flex-wrap:nowrap;">
+        <button class="btn" onclick="saveWebDAVSettings()" style="padding:8px 10px;font-size:12px;">保存配置</button>
+        <button class="btn" onclick="testWebDAV()" style="padding:8px 10px;font-size:12px;">测试连接</button>
+        <button class="btn primary" onclick="doBackup()" style="padding:8px 10px;font-size:12px;">立即备份</button>
+        <button class="btn" onclick="toggleRestoreOptions()" style="padding:8px 10px;font-size:12px;">恢复备份</button>
       </div>
 
       <div class="restore-options" id="restoreOptions">
