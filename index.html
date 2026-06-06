@@ -4968,7 +4968,7 @@ async function buildBackupData() {
     version: 2,
     timestamp: new Date().toISOString(),
     data: {
-      apiKey: state.apiKey,
+      // apiKey 不上传到云端，仅保留在本地备份中
       assistants: state.assistants,
       activeAssistantId: state.activeAssistantId,
       cacheTTL: state.cacheTTL,
@@ -5076,7 +5076,7 @@ function toggleRestoreOptions() {
 async function doRestore() {
   try {
     const mode = document.querySelector('input[name="restoreMode"]:checked').value;
-    if (mode === 'overwrite' && !confirm('完全覆盖将替换所有本地数据（包括 API Key，WebDAV 配置不受影响），确定继续？')) return;
+    if (mode === 'overwrite' && !confirm('完全覆盖将替换所有本地数据（API Key 和 WebDAV 配置不受影响），确定继续？')) return;
     setWebDAVStatus('idle', '正在查找备份...');
 
     // 列出所有备份文件，找最新的
