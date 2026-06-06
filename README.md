@@ -94,7 +94,7 @@ README.md     ← 你正在看的这个
 2. **OpenRouter 缓存**：必须锁 `provider.order` 到 Anthropic，路由到 Bedrock/Vertex 会静默破坏 `cache_control`
 3. **Safari CORS + WebDAV**：Safari 连带正确 CORS 头也会拦截 PROPFIND/DELETE/MKCOL，必须全部走 POST 代理
 4. **缓存一致性**：注入变化的时间戳、用同模型做自动标题，都会破坏提示词缓存命中——时间信息应在发送时按消息记录，标题生成换用其他模型
-5. **分支对话**：必须继承父对话的 `assistantId`，否则侧边栏归类出错
+5. **分支对话**：必须继承母对话的 `assistantId`，否则侧边栏归类出错
 6. **文件版本**：上传的文件可能是旧版，要和对话历史交叉对比确认
 7. **GitHub Pages 缓存**：测试时用 `?v=N` 查询参数强制刷新 CDN 缓存
 
@@ -116,9 +116,3 @@ https://<username>.github.io/benben/?v=42
 独立的 Express.js 服务，部署在 Render 免费层。用于将 Safari 不支持的 WebDAV 方法（PROPFIND、DELETE、MKCOL）转写为 POST 请求。
 
 核心逻辑：客户端发 POST，通过 `X-Method` 头指定实际的 WebDAV 方法，代理服务器转发为对应的原生请求。
-
----
-
-## 待办
-
-- [ ] 坚果云 WebDAV 适配（CORS 问题待解决，现有代理架构理论上可支持）
