@@ -105,7 +105,7 @@ html, body {
 }
 .msg-model {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text3);
   display: flex;
   align-items: center;
@@ -1217,40 +1217,39 @@ html, body {
 .thinking-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
+  gap: 5px;
+  padding: 4px 10px;
   background: var(--surface2);
   border: none;
-  border-radius: 12px;
+  border-radius: 16px;
   font-family: var(--font);
-  font-size: 13px;
-  color: var(--text2);
+  font-size: 11px;
+  color: var(--text3);
   cursor: pointer;
   transition: all 0.15s;
   user-select: none;
-  width: 100%;
 }
 .thinking-toggle:hover {
   background: var(--surface3);
 }
 .thinking-toggle .arrow {
-  font-size: 10px;
+  font-size: 8px;
   transition: transform 0.2s;
-  margin-left: auto;
 }
 .thinking-toggle.open .arrow {
-  transform: rotate(90deg);
+  transform: rotate(180deg);
 }
 .thinking-content {
   display: none;
   margin-top: 6px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   background: var(--surface2);
   border: none;
-  border-radius: 12px;
-  font-size: 13px;
-  line-height: 1.65;
-  color: var(--text2);
+  border-radius: 10px;
+  border-left: 2px solid var(--accent-light);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text3);
   white-space: pre-wrap;
   word-wrap: break-word;
   max-height: 300px;
@@ -1260,9 +1259,13 @@ html, body {
   display: block;
   animation: msgIn 0.2s ease-out;
 }
+.thinking-content strong {
+  color: var(--text2);
+  font-weight: 600;
+}
 .thinking-streaming {
   display: block;
-  border: 1px solid var(--accent-light);
+  border-left: 2px solid var(--accent);
   background: var(--accent-dim);
 }
 
@@ -3025,6 +3028,14 @@ function getModel() {
   return (asst.customModel || '').trim() || asst.model;
 }
 
+function getModelProvider(model) {
+  if (!model) model = getModel();
+  if (model.startsWith('anthropic/')) return 'anthropic';
+  if (model.startsWith('google/')) return 'google';
+  if (model.startsWith('openai/')) return 'openai';
+  return 'other';
+}
+
 // ============ CONVERSATIONS ============
 function newConversation() {
   const id = 'c_' + Date.now();
@@ -3931,13 +3942,15 @@ function renderMessages() {
     // Thinking block (collapsed by default)
     let thinkingHtml = '';
     if (m.thinking) {
+      // Render bold (**text**) in thinking content
+      const thinkingRendered = esc(m.thinking).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
       thinkingHtml = `
         <div class="thinking-block">
           <div class="thinking-toggle" onclick="toggleThinking(${i})">
-            <span class="arrow">&#9654;</span>
             思考过程
+            <span class="arrow">&#9662;</span>
           </div>
-          <div class="thinking-content" id="thinking-${i}">${esc(m.thinking)}</div>
+          <div class="thinking-content" id="thinking-${i}">${thinkingRendered}</div>
         </div>`;
     }
 
@@ -4148,8 +4161,8 @@ async function createBranchConv(messages, title) {
 
 // ============ FALLBACK COST ESTIMATION ============
 // Used when OpenRouter doesn't return cost in SSE response.
-// Prices are per-token (not per-million). Based on Anthropic official pricing (Jun 2026).
-// Cache write uses 1-hr TTL price (Shang's usual setting).
+// Prices are per-token (not per-million). Anthropic uses 1-hr TTL cache write price.
+// Gemini cache write ≈ input price (5-min TTL, negligible storage cost).
 // This is an approximation — actual billing may differ slightly.
 const MODEL_PRICING = {
   'anthropic/claude-opus-4.6':       { input: 5e-6,  output: 25e-6, cacheRead: 0.5e-6,  cacheWrite: 10e-6 },
@@ -4159,6 +4172,11 @@ const MODEL_PRICING = {
   'anthropic/claude-sonnet-4.5':     { input: 3e-6,  output: 15e-6, cacheRead: 0.3e-6,  cacheWrite: 6e-6 },
   'anthropic/claude-sonnet-4-20250514': { input: 3e-6, output: 15e-6, cacheRead: 0.3e-6, cacheWrite: 6e-6 },
   'anthropic/claude-haiku-4.5':      { input: 1e-6,  output: 5e-6,  cacheRead: 0.1e-6,  cacheWrite: 2e-6 },
+  // Gemini: cache read 0.25x input, cache write ≈ input (no extra charge on OpenRouter)
+  'google/gemini-2.5-pro-preview':   { input: 1.25e-6, output: 10e-6, cacheRead: 0.3125e-6, cacheWrite: 1.25e-6 },
+  'google/gemini-2.5-pro':           { input: 1.25e-6, output: 10e-6, cacheRead: 0.3125e-6, cacheWrite: 1.25e-6 },
+  // GPT-4o: cache read 0.5x input, no write cost
+  'openai/gpt-4o-2024-11-20':       { input: 2.5e-6, output: 10e-6, cacheRead: 1.25e-6, cacheWrite: 2.5e-6 },
 };
 
 function estimateCost(model, promptTokens, completionTokens, cachedTokens, cacheWriteTokens) {
@@ -4389,18 +4407,45 @@ async function sendMessage() {
       }
     }
 
-    const cacheCtl = { type: 'ephemeral' };
-    if (state.cacheTTL) cacheCtl.ttl = state.cacheTTL;
+    // Gemini explicit caching: put cache_control breakpoint on the second-to-last
+    // message so SP + conversation history is cached, only new user input is uncached.
+    // If first message in conv, fall back to system prompt.
+    // OpenRouter uses only the last breakpoint for Gemini.
+    if (getModelProvider() === 'google' && messages.length >= 2) {
+      const bpIdx = messages.length - 2; // message before current user input
+      const bpMsg = messages[bpIdx];
+      if (typeof bpMsg.content === 'string') {
+        bpMsg.content = [{ type: 'text', text: bpMsg.content, cache_control: { type: 'ephemeral' } }];
+      } else if (Array.isArray(bpMsg.content)) {
+        // Add cache_control to the last text block in the array
+        for (let i = bpMsg.content.length - 1; i >= 0; i--) {
+          if (bpMsg.content[i].type === 'text') {
+            bpMsg.content[i].cache_control = { type: 'ephemeral' };
+            break;
+          }
+        }
+      }
+    }
+
+    const currentProvider = getModelProvider();
 
     const body = {
       model: getModel(),
       messages,
       max_tokens: state.maxTokens,
       temperature: state.temperature,
-      stream: true,
-      cache_control: cacheCtl,
-      provider: { order: ['Anthropic'] }
+      stream: true
     };
+
+    // Anthropic: top-level cache_control + provider lock
+    if (currentProvider === 'anthropic') {
+      const cacheCtl = { type: 'ephemeral' };
+      if (state.cacheTTL) cacheCtl.ttl = state.cacheTTL;
+      body.cache_control = cacheCtl;
+      body.provider = { order: ['Anthropic'] };
+    }
+    // Google Gemini: cache_control breakpoint already placed on messages above
+    // Other providers (OpenAI, etc.): rely on their own implicit caching
 
     // Add reasoning (extended thinking) if enabled
     if (state.reasoningEnabled) {
@@ -4589,8 +4634,8 @@ function renderStreamingThinking(index, thinking) {
     thinkingBlock.className = 'thinking-block';
     thinkingBlock.innerHTML = `
       <div class="thinking-toggle open" onclick="toggleThinking(${index})">
-        <span class="arrow">&#9654;</span>
         思考中...
+        <span class="arrow">&#9662;</span>
       </div>
       <div class="thinking-content open thinking-streaming" id="thinking-${index}"></div>
     `;
@@ -4619,8 +4664,13 @@ function updateCacheIndicator(cached, cacheWrite) {
   if (totalCached > 0) {
     cacheState.tokens = totalCached;
     cacheState.lastRefresh = Date.now();
-    // TTL: parse from settings
-    cacheState.ttlMs = state.cacheTTL === '1h' ? 3600000 : 300000; // 1h or 5min
+    // TTL: Anthropic respects user setting; Gemini/others always ~5min
+    const provider = getModelProvider();
+    if (provider === 'anthropic') {
+      cacheState.ttlMs = state.cacheTTL === '1h' ? 3600000 : 300000;
+    } else {
+      cacheState.ttlMs = 300000; // 5min for Gemini and others
+    }
     updateCacheCountdown();
     startCacheTimer();
   }
