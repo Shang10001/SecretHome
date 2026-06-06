@@ -4507,12 +4507,12 @@ async function sendMessage() {
               }
             }
           }
-          // Fallback: check legacy reasoning fields
-          if (delta?.reasoning) {
+          // Fallback: legacy reasoning fields (only if reasoning_details not present)
+          else if (delta?.reasoning) {
             assistantMsg.thinking += delta.reasoning;
             renderStreamingThinking(conv.messages.length - 1, assistantMsg.thinking);
           }
-          if (delta?.reasoning_content) {
+          else if (delta?.reasoning_content) {
             assistantMsg.thinking += delta.reasoning_content;
             renderStreamingThinking(conv.messages.length - 1, assistantMsg.thinking);
           }
