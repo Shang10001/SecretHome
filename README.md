@@ -1,61 +1,124 @@
 # 笨笨家园 BenBenHome
 
-一个单 HTML 文件的 AI 聊天前端，通过 OpenRouter 调用 Claude / GPT / Gemini 等模型。
-不需要构建、不需要服务器，传到 GitHub Pages 打开就能用，也可以添加到手机主屏幕当 PWA 用。
+个人用 AI 聊天前端，单文件 PWA，通过 OpenRouter API 连接 Claude 等模型。主要用于创意写作和角色扮演。部署在 GitHub Pages 上，日常在 iOS Safari（添加到主屏幕）和桌面浏览器两端使用。
+
+所有代码由 Claude 编写，我负责提需求、设计和测试。
 
 ---
 
-## 功能一览
+## 架构概览
 
-**聊天核心**
-- 流式输出（SSE streaming）
-- 发送图片（自动压缩到 800px / JPEG 70%，嵌入对话数据，备份时一起走）
-- 多对话管理（新建 / 切换 / 删除）
-- 消息编辑（点 `⋮` → 编辑，直接在气泡里改）
-- 对话分支（从任意消息往上或往下拆成新对话）
-
-**模型 & 参数**
-- 支持 Claude Opus 4.7 / 4.6、Sonnet 4.5、GPT-4o，也可以手动输入任意 OpenRouter 模型 ID
-- Prompt Caching（5 分钟 / 1 小时 TTL），缓存状态实时显示
-- Extended Thinking / 思考链（Low / Medium / High / Max 四档力度）
-- System Prompt、Temperature、Max Tokens、上下文消息数 均可调
-
-**数据 & 备份**
-- 自动保存到浏览器 IndexedDB，刷新不丢
-- WebDAV 备份 / 恢复（支持"完全覆盖"和"智能合并"两种模式）
-- 从 Kelivo 导入对话记录
-- 每条消息记录 token 用量、缓存命中、花费
-
-**外观**
-- 两套主题：奶油暖白（参考了Claude.ai配色） / 夜间护眼
-- 移动端适配，键盘弹出不跳页（VisualViewport 钉位）
-
----
-
-## 文件结构
+整个应用就是一个 `index.html`（~6000 行），加一张 `icon.PNG` 做主屏图标。没有构建工具，没有依赖，推到 main 分支就是部署。
 
 ```
-index.html   ← 全部代码都在这一个文件里
-icon.png     ← 主屏幕图标（正方形 PNG，换图标只需替换这个文件）
-README.md
+index.html    ← 全部代码：HTML + CSS + JS
+icon.PNG      ← iOS 主屏图标
+README.md     ← 你正在看的这个
 ```
 
-## 换图标
+### 存储层
 
-1. 准备一张**正方形 PNG**（建议 1024×1024，铺实色底，别留透明，别自己磨圆角）
-2. 命名为 `icon.png`，在 GitHub 上覆盖掉旧的
-3. 手机上删掉旧的主屏幕图标 → 重新"添加到主屏幕"（iOS 会缓存旧图标）
+- **IndexedDB**：主存储，保存对话内容和设置。分 store 设计（settings / conversations）
+- **localStorage**：轻量元数据，主题偏好等
+- **`navigator.storage.persist()`**：防止 iOS Safari 静默清除 IndexedDB
+- **页面生命周期钩子**：`visibilitychange` / `pagehide` / `beforeunload` 三重保险自动保存
 
----
+### API 层
 
-## WebDAV 备份
-
-在设置 → 备份页填入 WebDAV 地址、用户名、密码，点测试确认连通，然后：
-- **备份**：把所有对话 + 设置 + 记忆打包成 `benben_backup.json` 上传到 WebDAV
-- **恢复 — 智能合并**：只补充本地没有的对话和记忆，不碰已有数据
-- **恢复 — 完全覆盖**：用备份内容替换本地所有数据（WebDAV 配置本身不受影响）
+- 通过 **OpenRouter** 调用模型，主力 Claude，偶尔 GPT-4o / Gemini
+- `provider: { order: ['Anthropic'] }` 锁定 Anthropic 直连，防止路由到 Bedrock/Vertex 导致 cache 失效
+- `cache_control` 请求级别设置，1 小时 TTL，Opus 模型需要 ~4096 原生 token 才触发缓存
 
 ---
 
-## 备忘
-- iOS 上如果键盘弹出时页面跳动，确认 viewport meta 里有 `interactive-widget=resizes-content`
+## 功能清单
+
+### 多助手系统
+- 每个助手有独立的名称、主题色、模型选择、系统提示词
+- 对话按助手分组，侧边栏按助手归类
+- 从 v1 单助手格式自动迁移
+
+### 记忆库（世界书）
+- 手动管理的记忆条目，可逐条启用/禁用
+- 按关键词自动匹配并注入到请求上下文中
+- 消息气泡上显示匹配了哪些记忆条目
+
+### 对话管理
+- 按日期分组的对话列表（Kelivo 风格）
+- 对话重命名、删除
+- 消息编辑、重新生成
+- **对话分支**：从任意消息处分叉出新对话，继承 assistantId
+
+### 全局搜索
+- 带防抖的全文搜索，跨所有对话
+- 关键词高亮，点击结果直接跳转到对应消息
+
+### 缓存状态指示
+- 模型名旁边的状态点：脉动绿 = 缓存命中，灰 = 已过期
+- 缓存倒计时显示
+
+### 图片支持
+- 拍照 / 相册上传，自动压缩
+- 图片以 base64 内联发送
+
+### 费用统计面板
+- 按助手分色的堆叠柱状图
+- 日历热力图显示每日使用量
+- 分时段统计（7天 / 30天 / 全部）
+- token 用量、对话数、估算费用
+
+### 主题切换
+- **奶油暖白**（默认）：Claude.ai 风格暖色调
+- **夜间护眼**：低蓝光暖色暗主题
+- 切换前预写入 localStorage，避免页面闪烁
+
+### 备份系统
+
+**云端 WebDAV 备份：**
+- 通过 CORS 代理（Express.js / Render 免费层）连接 WebDAV
+- 所有 WebDAV 方法改写为 POST + `X-Method` 头，绕过 Safari 跨域限制
+- 滚动时间戳备份，自动保留最近 5 份
+- PROPFIND XML 解析，自动找到最新备份进行恢复
+
+**本地备份：**
+- Header 下拉菜单中的「保存到本地」/「从本地导入」
+- JSON 格式，包含全部数据
+
+---
+
+## 踩过的坑
+
+这些是开发过程中积累的经验，以后改代码前值得回顾：
+
+1. **iOS Safari 存储蒸发**：不调 `navigator.storage.persist()`，IndexedDB 随时可能被系统回收，用户毫无感知
+2. **OpenRouter 缓存**：必须锁 `provider.order` 到 Anthropic，路由到 Bedrock/Vertex 会静默破坏 `cache_control`
+3. **Safari CORS + WebDAV**：Safari 连带正确 CORS 头也会拦截 PROPFIND/DELETE/MKCOL，必须全部走 POST 代理
+4. **缓存一致性**：注入变化的时间戳、用同模型做自动标题，都会破坏提示词缓存命中——时间信息应在发送时按消息记录，标题生成换用其他模型
+5. **分支对话**：必须继承父对话的 `assistantId`，否则侧边栏归类出错
+6. **文件版本**：上传的文件可能是旧版，要和对话历史交叉对比确认
+7. **GitHub Pages 缓存**：测试时用 `?v=N` 查询参数强制刷新 CDN 缓存
+
+---
+
+## 部署
+
+推到 `main` 分支就行。GitHub Pages 设置为从 main 根目录部署。
+
+测试时在 URL 后加 `?v=N` 绕过缓存：
+```
+https://<username>.github.io/benben/?v=42
+```
+
+---
+
+## CORS 代理
+
+独立的 Express.js 服务，部署在 Render 免费层。用于将 Safari 不支持的 WebDAV 方法（PROPFIND、DELETE、MKCOL）转写为 POST 请求。
+
+核心逻辑：客户端发 POST，通过 `X-Method` 头指定实际的 WebDAV 方法，代理服务器转发为对应的原生请求。
+
+---
+
+## 待办
+
+- [ ] 坚果云 WebDAV 适配（CORS 问题待解决，现有代理架构理论上可支持）
