@@ -95,14 +95,7 @@ html, body {
   gap: 10px;
   min-width: 0;
 }
-.logo {
-  font-family: var(--font);
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text);
-  white-space: nowrap;
-  letter-spacing: -0.3px;
-}
+
 .msg-model {
   font-family: var(--mono);
   font-size: 10px;
@@ -184,7 +177,6 @@ html, body {
   .header-actions { gap: 0; }
   .icon-btn { width: 32px; height: 32px; border-radius: 8px; }
   .icon-btn svg { width: 16px; height: 16px; }
-  .logo { font-size: 15px; }
   .cache-indicator { padding: 2px 7px; font-size: 10px; }
   .header-asst-btn { width: 32px; height: 32px; border-radius: 8px; }
 }
@@ -2026,7 +2018,6 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
   <!-- HEADER -->
   <div class="header">
     <div class="header-left">
-      <span class="logo">笨笨家园</span>
       <div class="cache-indicator" id="cacheStatus">
         <span class="cache-dot" id="cacheDot"></span>
         <span id="cacheLabel">--</span>
@@ -2325,13 +2316,14 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
         <label>模型</label>
         <select id="asstEditModel">
           <optgroup label="Opus">
-            <option value="anthropic/claude-opus-4.7">Claude Opus 4.7</option>
             <option value="anthropic/claude-opus-4.6" selected>Claude Opus 4.6 (笨笨)</option>
+            <option value="anthropic/claude-opus-4.5">Claude Opus 4.5</option>
           </optgroup>
           <optgroup label="Sonnet">
             <option value="anthropic/claude-sonnet-4.5">Claude Sonnet 4.5</option>
           </optgroup>
           <optgroup label="Google">
+            <option value="google/gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
             <option value="google/gemini-2.5-pro-preview">Gemini 2.5 Pro Preview</option>
           </optgroup>
           <optgroup label="OpenAI">
@@ -4163,13 +4155,13 @@ async function createBranchConv(messages, title) {
 // This is an approximation — actual billing may differ slightly.
 const MODEL_PRICING = {
   'anthropic/claude-opus-4.6':       { input: 5e-6,  output: 25e-6, cacheRead: 0.5e-6,  cacheWrite: 10e-6 },
-  'anthropic/claude-opus-4.7':       { input: 5e-6,  output: 25e-6, cacheRead: 0.5e-6,  cacheWrite: 10e-6 },
   'anthropic/claude-opus-4.5':       { input: 5e-6,  output: 25e-6, cacheRead: 0.5e-6,  cacheWrite: 10e-6 },
   'anthropic/claude-sonnet-4.6':     { input: 3e-6,  output: 15e-6, cacheRead: 0.3e-6,  cacheWrite: 6e-6 },
   'anthropic/claude-sonnet-4.5':     { input: 3e-6,  output: 15e-6, cacheRead: 0.3e-6,  cacheWrite: 6e-6 },
   'anthropic/claude-sonnet-4-20250514': { input: 3e-6, output: 15e-6, cacheRead: 0.3e-6, cacheWrite: 6e-6 },
   'anthropic/claude-haiku-4.5':      { input: 1e-6,  output: 5e-6,  cacheRead: 0.1e-6,  cacheWrite: 2e-6 },
-  // Gemini: cache read 0.25x input, cache write ≈ input (no extra charge on OpenRouter)
+  // Gemini: cache write ≈ input (no extra charge on OpenRouter)
+  'google/gemini-3.1-pro-preview':   { input: 2e-6,    output: 12e-6, cacheRead: 0.2e-6,    cacheWrite: 2e-6 },
   'google/gemini-2.5-pro-preview':   { input: 1.25e-6, output: 10e-6, cacheRead: 0.3125e-6, cacheWrite: 1.25e-6 },
   'google/gemini-2.5-pro':           { input: 1.25e-6, output: 10e-6, cacheRead: 0.3125e-6, cacheWrite: 1.25e-6 },
   // GPT-4o: cache read 0.5x input, no write cost
