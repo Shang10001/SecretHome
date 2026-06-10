@@ -2136,6 +2136,14 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       </div>
 
       <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="timestampEnabled" style="accent-color:var(--accent);width:16px;height:16px;">
+          注入时间戳
+        </label>
+        <div class="hint">开启后每条用户消息末尾会附上发送时间，让助手知道当前日期和时刻。关闭可节省少量 token。</div>
+      </div>
+
+      <div class="field">
         <label>Temperature</label>
         <input type="number" id="temperature" value="0.7" min="0" max="2" step="0.1">
         <div class="hint">启用思考链时此项会被忽略（Anthropic 要求 temperature=1）</div>
@@ -2434,6 +2442,7 @@ function defaultState() {
     cacheTTL: '1h',
     maxTokens: 4096,
     contextLen: 0,
+    timestampEnabled: true,
     temperature: 0.7,
     assistants: {
       'asst_default': {
@@ -3865,6 +3874,7 @@ function showSettings() {
   document.getElementById('autoExportToggle').checked = state.autoExport || false;
   document.getElementById('autoExportInterval').value = state.autoExportInterval || 50;
   document.getElementById('reasoningEnabled').checked = state.reasoningEnabled || false;
+  document.getElementById('timestampEnabled').checked = state.timestampEnabled !== false;
   document.getElementById('reasoningEffort').value = state.reasoningEffort || 'medium';
   openModal('settingsModal', true);
   updateStorageUsage();
@@ -3878,6 +3888,7 @@ function saveSettings() {
   state.contextLen = parseInt(document.getElementById('contextLen').value) || 0;
   state.temperature = parseFloat(document.getElementById('temperature').value) || 0.7;
   state.reasoningEnabled = document.getElementById('reasoningEnabled').checked;
+  state.timestampEnabled = document.getElementById('timestampEnabled').checked;
   state.reasoningEffort = document.getElementById('reasoningEffort').value;
   const newAutoInterval = parseInt(document.getElementById('autoExportInterval').value) || 50;
   if (newAutoInterval !== state.autoExportInterval) {
@@ -4382,8 +4393,8 @@ async function sendMessage() {
     for (let mi = 0; mi < historyMsgs.length; mi++) {
       const m = historyMsgs[mi];
       let content = m.content;
-      // Append stored timestamp to every user message
-      if (m.role === 'user' && m.ts) {
+      // Append stored timestamp to every user message (if enabled)
+      if (m.role === 'user' && m.ts && state.timestampEnabled !== false) {
         content = content + `\n\n[当前时间: ${m.ts}]`;
       }
       // Inject matched memories into the LAST user message only (preserves SP cache prefix)
