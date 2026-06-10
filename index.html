@@ -4267,6 +4267,8 @@ function removeImage() {
 
 // ============ SEND ============
 let isStreaming = false;
+let _streamAbort = null;   // AbortController for active stream
+let _streamLastData = 0;   // timestamp of last received chunk
 
 async function regenerateResponse(index) {
   if (isStreaming) return;
@@ -4337,6 +4339,8 @@ async function sendMessage() {
   renderMessages();
 
   isStreaming = true;
+  _streamAbort = new AbortController();
+  _streamLastData = Date.now();
   document.getElementById('sendBtn').disabled = true;
 
   const assistantMsg = { role: 'assistant', content: '', thinking: '', usage: null, model: getModel(), ts: now.getTime() };
@@ -4451,7 +4455,8 @@ async function sendMessage() {
         'HTTP-Referer': 'https://benben-home.local',
         'X-Title': 'BenBen Home'
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: _streamAbort.signal
     });
 
     if (!response.ok) {
@@ -4469,6 +4474,7 @@ async function sendMessage() {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
+      _streamLastData = Date.now();
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
@@ -4559,7 +4565,10 @@ async function sendMessage() {
 
   } catch(err) {
     typingEl.remove();
-    assistantMsg.content = `[错误] ${err.message}`;
+    // AbortError means the stream was intentionally killed (e.g. by background recovery)
+    assistantMsg.content += err.name === 'AbortError'
+      ? (assistantMsg.content ? '\n\n[连接中断 - 切后台时流被终止]' : '[连接中断 - 切后台时流被终止]')
+      : `[错误] ${err.message}`;
     // Fix: save any partial usage data from before the error
     if (usage && (usage.prompt_tokens || usage.completion_tokens)) {
       const cached = usage.prompt_tokens_details?.cached_tokens || 0;
@@ -4583,6 +4592,7 @@ async function sendMessage() {
   }
 
   isStreaming = false;
+  _streamAbort = null;
   document.getElementById('sendBtn').disabled = false;
 }
 
@@ -5856,9 +5866,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   // iOS PWA 切后台/锁屏时，系统可能随时终止进程
   // 在 visibilitychange 时立刻保存，确保数据不丢失
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden' && state._activeConvData) {
-      saveState();
-      console.log('[lifecycle] saved on visibility hidden');
+    if (document.visibilityState === 'hidden') {
+      // --- 切后台：保存 + 暂停定时器 ---
+      if (state._activeConvData) saveState();
+      if (cacheTimerInterval) { clearInterval(cacheTimerInterval); cacheTimerInterval = null; }
+      console.log('[lifecycle] hidden: saved + paused timers');
+    } else {
+      // --- 切前台：恢复 ---
+      // 1) 强制重绘 — Safari 有时切回来后渲染管线卡死
+      const app = document.querySelector('.app');
+      if (app) { app.style.display = 'none'; app.offsetHeight; app.style.display = ''; }
+
+      // 2) 重启 cache countdown
+      if (cacheState.lastRefresh && cacheState.tokens) {
+        updateCacheCountdown();
+        startCacheTimer();
+      }
+
+      // 3) 流式请求看门狗：如果超过 30 秒没收到数据，说明连接已死
+      if (isStreaming && _streamAbort && (Date.now() - _streamLastData > 30000)) {
+        console.log('[lifecycle] stream stale, aborting');
+        _streamAbort.abort();
+      }
+
+      console.log('[lifecycle] visible: repaint + timers restored');
     }
   });
 
