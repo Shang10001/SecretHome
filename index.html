@@ -3005,6 +3005,7 @@ async function tryLoadFromIDB() {
                 msgCount: conv.messages.length,
                 assistantId: conv.assistantId || 'asst_default'
               };
+              if (conv.mode) state.conversations[id].mode = conv.mode;
               migrated++;
             }
           }
@@ -3040,6 +3041,7 @@ async function tryLoadFromIDB() {
           msgCount: (conv.messages || []).length,
           assistantId: conv.assistantId || 'asst_default'
         };
+        if (conv.mode) state.conversations[id].mode = conv.mode;
       }
       saveSettingsToLS();
       showToast('已从存储恢复对话索引');
@@ -3247,7 +3249,7 @@ function importLocalBackup(event) {
         // Skip empty conversations
         if (!conv.messages || conv.messages.length === 0) continue;
         await saveConvToIDB(conv);
-        state.conversations[id] = {
+        const meta = {
           id: conv.id,
           title: conv.title,
           created: conv.created,
@@ -3255,6 +3257,8 @@ function importLocalBackup(event) {
           totalCost: conv.messages.reduce((s, m) => s + (m.usage?.cost || 0), 0),
           assistantId: conv.assistantId || 'asst_default'
         };
+        if (conv.mode) meta.mode = conv.mode;
+        state.conversations[id] = meta;
       }
 
       state.activeConvId = Object.keys(state.conversations)[0] || null;
@@ -5811,11 +5815,13 @@ async function doRestore() {
       state.conversations = {};
       for (const [id, conv] of Object.entries(importedConvs)) {
         await saveConvToIDB(conv);
-        state.conversations[id] = {
+        const meta = {
           id: conv.id, title: conv.title, created: conv.created,
           msgCount: (conv.messages || []).length,
           assistantId: conv.assistantId || 'asst_default'
         };
+        if (conv.mode) meta.mode = conv.mode;
+        state.conversations[id] = meta;
       }
       state.activeConvId = Object.keys(state.conversations)[0] || null;
     } else {
@@ -5829,11 +5835,13 @@ async function doRestore() {
       for (const [id, conv] of Object.entries(backupConvs)) {
         if (!state.conversations[id]) {
           await saveConvToIDB(conv);
-          state.conversations[id] = {
+          const meta = {
             id: conv.id, title: conv.title, created: conv.created,
             msgCount: (conv.messages || []).length,
             assistantId: conv.assistantId || 'asst_default'
           };
+          if (conv.mode) meta.mode = conv.mode;
+          state.conversations[id] = meta;
         }
       }
       const backupMems = data.memories || [];
