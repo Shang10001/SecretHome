@@ -2060,17 +2060,21 @@ html, body {
 }
 /* 缓存指示点：最新一组助手消息旁 */
 .chat-cache-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--text3);
   flex-shrink: 0;
-  margin-top: 15px;
   transition: background 0.3s;
+  display: none;
 }
 .chat-cache-dot.alive {
+  display: block;
   background: var(--green);
   animation: pulse 2s infinite;
+}
+.chat-cache-dot.expired {
+  display: block;
 }
 /* 组旁的 "..." 菜单按钮垂直对齐第一条气泡 */
 .chat-group .msg-inline-menu { margin-top: 9px; }
@@ -2279,6 +2283,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     <div class="chat-header-id" onclick="showChatConvList()" title="对话列表">
       <div class="chat-avatar" id="chatAvatar">笨</div>
       <div class="chat-header-name" id="chatHeaderName">笨笨</div>
+      <span class="chat-cache-dot" id="chatCacheDot"></span>
     </div>
     <div id="chatHeaderRight" style="display:flex;align-items:center;flex-shrink:0;"></div>
   </div>
@@ -4440,14 +4445,6 @@ function renderChatMessages() {
     return;
   }
 
-  // 找到最后一条助手消息（缓存指示点挂在这里）
-  let lastAsstIdx = -1;
-  for (let i = conv.messages.length - 1; i >= 0; i--) {
-    if (conv.messages[i].role === 'assistant') { lastAsstIdx = i; break; }
-  }
-  const cacheAlive = !!(cacheState.lastRefresh && cacheState.tokens &&
-    (Date.now() - cacheState.lastRefresh < cacheState.ttlMs));
-
   container.innerHTML = conv.messages.map((m, i) => {
     const menuBtn = `<button class="msg-inline-menu" onclick="toggleMsgMenu(${i}, event)">&#8943;</button>`;
     if (m.role === 'user') {
@@ -4460,15 +4457,11 @@ function renderChatMessages() {
         </div>`;
     } else {
       const bubbles = splitChatBubbles(m.content);
-      const dotHtml = i === lastAsstIdx
-        ? `<span class="chat-cache-dot ${cacheAlive ? 'alive' : ''}" id="chatCacheDot"></span>`
-        : '';
       const bubbleHtml = bubbles.map((b, bi) =>
         `<div class="chat-bubble asst ${bi === 0 ? 'first' : ''}">${esc(b)}</div>`
       ).join('');
       return `
         <div class="msg chat-group asst" data-index="${i}">
-          ${dotHtml}
           <div class="chat-bubble-col" id="msgContent-${i}">${bubbleHtml}</div>
           ${menuBtn}
         </div>`;
@@ -5363,9 +5356,12 @@ function updateModelDots(active) {
       el.classList.remove('cache-active');
     }
   });
-  // 聊天模式：最新一组助手消息旁的缓存指示点
+  // 聊天模式：header 里的缓存指示点
   const chatDot = document.getElementById('chatCacheDot');
-  if (chatDot) chatDot.classList.toggle('alive', !!active);
+  if (chatDot) {
+    chatDot.classList.toggle('alive', !!active);
+    chatDot.classList.toggle('expired', !active && !!(cacheState.lastRefresh && cacheState.tokens));
+  }
 }
 
 // ============ INPUT HELPERS ============
