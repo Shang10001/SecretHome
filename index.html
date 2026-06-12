@@ -2426,7 +2426,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       <div class="field">
         <label style="display:flex;justify-content:space-between;align-items:center;">
           聊天模式格式说明
-          <button class="btn" style="padding:3px 10px;font-size:12px;" onclick="restoreChatInstruction()">恢复默认</button>
+          <span style="font-weight:400;font-size:12px;color:var(--accent);cursor:pointer;" onclick="restoreChatInstruction()">恢复默认</span>
         </label>
         <textarea id="chatInstructionInput" rows="8" style="font-size:13px;line-height:1.6;" placeholder="留空则不追加任何说明"></textarea>
         <div class="hint">聊天模式下会追加到 system prompt 末尾，告诉模型如何用 ||| 拆分多条消息。留空则不追加（模型可能不再拆分气泡）。修改后，进行中的聊天对话下一条消息会重新写入缓存。</div>
