@@ -38,6 +38,8 @@
   --red-light: #FFECEB;
   --user-bg: #EEEEF6;
   --assistant-bg: transparent;
+  --chat-asst-bg: #EFEAE2;
+  --chat-user-bg: #DAE4E9;
   --radius: 16px;
   --radius-sm: 10px;
   --font: 'Noto Sans SC', -apple-system, 'Helvetica Neue', sans-serif;
@@ -1929,6 +1931,239 @@ html, body {
 .stats-tab-panel.active { display: block; }
 
 /* ========== 夜间护眼模式 (warm low-blue dark theme) ========== */
+/* ========== 聊天模式 (Chat Mode) ========== */
+/* --- 聊天界面顶栏 --- */
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.chat-header-id {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 10px;
+  transition: background 0.15s;
+}
+.chat-header-id:active { background: var(--surface2); }
+.chat-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.chat-header-name {
+  font-weight: 600;
+  font-size: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- 联系人列表 --- */
+.contacts-view {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  background: var(--bg);
+}
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  transition: background 0.15s;
+}
+.contact-item:active { background: var(--surface2); }
+.contact-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.contact-info { flex: 1; min-width: 0; }
+.contact-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text);
+}
+.contact-meta {
+  font-size: 13px;
+  color: var(--text2);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- 聊天气泡 --- */
+.chat-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 16px;
+  max-width: 100%;
+}
+.chat-group.user { justify-content: flex-end; }
+.chat-bubble-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 78%;
+  min-width: 0;
+}
+.chat-group.asst .chat-bubble-col { align-items: flex-start; }
+.chat-group.user .chat-bubble-col { align-items: flex-end; }
+.chat-bubble {
+  position: relative;
+  padding: 9px 14px;
+  border-radius: 16px;
+  font-size: 15px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  width: fit-content;
+  max-width: 100%;
+  color: var(--text);
+  animation: msgIn 0.25s ease-out;
+}
+.chat-bubble.asst { background: var(--chat-asst-bg); }
+.chat-bubble.user { background: var(--chat-user-bg); }
+/* 小尾巴：每组第一条气泡的底角 */
+.chat-bubble.asst.first { border-bottom-left-radius: 4px; }
+.chat-bubble.asst.first::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: -6px;
+  width: 12px;
+  height: 12px;
+  background: var(--chat-asst-bg);
+  border-bottom-right-radius: 12px;
+  z-index: -1;
+}
+.chat-bubble.user.first { border-bottom-right-radius: 4px; }
+.chat-bubble.user.first::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: -6px;
+  width: 12px;
+  height: 12px;
+  background: var(--chat-user-bg);
+  border-bottom-left-radius: 12px;
+  z-index: -1;
+}
+.chat-bubble-col .msg-image {
+  max-width: 200px;
+  border-radius: 14px;
+  display: block;
+}
+/* 缓存指示点：最新一组助手消息旁 */
+.chat-cache-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text3);
+  flex-shrink: 0;
+  margin-top: 15px;
+  transition: background 0.3s;
+}
+.chat-cache-dot.alive {
+  background: var(--green);
+  animation: pulse 2s infinite;
+}
+/* 组旁的 "..." 菜单按钮垂直对齐第一条气泡 */
+.chat-group .msg-inline-menu { margin-top: 9px; }
+/* --- 头像 --- */
+.avatar-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.avatar-edit-preview {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 22px;
+  background: var(--surface2);
+  color: var(--text2);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.avatar-edit-preview img,
+.chat-avatar img,
+.contact-avatar img,
+.chat-empty-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.chat-avatar, .contact-avatar, .chat-empty-avatar { overflow: hidden; }
+
+/* 聊天模式编辑态：气泡列变成可编辑文本块 */
+.chat-bubble-col.editing {
+  background: var(--surface2);
+  border-radius: 12px;
+  padding: 10px 14px;
+  outline: 1.5px solid var(--accent);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 15px;
+}
+
+/* 聊天模式空状态 */
+.chat-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 14px;
+  color: var(--text3);
+  font-size: 14px;
+}
+.chat-empty .chat-empty-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 26px;
+}
+
 :root.night {
   --bg: #1A1714;
   --surface: #1F1B18;
@@ -1951,6 +2186,8 @@ html, body {
   --red-light: #2E1B19;
   --user-bg: #2C2723;
   --assistant-bg: transparent;
+  --chat-asst-bg: #2C2723;
+  --chat-user-bg: #233037;
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
   --shadow: 0 2px 8px rgba(0,0,0,0.4);
   --shadow-lg: 0 4px 16px rgba(0,0,0,0.5);
@@ -1982,6 +2219,8 @@ html, body {
   --red-light: #FFECEB;
   --user-bg: #EFEEEB;
   --assistant-bg: transparent;
+  --chat-asst-bg: #EDE7DD;
+  --chat-user-bg: #D9E3E8;
   --shadow-sm: 0 1px 2px rgba(45,43,40,0.04);
   --shadow: 0 2px 8px rgba(45,43,40,0.07);
   --shadow-lg: 0 4px 16px rgba(45,43,40,0.10);
@@ -2018,6 +2257,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
   <!-- HEADER -->
   <div class="header">
     <div class="header-left">
+      <button class="icon-btn" id="modeSwitchBtn" onclick="switchUIMode()" title="聊天模式"></button>
       <div class="cache-indicator" id="cacheStatus">
         <span class="cache-dot" id="cacheDot"></span>
         <span id="cacheLabel">--</span>
@@ -2056,9 +2296,24 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     </div>
   </div>
 
+  <!-- CHAT HEADER (聊天模式专用顶栏) -->
+  <div class="chat-header" id="chatHeader" style="display:none">
+    <button class="icon-btn" onclick="showContactsView()" title="返回联系人">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="chat-header-id" onclick="showChatConvList()" title="对话列表">
+      <div class="chat-avatar" id="chatAvatar">笨</div>
+      <div class="chat-header-name" id="chatHeaderName">笨笨</div>
+    </div>
+    <div id="chatHeaderRight" style="display:flex;align-items:center;flex-shrink:0;"></div>
+  </div>
+
   <!-- MESSAGES -->
   <div class="messages" id="messages">
   </div>
+
+  <!-- CONTACTS (聊天模式联系人列表) -->
+  <div class="contacts-view" id="contactsView" style="display:none"></div>
 
   <!-- INPUT -->
   <div class="input-area">
@@ -2166,6 +2421,15 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
           <option value="max">Max — 最大力度 (仅 4.6)</option>
         </select>
         <div class="hint">Claude 4.6 支持 adaptive thinking，会根据任务复杂度自动调整思考深度</div>
+      </div>
+
+      <div class="field">
+        <label style="display:flex;justify-content:space-between;align-items:center;">
+          聊天模式格式说明
+          <button class="btn" style="padding:3px 10px;font-size:12px;" onclick="restoreChatInstruction()">恢复默认</button>
+        </label>
+        <textarea id="chatInstructionInput" rows="8" style="font-size:13px;line-height:1.6;" placeholder="留空则不追加任何说明"></textarea>
+        <div class="hint">聊天模式下会追加到 system prompt 末尾，告诉模型如何用 ||| 拆分多条消息。留空则不追加（模型可能不再拆分气泡）。修改后，进行中的聊天对话下一条消息会重新写入缓存。</div>
       </div>
 
       <div class="btn-row">
@@ -2313,6 +2577,16 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     <h2 id="asstEditTitle">新助手 <button onclick="closeModal('asstEditModal')">&#10005;</button></h2>
     <div class="asst-edit-form">
       <div class="field">
+        <label>头像</label>
+        <div class="avatar-edit-row">
+          <div class="avatar-edit-preview" id="asstAvatarPreview">?</div>
+          <button class="btn" onclick="document.getElementById('asstAvatarPicker').click()">选择图片</button>
+          <button class="btn" id="asstAvatarRemoveBtn" onclick="removeAsstAvatar()" style="display:none;color:var(--red);">移除</button>
+        </div>
+        <input type="file" id="asstAvatarPicker" accept="image/*" style="display:none" onchange="handleAsstAvatarPick(event)">
+        <div class="hint">不设置则显示名字首字 + 助手颜色</div>
+      </div>
+      <div class="field">
         <label>名称</label>
         <input type="text" id="asstEditName" placeholder="给助手起个名字...">
       </div>
@@ -2436,6 +2710,15 @@ const DB_KEY = 'benben_data';
 
 const ASST_COLORS = ['#DA7756','#228CC7','#379A8B','#3EBCD2','#DB444B','#EBB434','#9467BD','#D27AB7'];
 
+// 聊天模式：追加到 system prompt 末尾的格式说明（默认值，可在设置中修改）
+const CHAT_MODE_INSTRUCTION = `【聊天模式】
+当前场景：你和用户不在面对面，而是各自拿着手机，通过即时通讯App（类似微信）聊天。请遵守这个场景的表达方式：
+- 像平时用手机发消息一样说话：口语化、简短、自然。
+- 把回复拆成多条消息发送，相邻两条消息之间用 ||| 分隔。
+- 通常一次发 1~4 条，每条一般一两句话；也可以单独发一条很短的反应。
+- 不要写动作描写、神态描写或旁白，只发送你会真正"打字发出去"的文字。
+- 不要使用 Markdown 格式。`;
+
 function defaultState() {
   return {
     apiKey: '',
@@ -2463,7 +2746,10 @@ function defaultState() {
     autoExportInterval: 50,
     msgsSinceExport: 0,
     reasoningEnabled: false,
-    reasoningEffort: 'medium'
+    reasoningEffort: 'medium',
+    uiMode: 'roleplay',
+    lastRoleplayConvId: null,
+    chatInstruction: CHAT_MODE_INSTRUCTION
   };
 }
 
@@ -3004,6 +3290,7 @@ function getActiveConv() {
       created: state.conversations[state.activeConvId]?.created || Date.now(),
       assistantId: state.conversations[state.activeConvId]?.assistantId || state.activeAssistantId || 'asst_default'
     };
+    if (state.conversations[state.activeConvId]?.mode === 'chat') state._activeConvData.mode = 'chat';
   }
   return state._activeConvData;
 }
@@ -3039,8 +3326,10 @@ function newConversation() {
   const id = 'c_' + Date.now();
   const asstId = state.activeAssistantId || 'asst_default';
   const convData = { id, title: '新对话', messages: [], created: Date.now(), assistantId: asstId };
+  if (state.uiMode === 'chat') convData.mode = 'chat';
   // Save index metadata (no messages)
   state.conversations[id] = { id, title: '新对话', created: Date.now(), msgCount: 0, assistantId: asstId };
+  if (state.uiMode === 'chat') state.conversations[id].mode = 'chat';
   state.activeConvId = id;
   state._activeConvData = convData;
   saveState();
@@ -3069,7 +3358,15 @@ async function switchConversation(id) {
       created: convMeta?.created || Date.now(),
       assistantId: convMeta?.assistantId || state.activeAssistantId || 'asst_default'
     };
+    if (convMeta?.mode === 'chat') state._activeConvData.mode = 'chat';
   }
+  // Sync UI mode + view to this conversation's mode (handles cross-mode jumps e.g. from search)
+  const isChat = convMeta?.mode === 'chat' || state._activeConvData.mode === 'chat';
+  if (isChat !== (state.uiMode === 'chat')) {
+    state.uiMode = isChat ? 'chat' : 'roleplay';
+    updateModeSwitchIcon();
+  }
+  if (isChat) showChatView(); else showRoleplayView();
   saveState();
   renderMessages();
   closeModal('convModal');
@@ -3078,12 +3375,13 @@ async function switchConversation(id) {
 function deleteConversation(id) {
   if (!confirm('删除这个对话？')) return;
   const asstId = state.conversations[id]?.assistantId || state.activeAssistantId || 'asst_default';
+  const wasChat = state.conversations[id]?.mode === 'chat';
   delete state.conversations[id];
   deleteConvFromIDB(id);
   if (state.activeConvId === id) {
-    // Find next conversation within same assistant
+    // Find next conversation within same assistant AND same mode
     const asstConvs = Object.values(state.conversations)
-      .filter(c => (c.assistantId || 'asst_default') === asstId)
+      .filter(c => (c.assistantId || 'asst_default') === asstId && ((c.mode === 'chat') === wasChat))
       .sort((a, b) => b.created - a.created);
     state.activeConvId = asstConvs.length > 0 ? asstConvs[0].id : null;
     state._activeConvData = null;
@@ -3138,12 +3436,18 @@ function showAssistants() {
   openModal('convModal', true);
 }
 
+// 当前 UI 模式下该对话是否可见（chat 模式只看 chat 对话，角色扮演模式只看非 chat 对话）
+function convInCurrentMode(c) {
+  return state.uiMode === 'chat' ? c.mode === 'chat' : c.mode !== 'chat';
+}
+
 function renderAssistantList() {
   const list = document.getElementById('asstList');
   const assts = Object.values(state.assistants);
-  // Count conversations per assistant
+  // Count conversations per assistant (filtered by current mode)
   const convCounts = {};
   for (const c of Object.values(state.conversations)) {
+    if (!convInCurrentMode(c)) continue;
     const aid = c.assistantId || 'asst_default';
     convCounts[aid] = (convCounts[aid] || 0) + 1;
   }
@@ -3167,9 +3471,9 @@ async function drillIntoAssistant(asstId) {
 async function switchAssistant(asstId) {
   if (!state.assistants[asstId]) return;
   state.activeAssistantId = asstId;
-  // Find the most recent conversation for this assistant, or create one
+  // Find the most recent conversation for this assistant (in current mode), or create one
   const asstConvs = Object.values(state.conversations)
-    .filter(c => (c.assistantId || 'asst_default') === asstId)
+    .filter(c => (c.assistantId || 'asst_default') === asstId && convInCurrentMode(c))
     .sort((a, b) => b.created - a.created);
   if (asstConvs.length > 0) {
     state.activeConvId = asstConvs[0].id;
@@ -3178,11 +3482,14 @@ async function switchAssistant(asstId) {
       id: asstConvs[0].id, title: asstConvs[0].title, messages: [],
       created: asstConvs[0].created, assistantId: asstId
     };
+    if (asstConvs[0].mode === 'chat' && !state._activeConvData.mode) state._activeConvData.mode = 'chat';
   } else {
     // Create a new conversation for this assistant
     const id = 'c_' + Date.now();
     const convData = { id, title: '新对话', messages: [], created: Date.now(), assistantId: asstId };
+    if (state.uiMode === 'chat') convData.mode = 'chat';
     state.conversations[id] = { id, title: '新对话', created: Date.now(), msgCount: 0, assistantId: asstId };
+    if (state.uiMode === 'chat') state.conversations[id].mode = 'chat';
     state.activeConvId = id;
     state._activeConvData = convData;
   }
@@ -3207,7 +3514,7 @@ function showAssistantConvs() {
 
   const list = document.getElementById('convList');
   const convs = Object.values(state.conversations)
-    .filter(c => (c.assistantId || 'asst_default') === asst.id)
+    .filter(c => (c.assistantId || 'asst_default') === asst.id && convInCurrentMode(c))
     .sort((a,b) => b.created - a.created);
 
   // Group by date
@@ -3387,6 +3694,10 @@ function showAsstEdit(asstId) {
   document.getElementById('asstEditSP').value = asst.systemPrompt || '';
   document.getElementById('asstDeleteBtn').style.display = (isNew || asstId === 'asst_default') ? 'none' : '';
 
+  // 头像编辑缓冲
+  editingAsstAvatar = asst.avatar || null;
+  updateAsstAvatarPreview(asst);
+
   // Render color picker
   const picker = document.getElementById('asstColorPicker');
   // Normalize: old saves might have rgb() from style.background, convert back to hex
@@ -3407,6 +3718,54 @@ function showAsstEdit(asstId) {
 function pickAsstColor(el, color) {
   document.querySelectorAll('.asst-color-opt').forEach(e => e.classList.remove('selected'));
   el.classList.add('selected');
+}
+
+// --- 助手头像 ---
+let editingAsstAvatar = null;
+
+function updateAsstAvatarPreview(asst) {
+  const pv = document.getElementById('asstAvatarPreview');
+  const rmBtn = document.getElementById('asstAvatarRemoveBtn');
+  if (!pv) return;
+  if (editingAsstAvatar) {
+    pv.style.background = 'none';
+    pv.style.color = '';
+    pv.innerHTML = `<img src="${editingAsstAvatar}">`;
+    if (rmBtn) rmBtn.style.display = '';
+  } else {
+    const color = (asst && asst.color) || getSelectedAsstColor();
+    const name = document.getElementById('asstEditName')?.value || (asst && asst.name) || '?';
+    pv.innerHTML = '';
+    pv.style.background = color + '1F';
+    pv.style.color = color;
+    pv.textContent = name.charAt(0) || '?';
+    if (rmBtn) rmBtn.style.display = 'none';
+  }
+}
+
+function handleAsstAvatarPick(event) {
+  const file = event.target.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  // 压缩到 192px，控制 localStorage 占用（每个头像约 10KB）
+  compressImage(file, 192, 0.82).then(dataUrl => {
+    editingAsstAvatar = dataUrl;
+    updateAsstAvatarPreview();
+  });
+  event.target.value = '';
+}
+
+function removeAsstAvatar() {
+  editingAsstAvatar = null;
+  updateAsstAvatarPreview();
+}
+
+// 头像渲染：有图用图，没图用 名字首字 + 颜色
+function asstAvatarHtml(asst, cls) {
+  const color = (asst && asst.color) || '#DA7756';
+  if (asst && asst.avatar) {
+    return `<div class="${cls}"><img src="${asst.avatar}"></div>`;
+  }
+  return `<div class="${cls}" style="background:${color}1F;color:${color}">${esc(((asst && asst.name) || '?').charAt(0))}</div>`;
 }
 
 function getSelectedAsstColor() {
@@ -3451,10 +3810,13 @@ function saveAsstEdit() {
     asst.customModel = customModel;
     asst.systemPrompt = systemPrompt;
     asst.color = color;
+    if (editingAsstAvatar) asst.avatar = editingAsstAvatar;
+    else delete asst.avatar;
   } else {
     // Create new
     const id = 'asst_' + Date.now();
     state.assistants[id] = { id, name, model, customModel, systemPrompt, color };
+    if (editingAsstAvatar) state.assistants[id].avatar = editingAsstAvatar;
     editingAsstId = id;
     // Switch to the new assistant
     switchAssistant(id);
@@ -3464,6 +3826,10 @@ function saveAsstEdit() {
   updateHeaderAssistant();
   closeModal('asstEditModal');
   renderAssistantList();
+  // 联系人列表如果正打开着也刷新一下
+  if (state.uiMode === 'chat' && document.getElementById('contactsView').style.display !== 'none') {
+    renderContacts();
+  }
 }
 
 function deleteAssistant() {
@@ -3505,6 +3871,23 @@ function updateHeaderAssistant() {
   const inputEl = document.getElementById('userInput');
   if (dotEl) dotEl.style.background = asst.color || '#DA7756';
   if (inputEl) inputEl.placeholder = `跟${asst.name}说点什么...`;
+  // 聊天模式顶栏
+  const av = document.getElementById('chatAvatar');
+  const nm = document.getElementById('chatHeaderName');
+  if (av) {
+    if (asst.avatar) {
+      av.style.background = 'none';
+      av.style.color = '';
+      av.innerHTML = `<img src="${asst.avatar}">`;
+    } else {
+      const color = asst.color || '#DA7756';
+      av.innerHTML = '';
+      av.style.background = color + '1F';
+      av.style.color = color;
+      av.textContent = (asst.name || '?').charAt(0);
+    }
+  }
+  if (nm) nm.textContent = asst.name;
 }
 
 function showConvMenu(e, convId) {
@@ -3876,6 +4259,7 @@ function showSettings() {
   document.getElementById('reasoningEnabled').checked = state.reasoningEnabled || false;
   document.getElementById('timestampEnabled').checked = state.timestampEnabled !== false;
   document.getElementById('reasoningEffort').value = state.reasoningEffort || 'medium';
+  document.getElementById('chatInstructionInput').value = (typeof state.chatInstruction === 'string') ? state.chatInstruction : CHAT_MODE_INSTRUCTION;
   openModal('settingsModal', true);
   updateStorageUsage();
   updateLastBackupInfo();
@@ -3890,6 +4274,7 @@ function saveSettings() {
   state.reasoningEnabled = document.getElementById('reasoningEnabled').checked;
   state.timestampEnabled = document.getElementById('timestampEnabled').checked;
   state.reasoningEffort = document.getElementById('reasoningEffort').value;
+  state.chatInstruction = document.getElementById('chatInstructionInput').value;
   const newAutoInterval = parseInt(document.getElementById('autoExportInterval').value) || 50;
   if (newAutoInterval !== state.autoExportInterval) {
     state.msgsSinceExport = 0;
@@ -3897,6 +4282,10 @@ function saveSettings() {
   state.autoExportInterval = newAutoInterval;
   saveState();
   closeModal('settingsModal');
+}
+
+function restoreChatInstruction() {
+  document.getElementById('chatInstructionInput').value = CHAT_MODE_INSTRUCTION;
 }
 
 // ============ MODAL ============
@@ -3908,7 +4297,247 @@ function closeModal(id) {
 }
 
 // ============ RENDER ============
+// ============ 聊天模式 (CHAT MODE) ============
+
+function isChatConvActive() {
+  const conv = state._activeConvData;
+  if (conv && conv.mode === 'chat') return true;
+  return state.conversations[state.activeConvId]?.mode === 'chat';
+}
+
+function splitChatBubbles(content) {
+  return (content || '').split('|||').map(s => s.trim()).filter(s => s.length > 0);
+}
+
+// --- 模式切换（门 ←→ 气泡）---
+async function switchUIMode() {
+  if (state.uiMode !== 'chat') {
+    // 回家：进入聊天模式，先看到联系人列表
+    state.lastRoleplayConvId = state.activeConvId;
+    state.uiMode = 'chat';
+    saveState();
+    updateModeSwitchIcon();
+    showContactsView();
+  } else {
+    // 出门：回到角色扮演模式，恢复之前的对话
+    state.uiMode = 'roleplay';
+    updateModeSwitchIcon();
+    showRoleplayView();
+    let target = state.lastRoleplayConvId;
+    if (!target || !state.conversations[target] || state.conversations[target].mode === 'chat') {
+      const rp = Object.values(state.conversations)
+        .filter(c => c.mode !== 'chat' && (c.assistantId || 'asst_default') === state.activeAssistantId)
+        .sort((a, b) => b.created - a.created);
+      target = rp.length ? rp[0].id : null;
+    }
+    if (target) {
+      await switchConversation(target);
+    } else {
+      newConversation();
+    }
+    saveState();
+  }
+}
+
+function updateModeSwitchIcon() {
+  const btn = document.getElementById('modeSwitchBtn');
+  if (!btn) return;
+  if (state.uiMode === 'chat') {
+    // 聊天模式：显示窗户图标（点击出门去角色扮演）
+    btn.title = '出门 · 角色扮演';
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V10a6 6 0 0 1 12 0v11"/><line x1="4" y1="21" x2="20" y2="21"/><line x1="12" y1="4.3" x2="12" y2="21"/><line x1="6" y1="13" x2="18" y2="13"/></svg>';
+  } else {
+    // 角色扮演模式：显示气泡图标（点击回家聊天）
+    btn.title = '回家 · 聊天';
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+  }
+}
+
+// --- 视图切换 ---
+function showRoleplayView() {
+  document.getElementById('chatHeader').style.display = 'none';
+  document.querySelector('.header').style.display = '';
+  document.getElementById('contactsView').style.display = 'none';
+  document.getElementById('messages').style.display = '';
+  document.querySelector('.input-area').style.display = '';
+  const ci = document.getElementById('cacheStatus');
+  const hl = document.querySelector('.header-left');
+  if (ci && hl && ci.parentElement !== hl) hl.appendChild(ci);
+}
+
+function showContactsView() {
+  document.getElementById('chatHeader').style.display = 'none';
+  document.querySelector('.header').style.display = '';
+  document.getElementById('messages').style.display = 'none';
+  document.querySelector('.input-area').style.display = 'none';
+  document.getElementById('contactsView').style.display = '';
+  const ci = document.getElementById('cacheStatus');
+  const hl = document.querySelector('.header-left');
+  if (ci && hl && ci.parentElement !== hl) hl.appendChild(ci);
+  renderContacts();
+}
+
+function showChatView() {
+  document.querySelector('.header').style.display = 'none';
+  document.getElementById('chatHeader').style.display = '';
+  document.getElementById('contactsView').style.display = 'none';
+  document.getElementById('messages').style.display = '';
+  document.querySelector('.input-area').style.display = '';
+  const ci = document.getElementById('cacheStatus');
+  const slot = document.getElementById('chatHeaderRight');
+  if (ci && slot && ci.parentElement !== slot) slot.appendChild(ci);
+  updateHeaderAssistant();
+}
+
+// --- 联系人列表 ---
+function renderContacts() {
+  const el = document.getElementById('contactsView');
+  const assts = Object.values(state.assistants);
+  const counts = {};
+  for (const c of Object.values(state.conversations)) {
+    if (c.mode !== 'chat') continue;
+    const aid = c.assistantId || 'asst_default';
+    counts[aid] = (counts[aid] || 0) + 1;
+  }
+  el.innerHTML = assts.map(a => {
+    const color = a.color || '#DA7756';
+    return `
+    <div class="contact-item" onclick="openChatWithAssistant('${a.id}')">
+      ${asstAvatarHtml(a, 'contact-avatar')}
+      <div class="contact-info">
+        <div class="contact-name"><span class="asst-dot" style="background:${color}"></span>${esc(a.name)}</div>
+        <div class="contact-meta">${shortModelName(a.model || '')}${counts[a.id] ? ' · ' + counts[a.id] + ' 个对话' : ''}</div>
+      </div>
+      <button class="asst-item-more" onclick="event.stopPropagation();showAsstEdit('${a.id}')">&#8943;</button>
+    </div>`;
+  }).join('');
+}
+
+async function openChatWithAssistant(asstId) {
+  if (!state.assistants[asstId]) return;
+  state.activeAssistantId = asstId;
+  const chatConvs = Object.values(state.conversations)
+    .filter(c => c.mode === 'chat' && (c.assistantId || 'asst_default') === asstId)
+    .sort((a, b) => b.created - a.created);
+  if (chatConvs.length > 0) {
+    state.activeConvId = chatConvs[0].id;
+    const data = await loadConvFromIDB(chatConvs[0].id);
+    state._activeConvData = data || {
+      id: chatConvs[0].id, title: chatConvs[0].title, messages: [],
+      created: chatConvs[0].created, assistantId: asstId, mode: 'chat'
+    };
+    if (!state._activeConvData.mode) state._activeConvData.mode = 'chat';
+  } else {
+    const id = 'c_' + Date.now();
+    const convData = { id, title: '新对话', messages: [], created: Date.now(), assistantId: asstId, mode: 'chat' };
+    state.conversations[id] = { id, title: '新对话', created: convData.created, msgCount: 0, assistantId: asstId, mode: 'chat' };
+    state.activeConvId = id;
+    state._activeConvData = convData;
+  }
+  updateHeaderAssistant();
+  saveState();
+  showChatView();
+  renderMessages();
+}
+
+function showChatConvList() {
+  showAssistantConvs();
+}
+
+// --- 聊天气泡渲染 ---
+function renderChatMessages() {
+  const container = document.getElementById('messages');
+  const conv = getActiveConv();
+  const asst = getActiveAssistant();
+  const color = asst.color || '#DA7756';
+
+  if (conv.messages.length === 0) {
+    container.innerHTML = `
+      <div class="chat-empty">
+        ${asstAvatarHtml(asst, 'chat-empty-avatar')}
+        <div>和${esc(asst.name)}聊聊天吧</div>
+      </div>`;
+    updateCostBar();
+    return;
+  }
+
+  // 找到最后一条助手消息（缓存指示点挂在这里）
+  let lastAsstIdx = -1;
+  for (let i = conv.messages.length - 1; i >= 0; i--) {
+    if (conv.messages[i].role === 'assistant') { lastAsstIdx = i; break; }
+  }
+  const cacheAlive = !!(cacheState.lastRefresh && cacheState.tokens &&
+    (Date.now() - cacheState.lastRefresh < cacheState.ttlMs));
+
+  container.innerHTML = conv.messages.map((m, i) => {
+    const menuBtn = `<button class="msg-inline-menu" onclick="toggleMsgMenu(${i}, event)">&#8943;</button>`;
+    if (m.role === 'user') {
+      const imgHtml = m.image ? `<img class="msg-image" src="${m.image}">` : '';
+      const bubble = m.content ? `<div class="chat-bubble user first">${esc(m.content)}</div>` : '';
+      return `
+        <div class="msg chat-group user" data-index="${i}">
+          ${menuBtn}
+          <div class="chat-bubble-col" id="msgContent-${i}">${imgHtml}${bubble}</div>
+        </div>`;
+    } else {
+      const bubbles = splitChatBubbles(m.content);
+      const dotHtml = i === lastAsstIdx
+        ? `<span class="chat-cache-dot ${cacheAlive ? 'alive' : ''}" id="chatCacheDot"></span>`
+        : '';
+      const bubbleHtml = bubbles.map((b, bi) =>
+        `<div class="chat-bubble asst ${bi === 0 ? 'first' : ''}">${esc(b)}</div>`
+      ).join('');
+      return `
+        <div class="msg chat-group asst" data-index="${i}">
+          ${dotHtml}
+          <div class="chat-bubble-col" id="msgContent-${i}">${bubbleHtml}</div>
+          ${menuBtn}
+        </div>`;
+    }
+  }).join('');
+
+  if (typeof _highlightMsgIndex === 'undefined' || _highlightMsgIndex < 0) {
+    container.scrollTop = container.scrollHeight;
+  }
+  updateCostBar();
+}
+
+// 流式：增量更新气泡，避免每个 chunk 重建 DOM 导致动画闪烁
+function renderStreamingChat(index, content) {
+  const container = document.getElementById('messages');
+  const el = container.querySelectorAll('.msg')[index];
+  if (!el) return;
+  const col = el.querySelector('.chat-bubble-col');
+  if (!col) return;
+  // 末尾可能停在分隔符中间（| 或 ||），显示时先去掉
+  const display = content.replace(/\|+\s*$/, '');
+  const bubbles = splitChatBubbles(display);
+  if (bubbles.length === 0) return;
+  let divs = col.querySelectorAll('.chat-bubble');
+  while (divs.length < bubbles.length) {
+    const d = document.createElement('div');
+    d.className = 'chat-bubble asst' + (col.querySelectorAll('.chat-bubble').length === 0 ? ' first' : '');
+    col.appendChild(d);
+    divs = col.querySelectorAll('.chat-bubble');
+  }
+  while (divs.length > bubbles.length) {
+    col.removeChild(divs[divs.length - 1]);
+    divs = col.querySelectorAll('.chat-bubble');
+  }
+  bubbles.forEach((b, bi) => {
+    const d = divs[bi];
+    if (d.textContent !== b) d.textContent = b;
+    d.classList.toggle('streaming-cursor', bi === bubbles.length - 1);
+  });
+  container.scrollTop = container.scrollHeight;
+}
+
 function renderMessages() {
+  if (isChatConvActive()) return renderChatMessages();
+  return renderRoleplayMessages();
+}
+
+function renderRoleplayMessages() {
   const container = document.getElementById('messages');
   const conv = getActiveConv();
 
@@ -4018,6 +4647,10 @@ function toggleThinking(index) {
 function startEdit(index) {
   const el = document.getElementById('msgContent-' + index);
   if (!el) return;
+  // 聊天模式：编辑时显示原始文本（含 ||| 分隔符），保存后重新拆分渲染
+  if (isChatConvActive()) {
+    el.textContent = getActiveConv().messages[index].content || '';
+  }
   el.contentEditable = 'true';
   el.classList.add('editing');
   el.focus();
@@ -4148,10 +4781,13 @@ async function createBranchConv(messages, title) {
     delete m.usage;
   }
   const convData = { id, title, messages: msgsCopy, created: Date.now(), assistantId: asstId };
+  const srcMode = getActiveConv().mode;
+  if (srcMode === 'chat') convData.mode = 'chat';
   // Save to IDB
   await saveConvToIDB(convData);
   // Update state index
   state.conversations[id] = { id, title, created: Date.now(), msgCount: msgsCopy.length, assistantId: asstId };
+  if (srcMode === 'chat') state.conversations[id].mode = 'chat';
   // Switch to the new conversation
   state.activeConvId = id;
   state._activeConvData = convData;
@@ -4360,8 +4996,13 @@ async function sendMessage() {
 
   const container = document.getElementById('messages');
   const typingEl = document.createElement('div');
-  typingEl.className = 'msg assistant';
-  typingEl.innerHTML = `<div class="msg-content"><div class="typing-indicator"><span></span><span></span><span></span></div></div>`;
+  if (isChatConvActive()) {
+    typingEl.className = 'msg chat-group asst';
+    typingEl.innerHTML = `<div class="chat-bubble-col"><div class="chat-bubble asst first"><div class="typing-indicator"><span></span><span></span><span></span></div></div></div>`;
+  } else {
+    typingEl.className = 'msg assistant';
+    typingEl.innerHTML = `<div class="msg-content"><div class="typing-indicator"><span></span><span></span><span></span></div></div>`;
+  }
   container.appendChild(typingEl);
   container.scrollTop = container.scrollHeight;
 
@@ -4369,7 +5010,13 @@ async function sendMessage() {
   try {
     const messages = [];
     const asst = getActiveAssistant();
-    const fullSystem = (asst.systemPrompt || '').trim();
+    const isChatMode = isChatConvActive();
+    let fullSystem = (asst.systemPrompt || '').trim();
+    // 聊天模式：在 system prompt 末尾追加格式说明（可在设置中修改；留空则不追加）
+    if (isChatMode) {
+      const instr = (typeof state.chatInstruction === 'string' ? state.chatInstruction : CHAT_MODE_INSTRUCTION).trim();
+      if (instr) fullSystem = (fullSystem ? fullSystem + '\n\n' : '') + instr;
+    }
 
     // Memory Bank: keyword matching (inject into user message below, NOT here)
     const matchedMems = matchMemories(text);
@@ -4608,6 +5255,7 @@ async function sendMessage() {
 }
 
 function renderStreamingMessage(index, content) {
+  if (isChatConvActive()) return renderStreamingChat(index, content);
   const container = document.getElementById('messages');
   const msgEls = container.querySelectorAll('.msg');
   const el = msgEls[index];
@@ -4736,6 +5384,9 @@ function updateModelDots(active) {
       el.classList.remove('cache-active');
     }
   });
+  // 聊天模式：最新一组助手消息旁的缓存指示点
+  const chatDot = document.getElementById('chatCacheDot');
+  if (chatDot) chatDot.classList.toggle('alive', !!active);
 }
 
 // ============ INPUT HELPERS ============
@@ -5849,6 +6500,7 @@ function showTimeTip(el, event) {
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', async () => {
   syncThemeIcon();
+  updateModeSwitchIcon();
   updateHeaderAssistant();
   updateMemBadge();
   if (!state.activeConvId) newConversation();
@@ -5859,6 +6511,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // (renderMessages → getActiveConv would create empty fallback, blocking IDB load)
   await tryLoadFromIDB();
   renderMessages();
+  // 恢复 UI 模式（聊天 / 角色扮演）
+  updateModeSwitchIcon();
+  if (state.uiMode === 'chat') {
+    if (state.conversations[state.activeConvId]?.mode === 'chat') showChatView();
+    else showContactsView();
+  }
   // Modal close on overlay click
   document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); });
