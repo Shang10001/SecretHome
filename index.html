@@ -711,6 +711,9 @@ html, body {
 
 /* Assistant edit form */
 .asst-edit-form .field { margin-bottom: 16px; }
+.sp-mode-tabs { display: flex; gap: 2px; margin-bottom: 6px; }
+.sp-mode-tabs button { flex: 1; padding: 6px 0; border: 1px solid var(--border); border-radius: 8px 8px 0 0; background: var(--bg); color: var(--dim); font-size: 13px; cursor: pointer; border-bottom: none; }
+.sp-mode-tabs button.active { background: var(--card); color: var(--fg); font-weight: 600; }
 .asst-edit-form label {
   display: block;
   font-size: 13px;
@@ -2600,7 +2603,12 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       </div>
       <div class="field">
         <label>System Prompt</label>
+        <div class="sp-mode-tabs">
+          <button class="active" onclick="switchSPTab('rp')">角色扮演</button>
+          <button onclick="switchSPTab('chat')">聊天</button>
+        </div>
         <textarea id="asstEditSP" placeholder="角色设定..." oninput="updateAsstSPCounter()"></textarea>
+        <textarea id="asstEditChatSP" placeholder="聊天模式下的设定（留空则复用角色扮演的）..." oninput="updateAsstSPCounter()" style="display:none"></textarea>
         <div class="hint" style="display:flex;justify-content:space-between;align-items:center;">
           <span id="asstSPCounterText">0 字符 · ~0 tokens</span>
         </div>
@@ -2692,12 +2700,9 @@ const ASST_COLORS = ['#DA7756','#228CC7','#379A8B','#3EBCD2','#DB444B','#EBB434'
 
 // 聊天模式：追加到 system prompt 末尾的格式说明（默认值，可在设置中修改）
 const CHAT_MODE_INSTRUCTION = `【聊天模式】
-当前场景：你和用户不在面对面，而是各自拿着手机，通过即时通讯App（类似微信）聊天。请遵守这个场景的表达方式：
-- 像平时用手机发消息一样说话：口语化、简短、自然。
-- 把回复拆成多条消息发送，相邻两条消息之间用 ||| 分隔。
-- 通常一次发 1~4 条，每条一般一两句话；也可以单独发一条很短的反应。
-- 不要写动作描写、神态描写或旁白，只发送你会真正"打字发出去"的文字。
-- 不要使用 Markdown 格式。`;
+场景是手机即时通讯（类似微信），不是面对面。
+用 ||| 分隔多条消息，一次1~4条，每条一两句。口语化、简短。
+只发"打字发出去"的文字——不写动作/神态/旁白，不用Markdown。`;
 
 function defaultState() {
   return {
@@ -3670,13 +3675,15 @@ function showAsstEdit(asstId) {
   const isNew = !asstId;
   document.getElementById('asstEditTitle').innerHTML = (isNew ? '新助手' : '编辑助手') + ' <button onclick="closeModal(\'asstEditModal\')">&#10005;</button>';
 
-  const asst = isNew ? { name: '', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: ASST_COLORS[Object.keys(state.assistants).length % ASST_COLORS.length] } : state.assistants[asstId];
+  const asst = isNew ? { name: '', systemPrompt: '', chatSystemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: ASST_COLORS[Object.keys(state.assistants).length % ASST_COLORS.length] } : state.assistants[asstId];
 
   document.getElementById('asstEditName').value = asst.name || '';
   document.getElementById('asstEditModel').value = asst.model || 'anthropic/claude-opus-4.6';
   document.getElementById('asstEditCustomModel').value = asst.customModel || '';
   document.getElementById('asstEditSP').value = asst.systemPrompt || '';
+  document.getElementById('asstEditChatSP').value = asst.chatSystemPrompt || '';
   document.getElementById('asstDeleteBtn').style.display = (isNew || asstId === 'asst_default') ? 'none' : '';
+  switchSPTab('rp');
 
   // 头像编辑缓冲
   editingAsstAvatar = asst.avatar || null;
@@ -3757,8 +3764,24 @@ function getSelectedAsstColor() {
   return sel ? (sel.dataset.color || '#DA7756') : '#DA7756';
 }
 
+function switchSPTab(mode) {
+  const rpTa = document.getElementById('asstEditSP');
+  const chatTa = document.getElementById('asstEditChatSP');
+  const tabs = document.querySelectorAll('.sp-mode-tabs button');
+  if (mode === 'chat') {
+    rpTa.style.display = 'none'; chatTa.style.display = '';
+    tabs[0].classList.remove('active'); tabs[1].classList.add('active');
+  } else {
+    rpTa.style.display = ''; chatTa.style.display = 'none';
+    tabs[1].classList.remove('active'); tabs[0].classList.add('active');
+  }
+  updateAsstSPCounter();
+}
+
 function updateAsstSPCounter() {
-  const ta = document.getElementById('asstEditSP');
+  const rpTa = document.getElementById('asstEditSP');
+  const chatTa = document.getElementById('asstEditChatSP');
+  const ta = (chatTa && chatTa.style.display !== 'none') ? chatTa : rpTa;
   const text = ta ? ta.value : '';
   const chars = text.length;
   let tokens = 0;
@@ -3784,6 +3807,7 @@ function saveAsstEdit() {
   const model = document.getElementById('asstEditModel').value;
   const customModel = document.getElementById('asstEditCustomModel').value.trim();
   const systemPrompt = document.getElementById('asstEditSP').value;
+  const chatSystemPrompt = document.getElementById('asstEditChatSP').value;
   const color = getSelectedAsstColor();
 
   if (editingAsstId && state.assistants[editingAsstId]) {
@@ -3793,13 +3817,14 @@ function saveAsstEdit() {
     asst.model = model;
     asst.customModel = customModel;
     asst.systemPrompt = systemPrompt;
+    asst.chatSystemPrompt = chatSystemPrompt;
     asst.color = color;
     if (editingAsstAvatar) asst.avatar = editingAsstAvatar;
     else delete asst.avatar;
   } else {
     // Create new
     const id = 'asst_' + Date.now();
-    state.assistants[id] = { id, name, model, customModel, systemPrompt, color };
+    state.assistants[id] = { id, name, model, customModel, systemPrompt, chatSystemPrompt, color };
     if (editingAsstAvatar) state.assistants[id].avatar = editingAsstAvatar;
     editingAsstId = id;
     // Switch to the new assistant
@@ -4983,7 +5008,10 @@ async function sendMessage() {
     const messages = [];
     const asst = getActiveAssistant();
     const isChatMode = isChatConvActive();
-    let fullSystem = (asst.systemPrompt || '').trim();
+    // 根据模式选择 system prompt：聊天模式优先用 chatSystemPrompt，没有则 fallback 到 systemPrompt
+    let fullSystem = isChatMode
+      ? ((asst.chatSystemPrompt || asst.systemPrompt) || '').trim()
+      : (asst.systemPrompt || '').trim();
     // 聊天模式：在 system prompt 末尾追加格式说明（可在设置中修改；留空则不追加）
     if (isChatMode) {
       const instr = (typeof state.chatInstruction === 'string' ? state.chatInstruction : CHAT_MODE_INSTRUCTION).trim();
