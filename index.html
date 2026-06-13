@@ -5635,6 +5635,8 @@ async function doBackup() {
     const json = JSON.stringify(backup, null, 2);
     const filename = backupFilename();
     const resp = await webdavRequest('PUT', filename, json, 'application/json');
+    const respBody = await resp.text();
+    alert('DEBUG 备份响应:\nstatus: ' + resp.status + '\nstatusText: ' + resp.statusText + '\nfilename: ' + filename + '\nbody(前200字): ' + respBody.slice(0, 200));
     if (resp.ok || resp.status === 201 || resp.status === 204) {
       await cleanupOldBackups(5);
       state.lastBackupTime = Date.now(); saveState();
