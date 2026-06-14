@@ -2369,6 +2369,14 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
         <label>OpenRouter API Key</label>
         <input type="password" id="apiKey" placeholder="sk-or-v1-..." autocomplete="off">
       </div>
+      <div class="field">
+        <label>SiliconFlow API Key</label>
+        <input type="password" id="siliconflowApiKey" placeholder="sk-..." autocomplete="off">
+      </div>
+      <div class="field">
+        <label>DeepSeek API Key</label>
+        <input type="password" id="deepseekApiKey" placeholder="sk-..." autocomplete="off">
+      </div>
 
       <div class="field">
         <label>缓存 TTL</label>
@@ -2594,21 +2602,38 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
         <div class="asst-color-picker" id="asstColorPicker"></div>
       </div>
       <div class="field">
+        <label>API Provider</label>
+        <select id="asstEditProvider" onchange="onProviderChange()">
+          <option value="openrouter">OpenRouter</option>
+          <option value="siliconflow">SiliconFlow</option>
+          <option value="deepseek">DeepSeek</option>
+        </select>
+      </div>
+      <div class="field">
         <label>模型</label>
         <select id="asstEditModel">
-          <optgroup label="Opus">
+          <optgroup label="Opus" class="og-openrouter">
             <option value="anthropic/claude-opus-4.6" selected>Claude Opus 4.6 (笨笨)</option>
             <option value="anthropic/claude-opus-4.5">Claude Opus 4.5</option>
           </optgroup>
-          <optgroup label="Sonnet">
+          <optgroup label="Sonnet" class="og-openrouter">
             <option value="anthropic/claude-sonnet-4.5">Claude Sonnet 4.5</option>
           </optgroup>
-          <optgroup label="Google">
+          <optgroup label="Google" class="og-openrouter">
             <option value="google/gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
             <option value="google/gemini-2.5-pro-preview">Gemini 2.5 Pro Preview</option>
           </optgroup>
-          <optgroup label="OpenAI">
+          <optgroup label="OpenAI" class="og-openrouter">
             <option value="openai/gpt-4o-2024-11-20">GPT-4o (2024-11-20)</option>
+          </optgroup>
+          <optgroup label="DeepSeek" class="og-siliconflow" style="display:none">
+            <option value="deepseek-ai/DeepSeek-V4-Pro">DeepSeek V4 Pro</option>
+          </optgroup>
+          <optgroup label="GLM" class="og-siliconflow" style="display:none">
+            <option value="Pro/zai-org/GLM-5.1">GLM 5.1</option>
+          </optgroup>
+          <optgroup label="DeepSeek" class="og-deepseek" style="display:none">
+            <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
           </optgroup>
         </select>
       </div>
@@ -2723,6 +2748,8 @@ const CHAT_MODE_INSTRUCTION = `【聊天模式】
 function defaultState() {
   return {
     apiKey: '',
+    siliconflowApiKey: '',
+    deepseekApiKey: '',
     cacheTTL: '1h',
     maxTokens: 4096,
     contextLen: 0,
@@ -2735,7 +2762,8 @@ function defaultState() {
         systemPrompt: '',
         model: 'anthropic/claude-opus-4.6',
         customModel: '',
-        color: '#DA7756'
+        color: '#DA7756',
+        provider: 'openrouter'
       }
     },
     activeAssistantId: 'asst_default',
@@ -3160,6 +3188,8 @@ async function exportLocalBackup(silent) {
     timestamp: new Date().toISOString(),
     data: {
       apiKey: state.apiKey,
+      siliconflowApiKey: state.siliconflowApiKey,
+      deepseekApiKey: state.deepseekApiKey,
       assistants: state.assistants,
       activeAssistantId: state.activeAssistantId,
       cacheTTL: state.cacheTTL,
@@ -3205,6 +3235,8 @@ function importLocalBackup(event) {
       const keepWebdav = state.webdav;
       const keepAutoExport = state.autoExport;
       state.apiKey = data.apiKey || state.apiKey;
+      state.siliconflowApiKey = data.siliconflowApiKey || state.siliconflowApiKey;
+      state.deepseekApiKey = data.deepseekApiKey || state.deepseekApiKey;
       state.cacheTTL = data.cacheTTL || '1h';
       state.maxTokens = data.maxTokens || 4096;
       state.temperature = data.temperature ?? 0.7;
@@ -3307,7 +3339,7 @@ function getActiveAssistant() {
   const first = Object.values(state.assistants)[0];
   if (first) { state.activeAssistantId = first.id; return first; }
   // Create default if none exist
-  const def = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: '#DA7756' };
+  const def = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: '#DA7756', provider: 'openrouter' };
   state.assistants['asst_default'] = def;
   state.activeAssistantId = 'asst_default';
   return def;
@@ -3686,14 +3718,31 @@ async function jumpToSearchResult(convId, msgIndex) {
 // ============ ASSISTANT EDIT ============
 let editingAsstId = null;
 
+function onProviderChange() {
+  const prov = document.getElementById('asstEditProvider').value;
+  const modelSel = document.getElementById('asstEditModel');
+  // Show/hide optgroups based on provider
+  modelSel.querySelectorAll('.og-openrouter').forEach(og => og.style.display = prov === 'openrouter' ? '' : 'none');
+  modelSel.querySelectorAll('.og-siliconflow').forEach(og => og.style.display = prov === 'siliconflow' ? '' : 'none');
+  modelSel.querySelectorAll('.og-deepseek').forEach(og => og.style.display = prov === 'deepseek' ? '' : 'none');
+  // If current selected option is hidden, select first visible option
+  const sel = modelSel.options[modelSel.selectedIndex];
+  if (sel && sel.parentElement.style.display === 'none') {
+    const firstVisible = modelSel.querySelector('optgroup:not([style*="display: none"]) option, optgroup:not([style*="display:none"]) option');
+    if (firstVisible) modelSel.value = firstVisible.value;
+  }
+}
+
 function showAsstEdit(asstId) {
   editingAsstId = asstId || null;
   const isNew = !asstId;
   document.getElementById('asstEditTitle').innerHTML = (isNew ? '新助手' : '编辑助手') + ' <button onclick="closeModal(\'asstEditModal\')">&#10005;</button>';
 
-  const asst = isNew ? { name: '', systemPrompt: '', chatSystemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: ASST_COLORS[Object.keys(state.assistants).length % ASST_COLORS.length] } : state.assistants[asstId];
+  const asst = isNew ? { name: '', systemPrompt: '', chatSystemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: ASST_COLORS[Object.keys(state.assistants).length % ASST_COLORS.length], provider: 'openrouter' } : state.assistants[asstId];
 
   document.getElementById('asstEditName').value = asst.name || '';
+  document.getElementById('asstEditProvider').value = asst.provider || 'openrouter';
+  onProviderChange();
   document.getElementById('asstEditModel').value = asst.model || 'anthropic/claude-opus-4.6';
   document.getElementById('asstEditCustomModel').value = asst.customModel || '';
   document.getElementById('asstEditSP').value = asst.systemPrompt || '';
@@ -3822,6 +3871,7 @@ function saveAsstEdit() {
 
   const model = document.getElementById('asstEditModel').value;
   const customModel = document.getElementById('asstEditCustomModel').value.trim();
+  const provider = document.getElementById('asstEditProvider').value;
   const systemPrompt = document.getElementById('asstEditSP').value;
   const chatSystemPrompt = document.getElementById('asstEditChatSP').value;
   const color = getSelectedAsstColor();
@@ -3832,6 +3882,7 @@ function saveAsstEdit() {
     asst.name = name;
     asst.model = model;
     asst.customModel = customModel;
+    asst.provider = provider;
     asst.systemPrompt = systemPrompt;
     asst.chatSystemPrompt = chatSystemPrompt;
     asst.color = color;
@@ -3840,7 +3891,7 @@ function saveAsstEdit() {
   } else {
     // Create new
     const id = 'asst_' + Date.now();
-    state.assistants[id] = { id, name, model, customModel, systemPrompt, chatSystemPrompt, color };
+    state.assistants[id] = { id, name, model, customModel, provider, systemPrompt, chatSystemPrompt, color };
     if (editingAsstAvatar) state.assistants[id].avatar = editingAsstAvatar;
     editingAsstId = id;
     // Switch to the new assistant
@@ -4268,6 +4319,8 @@ document.addEventListener('click', (e) => {
 // ============ SETTINGS ============
 function showSettings() {
   document.getElementById('apiKey').value = state.apiKey;
+  document.getElementById('siliconflowApiKey').value = state.siliconflowApiKey || '';
+  document.getElementById('deepseekApiKey').value = state.deepseekApiKey || '';
   document.getElementById('cacheTTL').value = state.cacheTTL;
   document.getElementById('maxTokens').value = state.maxTokens;
   document.getElementById('contextLen').value = state.contextLen || 0;
@@ -4292,6 +4345,8 @@ function showSettings() {
 
 function saveSettings() {
   state.apiKey = document.getElementById('apiKey').value.trim();
+  state.siliconflowApiKey = document.getElementById('siliconflowApiKey').value.trim();
+  state.deepseekApiKey = document.getElementById('deepseekApiKey').value.trim();
   state.cacheTTL = document.getElementById('cacheTTL').value;
   state.maxTokens = parseInt(document.getElementById('maxTokens').value) || 4096;
   state.contextLen = parseInt(document.getElementById('contextLen').value) || 0;
@@ -4830,6 +4885,11 @@ const MODEL_PRICING = {
   'google/gemini-2.5-pro':           { input: 1.25e-6, output: 10e-6, cacheRead: 0.3125e-6, cacheWrite: 1.25e-6, ctx: 1000000 },
   // GPT-4o: cache read 0.5x input, no write cost
   'openai/gpt-4o-2024-11-20':       { input: 2.5e-6, output: 10e-6, cacheRead: 1.25e-6, cacheWrite: 2.5e-6, ctx: 128000 },
+  // SiliconFlow models (approximate pricing, no explicit cache)
+  'deepseek-ai/DeepSeek-V4-Pro':     { input: 1.6e-6, output: 3.5e-6, cacheRead: 0, cacheWrite: 0, ctx: 1000000 },
+  'Pro/zai-org/GLM-5.1':             { input: 1e-6,   output: 4e-6,   cacheRead: 0, cacheWrite: 0, ctx: 200000 },
+  // DeepSeek official (¥3/M input, ¥6/M output, ¥0.025/M cache hit → USD at ¥7.3=$1)
+  'deepseek-v4-pro':                 { input: 0.41e-6, output: 0.82e-6, cacheRead: 0.0034e-6, cacheWrite: 0.41e-6, ctx: 1000000 },
 };
 
 function estimateCost(model, promptTokens, completionTokens, cachedTokens, cacheWriteTokens) {
@@ -5011,7 +5071,22 @@ async function sendMessage() {
   const text = input.value.trim();
   if ((!text && !pendingImage) || isStreaming) return;
 
-  if (!state.apiKey) {
+  const asst = getActiveAssistant();
+  const asstProvider = asst.provider || 'openrouter';
+
+  if (asstProvider === 'siliconflow') {
+    if (!state.siliconflowApiKey) {
+      alert('请先在设置中填入 SiliconFlow API Key');
+      showSettings();
+      return;
+    }
+  } else if (asstProvider === 'deepseek') {
+    if (!state.deepseekApiKey) {
+      alert('请先在设置中填入 DeepSeek API Key');
+      showSettings();
+      return;
+    }
+  } else if (!state.apiKey) {
     alert('请先在设置中填入 OpenRouter API Key');
     showSettings();
     return;
@@ -5138,31 +5213,53 @@ async function sendMessage() {
       stream: true
     };
 
-    // Anthropic: top-level cache_control + provider lock
-    if (currentProvider === 'anthropic') {
-      const cacheCtl = { type: 'ephemeral' };
-      if (state.cacheTTL) cacheCtl.ttl = state.cacheTTL;
-      body.cache_control = cacheCtl;
-      body.provider = { order: ['Anthropic'] };
-    }
-    // Google Gemini: cache_control breakpoint already placed on messages above
-    // Other providers (OpenAI, etc.): rely on their own implicit caching
+    let apiUrl, apiHeaders;
 
-    // Add reasoning (extended thinking) if enabled
-    if (state.reasoningEnabled) {
-      body.reasoning = { effort: state.reasoningEffort || 'medium' };
-      // Anthropic requires temperature=1 when thinking is enabled
-      delete body.temperature;
-    }
+    if (asstProvider === 'siliconflow') {
+      // SiliconFlow: OpenAI-compatible, no cache_control
+      apiUrl = 'https://api.siliconflow.com/v1/chat/completions';
+      apiHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.siliconflowApiKey}`
+      };
+    } else if (asstProvider === 'deepseek') {
+      // DeepSeek official: OpenAI-compatible, automatic caching
+      apiUrl = 'https://api.deepseek.com/v1/chat/completions';
+      apiHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.deepseekApiKey}`
+      };
+    } else {
+      // OpenRouter
+      // Anthropic: top-level cache_control + provider lock
+      if (currentProvider === 'anthropic') {
+        const cacheCtl = { type: 'ephemeral' };
+        if (state.cacheTTL) cacheCtl.ttl = state.cacheTTL;
+        body.cache_control = cacheCtl;
+        body.provider = { order: ['Anthropic'] };
+      }
+      // Google Gemini: cache_control breakpoint already placed on messages above
+      // Other providers (OpenAI, etc.): rely on their own implicit caching
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
+      // Add reasoning (extended thinking) if enabled
+      if (state.reasoningEnabled) {
+        body.reasoning = { effort: state.reasoningEffort || 'medium' };
+        // Anthropic requires temperature=1 when thinking is enabled
+        delete body.temperature;
+      }
+
+      apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
+      apiHeaders = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${state.apiKey}`,
         'HTTP-Referer': 'https://benben-home.local',
         'X-Title': 'BenBen Home'
-      },
+      };
+    }
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: apiHeaders,
       body: JSON.stringify(body),
       signal: _streamAbort.signal
     });
@@ -5834,6 +5931,8 @@ async function doRestore() {
       // Full overwrite (restore apiKey from backup, keep webdav)
       const keepWebdav = state.webdav;
       state.apiKey = data.apiKey || state.apiKey;
+      state.siliconflowApiKey = data.siliconflowApiKey || state.siliconflowApiKey;
+      state.deepseekApiKey = data.deepseekApiKey || state.deepseekApiKey;
       state.cacheTTL = data.cacheTTL || '1h';
       state.maxTokens = data.maxTokens || 4096;
       state.temperature = data.temperature ?? 0.7;
