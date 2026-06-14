@@ -1430,6 +1430,19 @@ html, body {
   border-radius: 50%;
   background: var(--green);
 }
+.ctx-bar {
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+  overflow: hidden;
+  margin: 4px 0 2px;
+}
+.ctx-bar-fill {
+  height: 100%;
+  border-radius: 1px;
+  width: 0%;
+  transition: width 0.4s ease, background 0.4s ease;
+}
 
 /* ========== STREAMING CURSOR ========== */
 .streaming-cursor::after {
@@ -2314,6 +2327,9 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       <span class="cost-item" id="cacheInfoDisplay" style="display:none">
         <span id="cacheInfoText">--</span>
       </span>
+    </div>
+    <div class="ctx-bar" id="ctxBar" style="display:none">
+      <div class="ctx-bar-fill" id="ctxBarFill"></div>
     </div>
     <input type="file" id="imgPicker" accept="image/*" style="display:none" onchange="handleImagePick(event)">
     <div class="input-box">
@@ -4467,6 +4483,7 @@ function renderChatMessages() {
         <div>和${esc(asst.name)}聊聊天吧</div>
       </div>`;
     updateCostBar();
+    updateCtxBar();
     return;
   }
 
@@ -4497,6 +4514,7 @@ function renderChatMessages() {
     container.scrollTop = container.scrollHeight;
   }
   updateCostBar();
+    updateCtxBar();
 }
 
 // 流式：增量更新气泡，避免每个 chunk 重建 DOM 导致动画闪烁
@@ -4548,6 +4566,7 @@ function renderRoleplayMessages() {
         <div class="sublabel">cache_control: ready</div>
       </div>`;
     updateCostBar();
+    updateCtxBar();
     return;
   }
 
@@ -4626,6 +4645,7 @@ function renderRoleplayMessages() {
     container.scrollTop = container.scrollHeight;
   }
   updateCostBar();
+    updateCtxBar();
   if (cacheState.lastRefresh && cacheState.tokens) {
     const elapsed = Date.now() - cacheState.lastRefresh;
     const remaining = cacheState.ttlMs - elapsed;
@@ -4798,18 +4818,18 @@ async function createBranchConv(messages, title) {
 // Gemini cache write ≈ input price (5-min TTL, negligible storage cost).
 // This is an approximation — actual billing may differ slightly.
 const MODEL_PRICING = {
-  'anthropic/claude-opus-4.6':       { input: 5e-6,  output: 25e-6, cacheRead: 0.5e-6,  cacheWrite: 10e-6 },
-  'anthropic/claude-opus-4.5':       { input: 5e-6,  output: 25e-6, cacheRead: 0.5e-6,  cacheWrite: 10e-6 },
-  'anthropic/claude-sonnet-4.6':     { input: 3e-6,  output: 15e-6, cacheRead: 0.3e-6,  cacheWrite: 6e-6 },
-  'anthropic/claude-sonnet-4.5':     { input: 3e-6,  output: 15e-6, cacheRead: 0.3e-6,  cacheWrite: 6e-6 },
-  'anthropic/claude-sonnet-4-20250514': { input: 3e-6, output: 15e-6, cacheRead: 0.3e-6, cacheWrite: 6e-6 },
-  'anthropic/claude-haiku-4.5':      { input: 1e-6,  output: 5e-6,  cacheRead: 0.1e-6,  cacheWrite: 2e-6 },
+  'anthropic/claude-opus-4.6':       { input: 5e-6,  output: 25e-6, cacheRead: 0.5e-6,  cacheWrite: 10e-6, ctx: 200000 },
+  'anthropic/claude-opus-4.5':       { input: 5e-6,  output: 25e-6, cacheRead: 0.5e-6,  cacheWrite: 10e-6, ctx: 200000 },
+  'anthropic/claude-sonnet-4.6':     { input: 3e-6,  output: 15e-6, cacheRead: 0.3e-6,  cacheWrite: 6e-6,  ctx: 200000 },
+  'anthropic/claude-sonnet-4.5':     { input: 3e-6,  output: 15e-6, cacheRead: 0.3e-6,  cacheWrite: 6e-6,  ctx: 200000 },
+  'anthropic/claude-sonnet-4-20250514': { input: 3e-6, output: 15e-6, cacheRead: 0.3e-6, cacheWrite: 6e-6,  ctx: 200000 },
+  'anthropic/claude-haiku-4.5':      { input: 1e-6,  output: 5e-6,  cacheRead: 0.1e-6,  cacheWrite: 2e-6,  ctx: 200000 },
   // Gemini: cache write ≈ input (no extra charge on OpenRouter)
-  'google/gemini-3.1-pro-preview':   { input: 2e-6,    output: 12e-6, cacheRead: 0.2e-6,    cacheWrite: 2e-6 },
-  'google/gemini-2.5-pro-preview':   { input: 1.25e-6, output: 10e-6, cacheRead: 0.3125e-6, cacheWrite: 1.25e-6 },
-  'google/gemini-2.5-pro':           { input: 1.25e-6, output: 10e-6, cacheRead: 0.3125e-6, cacheWrite: 1.25e-6 },
+  'google/gemini-3.1-pro-preview':   { input: 2e-6,    output: 12e-6, cacheRead: 0.2e-6,    cacheWrite: 2e-6,    ctx: 1000000 },
+  'google/gemini-2.5-pro-preview':   { input: 1.25e-6, output: 10e-6, cacheRead: 0.3125e-6, cacheWrite: 1.25e-6, ctx: 1000000 },
+  'google/gemini-2.5-pro':           { input: 1.25e-6, output: 10e-6, cacheRead: 0.3125e-6, cacheWrite: 1.25e-6, ctx: 1000000 },
   // GPT-4o: cache read 0.5x input, no write cost
-  'openai/gpt-4o-2024-11-20':       { input: 2.5e-6, output: 10e-6, cacheRead: 1.25e-6, cacheWrite: 2.5e-6 },
+  'openai/gpt-4o-2024-11-20':       { input: 2.5e-6, output: 10e-6, cacheRead: 1.25e-6, cacheWrite: 2.5e-6, ctx: 128000 },
 };
 
 function estimateCost(model, promptTokens, completionTokens, cachedTokens, cacheWriteTokens) {
@@ -4857,6 +4877,36 @@ function updateCostBar() {
     msgEl.style.display = 'none';
     tokenEl.style.display = 'none';
   }
+}
+
+function updateCtxBar() {
+  const bar = document.getElementById('ctxBar');
+  const fill = document.getElementById('ctxBarFill');
+  const conv = getActiveConv();
+  // Find last assistant message with usage data
+  let lastUsage = null;
+  for (let i = conv.messages.length - 1; i >= 0; i--) {
+    const m = conv.messages[i];
+    if (m.role === 'assistant' && m.usage && m.usage.prompt_tokens) {
+      lastUsage = m.usage;
+      break;
+    }
+  }
+  if (!lastUsage) {
+    bar.style.display = 'none';
+    return;
+  }
+  const model = getModel();
+  const pricing = MODEL_PRICING[model];
+  const ctxLimit = pricing ? pricing.ctx : 200000; // default 200k
+  const used = (lastUsage.prompt_tokens || 0) + (lastUsage.completion_tokens || 0);
+  const pct = Math.min(100, (used / ctxLimit) * 100);
+  fill.style.width = pct + '%';
+  if (pct < 60) fill.style.background = 'var(--green)';
+  else if (pct < 85) fill.style.background = 'var(--orange)';
+  else fill.style.background = 'var(--red)';
+  bar.style.display = '';
+  bar.title = Math.round(used/1000) + 'k / ' + Math.round(ctxLimit/1000) + 'k tokens (' + pct.toFixed(1) + '%)';
 }
 
 function esc(str) {
