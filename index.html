@@ -2094,6 +2094,8 @@ html, body {
 }
 /* 组旁的 "..." 菜单按钮垂直对齐第一条气泡 */
 .chat-group .msg-inline-menu { margin-top: 9px; }
+/* 流式输出时隐藏菜单按钮 */
+.chat-group.streaming .msg-inline-menu { display: none; }
 /* --- 头像 --- */
 .avatar-edit-row {
   display: flex;
@@ -5171,15 +5173,26 @@ async function sendMessage() {
   renderMessages();
 
   const container = document.getElementById('messages');
-  const typingEl = document.createElement('div');
+  let typingEl = null;
   if (isChatConvActive()) {
-    typingEl.className = 'msg chat-group asst';
-    typingEl.innerHTML = `<div class="chat-bubble-col"><div class="chat-bubble asst first"><div class="typing-indicator"><span></span><span></span><span></span></div></div></div>`;
+    // Chat mode: inject typing dots INTO the last rendered message's bubble-col
+    // instead of creating a separate .msg element
+    const lastMsg = container.querySelector('.msg:last-child .chat-bubble-col');
+    if (lastMsg) {
+      // Hide the menu button during streaming
+      lastMsg.closest('.msg').classList.add('streaming');
+      const tb = document.createElement('div');
+      tb.className = 'chat-bubble asst first typing-bubble';
+      tb.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+      lastMsg.appendChild(tb);
+      typingEl = tb;
+    }
   } else {
+    typingEl = document.createElement('div');
     typingEl.className = 'msg assistant';
     typingEl.innerHTML = `<div class="msg-content"><div class="typing-indicator"><span></span><span></span><span></span></div></div>`;
+    container.appendChild(typingEl);
   }
-  container.appendChild(typingEl);
   container.scrollTop = container.scrollHeight;
 
   let usage = {};
@@ -5323,7 +5336,7 @@ async function sendMessage() {
       throw new Error(`API ${response.status}: ${err}`);
     }
 
-    typingEl.remove();
+    if (typingEl) typingEl.remove();
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -5423,7 +5436,7 @@ async function sendMessage() {
     checkAutoExport();
 
   } catch(err) {
-    typingEl.remove();
+    if (typingEl) typingEl.remove();
     // AbortError means the stream was intentionally killed (e.g. by background recovery)
     assistantMsg.content += err.name === 'AbortError'
       ? (assistantMsg.content ? '\n\n[连接中断 - 切后台时流被终止]' : '[连接中断 - 切后台时流被终止]')
