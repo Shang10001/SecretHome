@@ -2624,29 +2624,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       <div class="field">
         <label>模型</label>
         <select id="asstEditModel">
-          <optgroup label="Opus" class="og-openrouter">
-            <option value="anthropic/claude-opus-4.6" selected>Claude Opus 4.6 (笨笨)</option>
-            <option value="anthropic/claude-opus-4.5">Claude Opus 4.5</option>
-          </optgroup>
-          <optgroup label="Sonnet" class="og-openrouter">
-            <option value="anthropic/claude-sonnet-4.5">Claude Sonnet 4.5</option>
-          </optgroup>
-          <optgroup label="Google" class="og-openrouter">
-            <option value="google/gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
-            <option value="google/gemini-2.5-pro-preview">Gemini 2.5 Pro Preview</option>
-          </optgroup>
-          <optgroup label="OpenAI" class="og-openrouter">
-            <option value="openai/gpt-4o-2024-11-20">GPT-4o (2024-11-20)</option>
-          </optgroup>
-          <optgroup label="DeepSeek" class="og-siliconflow" style="display:none">
-            <option value="deepseek-ai/DeepSeek-V4-Pro">DeepSeek V4 Pro</option>
-          </optgroup>
-          <optgroup label="GLM" class="og-siliconflow" style="display:none">
-            <option value="Pro/zai-org/GLM-5.1">GLM 5.1</option>
-          </optgroup>
-          <optgroup label="DeepSeek" class="og-deepseek" style="display:none">
-            <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
-          </optgroup>
+          <option value="">(使用自定义模型)</option>
         </select>
       </div>
       <div class="field">
@@ -3739,19 +3717,67 @@ async function jumpToSearchResult(convId, msgIndex) {
 // ============ ASSISTANT EDIT ============
 let editingAsstId = null;
 
+const PROVIDER_MODELS = {
+  openrouter: [
+    { group: 'Opus', models: [
+      { value: 'anthropic/claude-opus-4.6', label: 'Claude Opus 4.6 (笨笨)' },
+      { value: 'anthropic/claude-opus-4.5', label: 'Claude Opus 4.5' },
+    ]},
+    { group: 'Sonnet', models: [
+      { value: 'anthropic/claude-sonnet-4.5', label: 'Claude Sonnet 4.5' },
+    ]},
+    { group: 'Google', models: [
+      { value: 'google/gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview' },
+      { value: 'google/gemini-2.5-pro-preview', label: 'Gemini 2.5 Pro Preview' },
+    ]},
+    { group: 'OpenAI', models: [
+      { value: 'openai/gpt-4o-2024-11-20', label: 'GPT-4o (2024-11-20)' },
+    ]},
+  ],
+  siliconflow: [
+    { group: 'DeepSeek', models: [
+      { value: 'deepseek-ai/DeepSeek-V4-Pro', label: 'DeepSeek V4 Pro' },
+    ]},
+    { group: 'GLM', models: [
+      { value: 'Pro/zai-org/GLM-5.1', label: 'GLM 5.1' },
+    ]},
+  ],
+  deepseek: [
+    { group: 'DeepSeek', models: [
+      { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
+    ]},
+  ],
+};
+
 function onProviderChange() {
   const prov = document.getElementById('asstEditProvider').value;
   const modelSel = document.getElementById('asstEditModel');
-  // Show/hide optgroups based on provider
-  modelSel.querySelectorAll('.og-openrouter').forEach(og => og.style.display = prov === 'openrouter' ? '' : 'none');
-  modelSel.querySelectorAll('.og-siliconflow').forEach(og => og.style.display = prov === 'siliconflow' ? '' : 'none');
-  modelSel.querySelectorAll('.og-deepseek').forEach(og => og.style.display = prov === 'deepseek' ? '' : 'none');
-  // If current selected option is hidden, select first visible option
-  const sel = modelSel.options[modelSel.selectedIndex];
-  if (sel && sel.parentElement.style.display === 'none') {
-    const firstVisible = modelSel.querySelector('optgroup:not([style*="display: none"]) option, optgroup:not([style*="display:none"]) option');
-    if (firstVisible) modelSel.value = firstVisible.value;
+  const curVal = modelSel.value;
+
+  // Rebuild options
+  modelSel.innerHTML = '';
+  // Blank option for custom model
+  const blank = document.createElement('option');
+  blank.value = '';
+  blank.textContent = '(使用自定义模型)';
+  modelSel.appendChild(blank);
+
+  const groups = PROVIDER_MODELS[prov] || [];
+  for (const g of groups) {
+    const og = document.createElement('optgroup');
+    og.label = g.group;
+    for (const m of g.models) {
+      const opt = document.createElement('option');
+      opt.value = m.value;
+      opt.textContent = m.label;
+      og.appendChild(opt);
+    }
+    modelSel.appendChild(og);
   }
+
+  // Try to restore previous selection if it still exists
+  const exists = Array.from(modelSel.options).some(o => o.value === curVal);
+  modelSel.value = exists ? curVal : (groups[0]?.models[0]?.value || '');
 }
 
 function showAsstEdit(asstId) {
@@ -3892,6 +3918,7 @@ function saveAsstEdit() {
 
   const model = document.getElementById('asstEditModel').value;
   const customModel = document.getElementById('asstEditCustomModel').value.trim();
+  if (!model && !customModel) { alert('请选择模型或填写自定义模型 ID'); return; }
   const provider = document.getElementById('asstEditProvider').value;
   const systemPrompt = document.getElementById('asstEditSP').value;
   const chatSystemPrompt = document.getElementById('asstEditChatSP').value;
