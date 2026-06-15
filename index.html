@@ -2370,12 +2370,24 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
         <input type="password" id="apiKey" placeholder="sk-or-v1-..." autocomplete="off">
       </div>
       <div class="field">
+        <label>OpenRouter Endpoint</label>
+        <input type="text" id="openrouterEndpoint" placeholder="https://openrouter.ai/api/v1/chat/completions" autocomplete="off">
+      </div>
+      <div class="field">
         <label>SiliconFlow API Key</label>
         <input type="password" id="siliconflowApiKey" placeholder="sk-..." autocomplete="off">
       </div>
       <div class="field">
+        <label>SiliconFlow Endpoint</label>
+        <input type="text" id="siliconflowEndpoint" placeholder="https://api.siliconflow.cn/v1/chat/completions" autocomplete="off">
+      </div>
+      <div class="field">
         <label>DeepSeek API Key</label>
         <input type="password" id="deepseekApiKey" placeholder="sk-..." autocomplete="off">
+      </div>
+      <div class="field">
+        <label>DeepSeek Endpoint</label>
+        <input type="text" id="deepseekEndpoint" placeholder="https://api.deepseek.com/v1/chat/completions" autocomplete="off">
       </div>
 
       <div class="field">
@@ -2748,8 +2760,11 @@ const CHAT_MODE_INSTRUCTION = `【聊天模式】
 function defaultState() {
   return {
     apiKey: '',
+    openrouterEndpoint: 'https://openrouter.ai/api/v1/chat/completions',
     siliconflowApiKey: '',
+    siliconflowEndpoint: 'https://api.siliconflow.cn/v1/chat/completions',
     deepseekApiKey: '',
+    deepseekEndpoint: 'https://api.deepseek.com/v1/chat/completions',
     cacheTTL: '1h',
     maxTokens: 4096,
     contextLen: 0,
@@ -3188,8 +3203,11 @@ async function exportLocalBackup(silent) {
     timestamp: new Date().toISOString(),
     data: {
       apiKey: state.apiKey,
+      openrouterEndpoint: state.openrouterEndpoint,
       siliconflowApiKey: state.siliconflowApiKey,
+      siliconflowEndpoint: state.siliconflowEndpoint,
       deepseekApiKey: state.deepseekApiKey,
+      deepseekEndpoint: state.deepseekEndpoint,
       assistants: state.assistants,
       activeAssistantId: state.activeAssistantId,
       cacheTTL: state.cacheTTL,
@@ -3235,8 +3253,11 @@ function importLocalBackup(event) {
       const keepWebdav = state.webdav;
       const keepAutoExport = state.autoExport;
       state.apiKey = data.apiKey || state.apiKey;
+      state.openrouterEndpoint = data.openrouterEndpoint || state.openrouterEndpoint;
       state.siliconflowApiKey = data.siliconflowApiKey || state.siliconflowApiKey;
+      state.siliconflowEndpoint = data.siliconflowEndpoint || state.siliconflowEndpoint;
       state.deepseekApiKey = data.deepseekApiKey || state.deepseekApiKey;
+      state.deepseekEndpoint = data.deepseekEndpoint || state.deepseekEndpoint;
       state.cacheTTL = data.cacheTTL || '1h';
       state.maxTokens = data.maxTokens || 4096;
       state.temperature = data.temperature ?? 0.7;
@@ -4319,8 +4340,11 @@ document.addEventListener('click', (e) => {
 // ============ SETTINGS ============
 function showSettings() {
   document.getElementById('apiKey').value = state.apiKey;
+  document.getElementById('openrouterEndpoint').value = state.openrouterEndpoint || 'https://openrouter.ai/api/v1/chat/completions';
   document.getElementById('siliconflowApiKey').value = state.siliconflowApiKey || '';
+  document.getElementById('siliconflowEndpoint').value = state.siliconflowEndpoint || 'https://api.siliconflow.cn/v1/chat/completions';
   document.getElementById('deepseekApiKey').value = state.deepseekApiKey || '';
+  document.getElementById('deepseekEndpoint').value = state.deepseekEndpoint || 'https://api.deepseek.com/v1/chat/completions';
   document.getElementById('cacheTTL').value = state.cacheTTL;
   document.getElementById('maxTokens').value = state.maxTokens;
   document.getElementById('contextLen').value = state.contextLen || 0;
@@ -4345,8 +4369,11 @@ function showSettings() {
 
 function saveSettings() {
   state.apiKey = document.getElementById('apiKey').value.trim();
+  state.openrouterEndpoint = document.getElementById('openrouterEndpoint').value.trim() || 'https://openrouter.ai/api/v1/chat/completions';
   state.siliconflowApiKey = document.getElementById('siliconflowApiKey').value.trim();
+  state.siliconflowEndpoint = document.getElementById('siliconflowEndpoint').value.trim() || 'https://api.siliconflow.cn/v1/chat/completions';
   state.deepseekApiKey = document.getElementById('deepseekApiKey').value.trim();
+  state.deepseekEndpoint = document.getElementById('deepseekEndpoint').value.trim() || 'https://api.deepseek.com/v1/chat/completions';
   state.cacheTTL = document.getElementById('cacheTTL').value;
   state.maxTokens = parseInt(document.getElementById('maxTokens').value) || 4096;
   state.contextLen = parseInt(document.getElementById('contextLen').value) || 0;
@@ -5217,14 +5244,14 @@ async function sendMessage() {
 
     if (asstProvider === 'siliconflow') {
       // SiliconFlow: OpenAI-compatible, no cache_control
-      apiUrl = 'https://api.siliconflow.com/v1/chat/completions';
+      apiUrl = state.siliconflowEndpoint || 'https://api.siliconflow.cn/v1/chat/completions';
       apiHeaders = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${state.siliconflowApiKey}`
       };
     } else if (asstProvider === 'deepseek') {
       // DeepSeek official: OpenAI-compatible, automatic caching
-      apiUrl = 'https://api.deepseek.com/v1/chat/completions';
+      apiUrl = state.deepseekEndpoint || 'https://api.deepseek.com/v1/chat/completions';
       apiHeaders = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${state.deepseekApiKey}`
@@ -5248,7 +5275,7 @@ async function sendMessage() {
         delete body.temperature;
       }
 
-      apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
+      apiUrl = state.openrouterEndpoint || 'https://openrouter.ai/api/v1/chat/completions';
       apiHeaders = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${state.apiKey}`,
@@ -5931,8 +5958,11 @@ async function doRestore() {
       // Full overwrite (restore apiKey from backup, keep webdav)
       const keepWebdav = state.webdav;
       state.apiKey = data.apiKey || state.apiKey;
+      state.openrouterEndpoint = data.openrouterEndpoint || state.openrouterEndpoint;
       state.siliconflowApiKey = data.siliconflowApiKey || state.siliconflowApiKey;
+      state.siliconflowEndpoint = data.siliconflowEndpoint || state.siliconflowEndpoint;
       state.deepseekApiKey = data.deepseekApiKey || state.deepseekApiKey;
+      state.deepseekEndpoint = data.deepseekEndpoint || state.deepseekEndpoint;
       state.cacheTTL = data.cacheTTL || '1h';
       state.maxTokens = data.maxTokens || 4096;
       state.temperature = data.temperature ?? 0.7;
