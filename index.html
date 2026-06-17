@@ -274,6 +274,34 @@ html, body {
   padding: 0 16px;
   line-height: 1.55;
 }
+.md-codeblock {
+  background: var(--surface2);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 6px 0;
+  overflow-x: auto;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre;
+}
+.md-inline-code {
+  background: var(--surface2);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 0.9em;
+}
+.chat-bubble .md-codeblock {
+  background: rgba(0,0,0,0.06);
+}
+.chat-bubble .md-inline-code {
+  background: rgba(0,0,0,0.06);
+}
+[data-theme="night"] .chat-bubble .md-codeblock,
+[data-theme="night"] .chat-bubble .md-inline-code {
+  background: rgba(255,255,255,0.08);
+}
 .meta-tag {
   padding: 0;
   border-radius: 0;
@@ -2986,7 +3014,7 @@ function saveState() {
     const meta = state.conversations[state._activeConvData.id];
     meta.title = state._activeConvData.title;
     meta.msgCount = state._activeConvData.messages.length;
-    meta.totalCost = state._activeConvData.messages.reduce((s, m) => s + (m.usage?.cost || 0), 0);
+    meta.totalCost = state._activeConvData.messages.reduce((s, m) => s + (m.usage?.cost || 0), 0) + (state._activeConvData.deletedCost || 0);
   }
   saveSettingsToLS();
   saveSettingsToIDB();
@@ -3081,7 +3109,7 @@ async function tryLoadFromIDB() {
     if (state.conversations[id].totalCost === undefined) {
       const conv = await loadConvFromIDB(id);
       if (conv && conv.messages) {
-        state.conversations[id].totalCost = conv.messages.reduce((s, m) => s + (m.usage?.cost || 0), 0);
+        state.conversations[id].totalCost = conv.messages.reduce((s, m) => s + (m.usage?.cost || 0), 0) + (conv.deletedCost || 0);
         needsSave = true;
       }
     }
@@ -3288,7 +3316,7 @@ function importLocalBackup(event) {
           title: conv.title,
           created: conv.created,
           msgCount: conv.messages.length,
-          totalCost: conv.messages.reduce((s, m) => s + (m.usage?.cost || 0), 0),
+          totalCost: conv.messages.reduce((s, m) => s + (m.usage?.cost || 0), 0) + (conv.deletedCost || 0),
           assistantId: conv.assistantId || 'asst_default'
         };
         if (conv.mode) meta.mode = conv.mode;
@@ -4611,7 +4639,7 @@ function renderChatMessages() {
     } else {
       const bubbles = splitChatBubbles(m.content);
       const bubbleHtml = bubbles.map((b, bi) =>
-        `<div class="chat-bubble asst ${bi === 0 ? 'first' : ''}">${esc(b)}</div>`
+        `<div class="chat-bubble asst ${bi === 0 ? 'first' : ''}">${renderMd(b)}</div>`
       ).join('');
       return `
         <div class="msg chat-group asst" data-index="${i}">
@@ -4652,7 +4680,8 @@ function renderStreamingChat(index, content) {
   }
   bubbles.forEach((b, bi) => {
     const d = divs[bi];
-    if (d.textContent !== b) d.textContent = b;
+    const rendered = renderMd(b);
+    if (d.innerHTML !== rendered) d.innerHTML = rendered;
     d.classList.toggle('streaming-cursor', bi === bubbles.length - 1);
   });
   container.scrollTop = container.scrollHeight;
@@ -4743,7 +4772,7 @@ function renderRoleplayMessages() {
             ${menuBtn}
           </div>
           ${thinkingHtml}
-          <div class="msg-content" id="msgContent-${i}">${esc(m.content)}</div>
+          <div class="msg-content" id="msgContent-${i}">${renderMd(m.content)}</div>
           ${footerHtml}
           ${regenBtn}
         </div>
@@ -4777,6 +4806,9 @@ function startEdit(index) {
   if (!el) return;
   // 聊天模式：编辑时显示原始文本（含 ||| 分隔符），保存后重新拆分渲染
   if (isChatConvActive()) {
+    el.textContent = getActiveConv().messages[index].content || '';
+  } else if (getActiveConv().messages[index].role === 'assistant') {
+    // 角色扮演模式：编辑时显示原始文本（含 markdown 标记）
     el.textContent = getActiveConv().messages[index].content || '';
   }
   el.contentEditable = 'true';
@@ -4976,6 +5008,7 @@ function updateCostBar() {
       totalTokens += (m.usage.prompt_tokens || 0) + (m.usage.completion_tokens || 0);
     }
   }
+  totalCost += conv.deletedCost || 0;
 
   const costEl = document.getElementById('costDisplay');
   const msgEl = document.getElementById('msgCountDisplay');
@@ -5029,6 +5062,22 @@ function esc(str) {
   const d = document.createElement('div');
   d.textContent = str;
   return d.innerHTML;
+}
+
+function renderMd(str) {
+  let s = esc(str);
+  // Code blocks: ```lang\n...\n``` → <pre><code>
+  s = s.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) =>
+    `<pre class="md-codeblock"><code>${code}</code></pre>`);
+  // Inline code: `...` → <code>
+  s = s.replace(/`([^`\n]+?)`/g, '<code class="md-inline-code">$1</code>');
+  // Bold: **...** → <strong>
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Italic: *...* → <em> (but not inside words with *)
+  s = s.replace(/(?<!\w)\*([^\s*](?:.*?[^\s*])?)\*(?!\w)/g, '<em>$1</em>');
+  // Strikethrough: ~~...~~ → <del>
+  s = s.replace(/~~(.+?)~~/g, '<del>$1</del>');
+  return s;
 }
 
 // ============ IMAGE HANDLING ============
@@ -5099,6 +5148,12 @@ async function regenerateResponse(index) {
   if (userIdx < 0) return;
 
   const userMsg = conv.messages[userIdx];
+
+  // Accumulate cost of messages being deleted so cost display doesn't roll back
+  if (!conv.deletedCost) conv.deletedCost = 0;
+  for (let i = index; i < conv.messages.length; i++) {
+    conv.deletedCost += conv.messages[i].usage?.cost || 0;
+  }
 
   // Remove everything from the assistant message onward
   conv.messages.splice(index);
@@ -5476,7 +5531,7 @@ function renderStreamingMessage(index, content) {
   if (el) {
     const contentEl = el.querySelector('.msg-content');
     if (contentEl) {
-      contentEl.textContent = content;
+      contentEl.innerHTML = renderMd(content);
       contentEl.classList.add('streaming-cursor');
     }
     // Collapse thinking when content starts streaming
@@ -6146,6 +6201,7 @@ async function showStats() {
       totalCacheWrite += m.usage.cache_write_tokens || 0;
     }
   }
+  for (const conv of convList) totalCost += conv.deletedCost || 0;
 
   // Helper: compute card stats for a given time window
   function computePeriodStats(msgs, convs, daysBack) {
@@ -6229,6 +6285,8 @@ async function showStats() {
   }
   const dailyData = Object.entries(dailyCounts);
   const maxDaily = Math.max(1, ...dailyData.map(d => d[1]));
+  const dailyCostData = Object.entries(dailyCosts);
+  const maxDailyCost = Math.max(0.001, ...dailyCostData.map(d => d[1]));
 
   // ---- Daily chat duration (60-min session gap) ----
   const SESSION_GAP = 60 * 60 * 1000; // 60 minutes
@@ -6288,7 +6346,7 @@ async function showStats() {
     id: c.id,
     title: c.title || '(无标题)',
     msgCount: (c.messages || []).length,
-    cost: (c.messages || []).reduce((s, m) => s + (m.usage?.cost || 0), 0)
+    cost: (c.messages || []).reduce((s, m) => s + (m.usage?.cost || 0), 0) + (c.deletedCost || 0)
   }));
   const topByMsgs = [...convStats].sort((a, b) => b.msgCount - a.msgCount).slice(0, 5);
   const topByCost = [...convStats].sort((a, b) => b.cost - a.cost).slice(0, 5);
@@ -6345,6 +6403,29 @@ async function showStats() {
       </div>
 
       <div class="stats-section">
+        <div class="stats-section-title">近 30 天花费</div>
+        <div class="stats-bar-chart" id="statsCostChart">
+          ${dailyCostData.map(([d, cost]) => {
+            const h = Math.max(2, (cost / maxDailyCost) * 90);
+            const count = dailyCounts[d] || 0;
+            const color = cost > 0 ? 'var(--accent)' : 'var(--surface3)';
+            return `<div class="stats-bar-col" data-date="${d}" data-count="${count}" data-cost="${cost.toFixed(4)}" onclick="showCostTip(this,event)">
+              <div class="stats-bar-stack" style="height:${h}%"><div class="stats-bar-seg" style="flex:1;background:${color}"></div></div>
+            </div>`;
+          }).join('')}
+          <div class="stats-bar-tip" id="statsCostTip"></div>
+        </div>
+        <div class="stats-bar-chart-labels">
+          ${dailyCostData.filter((_, i) => i % 5 === 0 || i === dailyCostData.length - 1).map(([d]) =>
+            `<span>${d.slice(5)}</span>`
+          ).join('')}
+        </div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:6px;">
+          30 天合计: $${dailyCostData.reduce((s, [, c]) => s + c, 0).toFixed(4)}
+        </div>
+      </div>
+
+      <div class="stats-section">
         <div class="stats-section-title">近 30 天消息量</div>
         <div class="stats-bar-chart" id="statsBarChart">
           ${dailyData.map(([d, c], idx) => {
@@ -6368,28 +6449,6 @@ async function showStats() {
           ${dailyData.filter((_, i) => i % 5 === 0 || i === dailyData.length - 1).map(([d]) =>
             `<span>${d.slice(5)}</span>`
           ).join('')}
-        </div>
-      </div>
-
-      <div class="stats-section">
-        <div class="stats-section-title">近 30 天聊天时间</div>
-        <div class="stats-bar-chart" id="statsTimeChart">
-          ${durationData.map(([d, mins]) => {
-            const h = Math.max(2, (mins / maxDuration) * 90);
-            const color = mins > 0 ? 'var(--accent)' : 'var(--surface3)';
-            return `<div class="stats-bar-col" data-date="${d}" data-duration="${mins.toFixed(1)}" onclick="showTimeTip(this,event)">
-              <div class="stats-bar-stack" style="height:${h}%"><div class="stats-bar-seg" style="flex:1;background:${color}"></div></div>
-            </div>`;
-          }).join('')}
-          <div class="stats-bar-tip" id="statsTimeTip"></div>
-        </div>
-        <div class="stats-bar-chart-labels">
-          ${durationData.filter((_, i) => i % 5 === 0 || i === durationData.length - 1).map(([d]) =>
-            `<span>${d.slice(5)}</span>`
-          ).join('')}
-        </div>
-        <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:6px;">
-          30 天合计: ${fmtDuration(durationData.reduce((s, [, m]) => s + m, 0))}
         </div>
       </div>
 
@@ -6662,6 +6721,33 @@ function buildCalendarHeatmap(userMsgs, getDayColor) {
 
   html += '</div>';
   return html;
+}
+
+function showCostTip(el, event) {
+  event.stopPropagation();
+  const tip = document.getElementById('statsCostTip');
+  const date = el.dataset.date;
+  const cost = el.dataset.cost;
+  const count = el.dataset.count;
+
+  tip.innerHTML = `<span>${date}</span><span>$${cost}</span><span>${count} 条</span>`;
+  tip.classList.add('show');
+
+  const chartRect = el.closest('.stats-bar-chart').getBoundingClientRect();
+  const barRect = el.getBoundingClientRect();
+  const tipW = tip.offsetWidth;
+  let left = barRect.left + barRect.width / 2 - chartRect.left - tipW / 2;
+  left = Math.max(0, Math.min(left, chartRect.width - tipW));
+  tip.style.left = left + 'px';
+
+  el.closest('.stats-bar-chart').querySelectorAll('.stats-bar-col').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+
+  clearTimeout(tip._timer);
+  tip._timer = setTimeout(() => {
+    tip.classList.remove('show');
+    el.classList.remove('active');
+  }, 3000);
 }
 
 function showBarTip(el, event) {
