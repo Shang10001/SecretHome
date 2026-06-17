@@ -6273,13 +6273,18 @@ async function showStats() {
   }
   // Compute daily costs: iterate conversations in order so assistant msgs
   // without ts can inherit the date from the preceding user message
+  const dailyAsstCosts = {}; // { dateKey: { assistantId: cost } }
   for (const conv of convList) {
     let lastDate = null;
+    const asstId = conv.assistantId || state.conversations[conv.id]?.assistantId || 'asst_default';
     for (const m of (conv.messages || [])) {
       const ts = extractTimestamp(m);
       if (ts) lastDate = localDateKey(ts);
       if (m.role === 'assistant' && m.usage && lastDate && lastDate in dailyCosts) {
-        dailyCosts[lastDate] += m.usage.cost || 0;
+        const c = m.usage.cost || 0;
+        dailyCosts[lastDate] += c;
+        if (!dailyAsstCosts[lastDate]) dailyAsstCosts[lastDate] = {};
+        dailyAsstCosts[lastDate][asstId] = (dailyAsstCosts[lastDate][asstId] || 0) + c;
       }
     }
   }
@@ -6408,9 +6413,15 @@ async function showStats() {
           ${dailyCostData.map(([d, cost]) => {
             const h = Math.max(2, (cost / maxDailyCost) * 90);
             const count = dailyCounts[d] || 0;
-            const color = cost > 0 ? 'var(--accent)' : 'var(--surface3)';
+            const asstCosts = dailyAsstCosts[d] || {};
+            const segs = Object.entries(asstCosts)
+              .sort((a, b) => b[1] - a[1])
+              .map(([aid, c]) => {
+                const color = (state.assistants[aid]?.color) || 'var(--accent)';
+                return `<div class="stats-bar-seg" style="flex:${c};background:${color}"></div>`;
+              }).join('');
             return `<div class="stats-bar-col" data-date="${d}" data-count="${count}" data-cost="${cost.toFixed(4)}" onclick="showCostTip(this,event)">
-              <div class="stats-bar-stack" style="height:${h}%"><div class="stats-bar-seg" style="flex:1;background:${color}"></div></div>
+              <div class="stats-bar-stack" style="height:${h}%">${segs || `<div class="stats-bar-seg" style="flex:1;background:var(--surface3)"></div>`}</div>
             </div>`;
           }).join('')}
           <div class="stats-bar-tip" id="statsCostTip"></div>
