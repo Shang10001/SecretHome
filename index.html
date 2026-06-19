@@ -4836,7 +4836,7 @@ function saveEdit(index) {
   const el = document.getElementById('msgContent-' + index);
   if (!el) return;
   const conv = getActiveConv();
-  conv.messages[index].content = el.textContent;
+  conv.messages[index].content = el.innerText;
   el.contentEditable = 'false';
   el.classList.remove('editing');
   saveState();
