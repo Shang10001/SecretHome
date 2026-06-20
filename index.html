@@ -3763,6 +3763,10 @@ const PROVIDER_MODELS = {
     { group: 'OpenAI', models: [
       { value: 'openai/gpt-4o-2024-11-20', label: 'GPT-4o (2024-11-20)' },
     ]},
+    { group: 'GLM', models: [
+      { value: 'z-ai/glm-5.2', label: 'GLM 5.2' },
+      { value: 'z-ai/glm-5.1', label: 'GLM 5.1' },
+    ]},
   ],
   siliconflow: [
     { group: 'DeepSeek', models: [
@@ -4993,8 +4997,12 @@ const MODEL_PRICING = {
   // GPT-4o: cache read 0.5x input, no write cost
   'openai/gpt-4o-2024-11-20':       { input: 2.5e-6, output: 10e-6, cacheRead: 1.25e-6, cacheWrite: 2.5e-6, ctx: 128000 },
   // SiliconFlow models (approximate pricing, no explicit cache)
+  // DeepSeek on SiliconFlow
   'deepseek-ai/DeepSeek-V4-Pro':     { input: 1.6e-6, output: 3.5e-6, cacheRead: 0, cacheWrite: 0, ctx: 1000000 },
   'Pro/zai-org/GLM-5.1':             { input: 1e-6,   output: 4e-6,   cacheRead: 0, cacheWrite: 0, ctx: 200000 },
+  // GLM on OpenRouter
+  'z-ai/glm-5.1':                    { input: 0.95e-6, output: 3.15e-6, cacheRead: 0, cacheWrite: 0, ctx: 202752 },
+  'z-ai/glm-5.2':                    { input: 1.2e-6,  output: 4.1e-6,  cacheRead: 0, cacheWrite: 0, ctx: 1048576 },
   // DeepSeek official (¥3/M input, ¥6/M output, ¥0.025/M cache hit → USD at ¥7.3=$1)
   'deepseek-v4-pro':                 { input: 0.41e-6, output: 0.82e-6, cacheRead: 0.0034e-6, cacheWrite: 0.41e-6, ctx: 1000000 },
 };
