@@ -4924,7 +4924,10 @@ function deleteMessage(index) {
   if (!confirm('确定删除这条消息吗？')) return;
   conv.messages[index].deleted = true;
   saveState();
+  const container = document.getElementById('messages');
+  const scrollPos = container.scrollTop;
   renderMessages();
+  container.scrollTop = scrollPos;
   showToast('消息已删除');
 }
 
