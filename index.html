@@ -3659,7 +3659,7 @@ async function doSearch(query) {
     const msgs = conv.messages || [];
     for (let i = 0; i < msgs.length; i++) {
       const m = msgs[i];
-      if (!m.content) continue;
+      if (!m.content || m.deleted) continue;
       const idx = m.content.toLowerCase().indexOf(q);
       if (idx === -1) continue;
 
@@ -4627,6 +4627,7 @@ function renderChatMessages() {
   }
 
   container.innerHTML = conv.messages.map((m, i) => {
+    if (m.deleted) return '';
     const menuBtn = `<button class="msg-inline-menu" onclick="toggleMsgMenu(${i}, event)">&#8943;</button>`;
     if (m.role === 'user') {
       const imgHtml = m.image ? `<img class="msg-image" src="${m.image}">` : '';
@@ -4711,6 +4712,7 @@ function renderRoleplayMessages() {
   }
 
   container.innerHTML = conv.messages.map((m, i) => {
+    if (m.deleted) return '';
     let metaParts = '';
     if (m.usage) {
       const u = m.usage;
@@ -4866,6 +4868,10 @@ function toggleMsgMenu(index, event) {
     ${isAssistant ? `<button class="conv-context-menu-item" onclick="regenerateResponse(${index}); closeMsgMenus();">
       <span class="ctx-icon">&#8635;</span>重新生成
     </button>` : ''}
+    <div class="conv-context-sep"></div>
+    <button class="conv-context-menu-item" style="color:var(--danger,#e53935);" onclick="deleteMessage(${index}); closeMsgMenus();">
+      <span class="ctx-icon">&#128465;</span>删除
+    </button>
     ${canBranchUp ? `<div class="conv-context-sep"></div>
     <button class="conv-context-menu-item" onclick="branchUp(${index}); closeMsgMenus();">
       <span class="ctx-icon">&#8598;</span>从这里往上分支
@@ -4912,6 +4918,16 @@ function closeMsgMenus() {
   if (menu) menu.classList.remove('open');
 }
 
+function deleteMessage(index) {
+  const conv = getActiveConv();
+  if (!conv || index < 0 || index >= conv.messages.length) return;
+  if (!confirm('确定删除这条消息吗？')) return;
+  conv.messages[index].deleted = true;
+  saveState();
+  renderMessages();
+  showToast('消息已删除');
+}
+
 // Branch up: messages 0..index → new conversation
 async function branchUp(index) {
   const conv = getActiveConv();
@@ -4935,8 +4951,8 @@ async function branchDown(index) {
 async function createBranchConv(messages, title) {
   const id = 'c_' + Date.now();
   const asstId = getActiveConv().assistantId || state.activeAssistantId || 'asst_default';
-  // Deep copy messages, strip usage data (cost belongs to original conversation)
-  const msgsCopy = JSON.parse(JSON.stringify(messages));
+  // Deep copy messages, strip usage data and deleted messages (cost belongs to original conversation)
+  const msgsCopy = JSON.parse(JSON.stringify(messages.filter(m => !m.deleted)));
   for (const m of msgsCopy) {
     delete m.usage;
   }
@@ -5280,7 +5296,7 @@ async function sendMessage() {
     }
 
     // Apply context length limit (0 = unlimited)
-    let historyMsgs = conv.messages.filter(m => m !== assistantMsg);
+    let historyMsgs = conv.messages.filter(m => m !== assistantMsg && !m.deleted);
     if (state.contextLen > 0 && historyMsgs.length > state.contextLen) {
       historyMsgs = historyMsgs.slice(-state.contextLen);
     }
