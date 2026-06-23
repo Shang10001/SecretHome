@@ -1,0 +1,241 @@
+--- index.html
+
++++ index_patched.html
+
+@@ -741,6 +741,6 @@
+
+ .asst-edit-form .field { margin-bottom: 16px; }
+ .sp-mode-tabs { display: flex; gap: 2px; margin-bottom: 6px; }
+-.sp-mode-tabs button { flex: 1; padding: 6px 0; border: 1px solid var(--border); border-radius: 8px 8px 0 0; background: var(--bg); color: var(--dim); font-size: 13px; cursor: pointer; border-bottom: none; }
+-.sp-mode-tabs button.active { background: var(--card); color: var(--fg); font-weight: 600; }
++.sp-mode-tabs button { flex: 1; padding: 6px 0; border: 1px solid var(--border); border-radius: 8px 8px 0 0; background: var(--bg); color: var(--text3); font-size: 13px; cursor: pointer; border-bottom: none; }
++.sp-mode-tabs button.active { background: var(--surface); color: var(--text); font-weight: 600; }
+ .asst-edit-form label {
+   display: block;
+@@ -1281,4 +1281,15 @@
+
+   display: block;
+   animation: msgIn 0.2s ease-out;
++}
++
++.chat-bubble-col .thinking-block {
++  padding-left: 0;
++  margin-bottom: 4px;
++}
++.chat-bubble-col .thinking-toggle {
++  margin-left: 0;
++}
++.chat-bubble-col .thinking-content {
++  max-width: 100%;
+ }
+ .thinking-content strong {
+@@ -3096,4 +3107,11 @@
+
+         if (conv.mode) state.conversations[id].mode = conv.mode;
+       }
++      if (!state.activeConvId || !state.conversations[state.activeConvId]) {
++        const newest = Object.values(state.conversations).sort((a, b) => b.created - a.created)[0];
++        state.activeConvId = newest ? newest.id : null;
++      }
++      if (state.activeConvId && !state._activeConvData) {
++        state._activeConvData = await loadConvFromIDB(state.activeConvId);
++      }
+       saveSettingsToLS();
+       showToast('已从存储恢复对话索引');
+@@ -3886,4 +3904,5 @@
+
+   // 压缩到 192px，控制 localStorage 占用（每个头像约 10KB）
+   compressImage(file, 192, 0.82).then(dataUrl => {
++    if (!dataUrl) { showToast('头像读取失败'); return; }
+     editingAsstAvatar = dataUrl;
+     updateAsstAvatarPreview();
+@@ -3947,5 +3966,5 @@
+
+ }
+ 
+-function saveAsstEdit() {
++async function saveAsstEdit() {
+   const name = document.getElementById('asstEditName').value.trim();
+   if (!name) { alert('请输入助手名称'); return; }
+@@ -3978,5 +3997,5 @@
+
+     editingAsstId = id;
+     // Switch to the new assistant
+-    switchAssistant(id);
++    await switchAssistant(id);
+   }
+ 
+@@ -3991,5 +4010,5 @@
+
+ }
+ 
+-function deleteAssistant() {
++async function deleteAssistant() {
+   if (!editingAsstId || editingAsstId === 'asst_default') return;
+   const asst = state.assistants[editingAsstId];
+@@ -4009,9 +4028,9 @@
+
+   if (state.activeAssistantId === editingAsstId) {
+     const first = Object.values(state.assistants)[0];
+-    if (first) switchAssistant(first.id);
++    if (first) await switchAssistant(first.id);
+     else {
+       // Recreate default
+-      state.assistants['asst_default'] = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: '#DA7756' };
+-      switchAssistant('asst_default');
++      state.assistants['asst_default'] = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: '#DA7756', provider: 'openrouter' };
++      await switchAssistant('asst_default');
+     }
+   }
+@@ -4802,7 +4821,8 @@
+
+ function toggleThinking(index) {
+   const content = document.getElementById('thinking-' + index);
++  if (!content) return;
+   const toggle = content.previousElementSibling;
+   content.classList.toggle('open');
+-  toggle.classList.toggle('open');
++  if (toggle) toggle.classList.toggle('open');
+ }
+ 
+@@ -5028,7 +5048,8 @@
+
+   let totalCost = 0;
+   let totalTokens = 0;
+-  let msgCount = conv.messages.length;
+-
+-  for (const m of conv.messages) {
++  const visibleMessages = conv.messages.filter(m => !m.deleted);
++  let msgCount = visibleMessages.length;
++
++  for (const m of visibleMessages) {
+     if (m.usage) {
+       if (m.usage.cost !== undefined && m.usage.cost !== null) totalCost += m.usage.cost;
+@@ -5119,16 +5140,23 @@
+
+       const img = new Image();
+       img.onload = () => {
+-        let w = img.width, h = img.height;
+-        if (w > maxPx || h > maxPx) {
+-          if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
+-          else { w = Math.round(w * maxPx / h); h = maxPx; }
++        try {
++          let w = img.width, h = img.height;
++          if (w > maxPx || h > maxPx) {
++            if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
++            else { w = Math.round(w * maxPx / h); h = maxPx; }
++          }
++          const c = document.createElement('canvas');
++          c.width = w; c.height = h;
++          c.getContext('2d').drawImage(img, 0, 0, w, h);
++          resolve(c.toDataURL('image/jpeg', quality));
++        } catch(err) {
++          // If canvas encoding fails, keep the original image instead of dropping it.
++          resolve(e.target.result);
+         }
+-        const c = document.createElement('canvas');
+-        c.width = w; c.height = h;
+-        c.getContext('2d').drawImage(img, 0, 0, w, h);
+-        resolve(c.toDataURL('image/jpeg', quality));
+       };
++      img.onerror = () => resolve(e.target.result);
+       img.src = e.target.result;
+     };
++    reader.onerror = () => resolve(null);
+     reader.readAsDataURL(file);
+   });
+@@ -5139,4 +5167,5 @@
+
+   if (!file || !file.type.startsWith('image/')) return;
+   compressImage(file).then(dataUrl => {
++    if (!dataUrl) { showToast('图片读取失败'); return; }
+     pendingImage = dataUrl;
+     document.getElementById('imgPreviewImg').src = dataUrl;
+@@ -5239,5 +5268,8 @@
+
+   if (pendingImage) { userMsg.image = pendingImage; pendingImage = null; document.getElementById('imgPreview').style.display = 'none'; }
+   conv.messages.push(userMsg);
+-  if (conv.messages.length === 1) conv.title = text.slice(0, 30) + (text.length > 30 ? '...' : '');
++  if (conv.messages.length === 1) {
++    const titleBase = text || (userMsg.image ? '图片消息' : '新对话');
++    conv.title = titleBase.slice(0, 30) + (titleBase.length > 30 ? '...' : '');
++  }
+ 
+   input.value = '';
+@@ -5554,6 +5586,5 @@
+
+   if (isChatConvActive()) return renderStreamingChat(index, content);
+   const container = document.getElementById('messages');
+-  const msgEls = container.querySelectorAll('.msg');
+-  const el = msgEls[index];
++  const el = container.querySelector(`.msg[data-index="${index}"]`);
+   if (el) {
+     const contentEl = el.querySelector('.msg-content');
+@@ -5576,6 +5607,5 @@
+
+ function renderStreamingThinking(index, thinking) {
+   const container = document.getElementById('messages');
+-  const msgEls = container.querySelectorAll('.msg');
+-  const el = msgEls[index];
++  const el = container.querySelector(`.msg[data-index="${index}"]`);
+   if (!el) return;
+ 
+@@ -5583,6 +5613,7 @@
+
+   let thinkingBlock = el.querySelector('.thinking-block');
+   if (!thinkingBlock) {
+-    // Insert thinking block before msg-content
++    // Roleplay messages have .msg-content; chat-mode bubbles use .chat-bubble-col.
+     const contentEl = el.querySelector('.msg-content');
++    const chatCol = el.querySelector('.chat-bubble-col');
+     thinkingBlock = document.createElement('div');
+     thinkingBlock.className = 'thinking-block';
+@@ -5594,5 +5625,7 @@
+
+       <div class="thinking-content open thinking-streaming" id="thinking-${index}"></div>
+     `;
+-    contentEl.before(thinkingBlock);
++    if (contentEl) contentEl.before(thinkingBlock);
++    else if (chatCol) chatCol.prepend(thinkingBlock);
++    else return;
+   }
+ 
+@@ -5693,4 +5726,20 @@
+
+   el.style.height = 'auto';
+   el.style.height = Math.min(el.scrollHeight, 160) + 'px';
++}
++
++function isLikelyMobileInput() {
++  return window.matchMedia('(max-width: 600px)').matches || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
++}
++
++function setupInputShortcuts() {
++  const input = document.getElementById('userInput');
++  if (!input || input._benbenShortcutsReady) return;
++  input._benbenShortcutsReady = true;
++  input.addEventListener('keydown', (e) => {
++    const wantsSend = e.key === 'Enter' && !e.shiftKey && !e.isComposing && (!isLikelyMobileInput() || e.ctrlKey || e.metaKey);
++    if (!wantsSend) return;
++    e.preventDefault();
++    sendMessage();
++  });
+ }
+ 
+@@ -6854,11 +6903,12 @@
+
+   updateHeaderAssistant();
+   updateMemBadge();
++  setupInputShortcuts();
++  // CRITICAL: Load IDB data BEFORE creating/rendering a conversation.
++  // Otherwise a fresh empty conversation can hide older IndexedDB data when localStorage was cleared.
++  await tryLoadFromIDB();
+   if (!state.activeConvId) newConversation();
+   // Set auto-export toggle state
+   const aeToggle = document.getElementById('autoExportToggle');
+   if (aeToggle) aeToggle.checked = state.autoExport || false;
+-  // CRITICAL: Load IDB data BEFORE rendering to avoid race condition
+-  // (renderMessages → getActiveConv would create empty fallback, blocking IDB load)
+-  await tryLoadFromIDB();
+   renderMessages();
+   // 恢复 UI 模式（聊天 / 角色扮演）
