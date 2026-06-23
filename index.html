@@ -1442,6 +1442,105 @@ html, body {
   flex-shrink: 0;
 }
 
+/* ========== BULK MESSAGE DELETE ========== */
+.bulk-msg-check {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  margin: 6px 6px 0 0;
+}
+.bulk-msg-check:hover,
+.bulk-msg-check:active {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.bulk-msg-check.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.bulk-delete-mode .msg-inline-menu { display: none; }
+.msg.assistant > .bulk-msg-check {
+  margin-left: 16px;
+  margin-bottom: 4px;
+}
+.chat-group > .bulk-msg-check {
+  margin-top: 10px;
+}
+.bulk-delete-bar {
+  display: none;
+  position: fixed;
+  left: 50%;
+  bottom: calc(86px + var(--safe-bottom));
+  transform: translateX(-50%);
+  width: calc(100% - 24px);
+  max-width: 560px;
+  z-index: 170;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  border-radius: 16px;
+  padding: 10px 12px;
+  align-items: center;
+  gap: 8px;
+  animation: msgIn 0.16s ease-out;
+}
+.bulk-delete-bar.show { display: flex; }
+.bulk-delete-count {
+  flex: 1;
+  min-width: 0;
+  color: var(--text2);
+  font-size: 13px;
+}
+.bulk-delete-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.bulk-delete-actions button {
+  border: none;
+  border-radius: 10px;
+  padding: 7px 10px;
+  background: var(--surface2);
+  color: var(--text2);
+  font-family: var(--font);
+  font-size: 12px;
+  cursor: pointer;
+}
+.bulk-delete-actions button:hover,
+.bulk-delete-actions button:active {
+  background: var(--surface3);
+  color: var(--text);
+}
+.bulk-delete-actions button.danger {
+  background: var(--red-light);
+  color: var(--red);
+}
+.bulk-delete-actions button.danger:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+@media (max-width: 480px) {
+  .bulk-delete-bar {
+    bottom: calc(96px + var(--safe-bottom));
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .bulk-delete-actions { justify-content: space-between; }
+  .bulk-delete-actions button { flex: 1; padding: 8px 6px; }
+}
+
 /* ========== COST DASHBOARD ========== */
 .cost-bar {
   display: flex;
@@ -2757,6 +2856,18 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
 <div class="msg-menu-overlay" id="msgMenuOverlay" onclick="closeMsgMenus()"></div>
 <div class="msg-menu" id="msgMenuPopup" onclick="event.stopPropagation()"></div>
 
+
+<!-- BULK DELETE BAR -->
+<div class="bulk-delete-bar" id="bulkDeleteBar">
+  <div class="bulk-delete-count" id="bulkDeleteCount">已选择 0 条</div>
+  <div class="bulk-delete-actions">
+    <button onclick="selectAllBulkDelete()">全选</button>
+    <button onclick="clearBulkDeleteSelection()">清空</button>
+    <button class="danger" id="bulkDeleteBtn" onclick="bulkDeleteSelectedMessages()">删除选中</button>
+    <button onclick="exitBulkDeleteMode()">取消</button>
+  </div>
+</div>
+
 <!-- AUTOSAVE TOAST -->
 <div class="autosave-toast" id="autosaveToast"></div>
 
@@ -3407,6 +3518,7 @@ function getModelProvider(model) {
 
 // ============ CONVERSATIONS ============
 function newConversation() {
+  resetBulkDeleteMode();
   const id = 'c_' + Date.now();
   const asstId = state.activeAssistantId || 'asst_default';
   const convData = { id, title: '新对话', messages: [], created: Date.now(), assistantId: asstId };
@@ -3422,6 +3534,7 @@ function newConversation() {
 }
 
 async function switchConversation(id) {
+  resetBulkDeleteMode();
   state.activeConvId = id;
   // Also sync active assistant to match this conversation
   const convMeta = state.conversations[id];
@@ -4631,6 +4744,115 @@ function showChatConvList() {
   showAssistantConvs();
 }
 
+
+// --- 批量删除消息 ---
+let bulkDeleteMode = false;
+let bulkDeleteSelected = new Set();
+
+function getVisibleMessageIndexes() {
+  const conv = getActiveConv();
+  if (!conv || !Array.isArray(conv.messages)) return [];
+  return conv.messages
+    .map((m, i) => (!m || m.deleted) ? null : i)
+    .filter(i => i !== null);
+}
+
+function renderBulkDeleteCheckbox(index) {
+  if (!bulkDeleteMode) return '';
+  const checked = bulkDeleteSelected.has(index);
+  return `<button class="bulk-msg-check ${checked ? 'selected' : ''}" onclick="toggleBulkDeleteSelect(${index}, event)" title="选择消息">${checked ? '&#10003;' : ''}</button>`;
+}
+
+function startBulkDeleteMode(index) {
+  const conv = getActiveConv();
+  if (!conv || !conv.messages || !conv.messages.some(m => m && !m.deleted)) {
+    showToast('没有可删除的消息');
+    return;
+  }
+  bulkDeleteMode = true;
+  bulkDeleteSelected = new Set();
+  if (typeof index === 'number' && conv.messages[index] && !conv.messages[index].deleted) {
+    bulkDeleteSelected.add(index);
+  }
+  closeMsgMenus();
+  renderMessages();
+  showToast('已进入批量选择');
+}
+
+function exitBulkDeleteMode(shouldRender = true) {
+  bulkDeleteMode = false;
+  bulkDeleteSelected.clear();
+  document.body.classList.remove('bulk-delete-mode');
+  updateBulkDeleteBar();
+  if (shouldRender) renderMessages();
+}
+
+function resetBulkDeleteMode() {
+  bulkDeleteMode = false;
+  bulkDeleteSelected.clear();
+  document.body.classList.remove('bulk-delete-mode');
+  const bar = document.getElementById('bulkDeleteBar');
+  if (bar) bar.classList.remove('show');
+}
+
+function toggleBulkDeleteSelect(index, event) {
+  if (event) event.stopPropagation();
+  if (!bulkDeleteMode) return;
+  const conv = getActiveConv();
+  if (!conv.messages[index] || conv.messages[index].deleted) return;
+  if (bulkDeleteSelected.has(index)) bulkDeleteSelected.delete(index);
+  else bulkDeleteSelected.add(index);
+  renderMessages();
+}
+
+function selectAllBulkDelete() {
+  if (!bulkDeleteMode) return;
+  bulkDeleteSelected = new Set(getVisibleMessageIndexes());
+  renderMessages();
+}
+
+function clearBulkDeleteSelection() {
+  bulkDeleteSelected.clear();
+  renderMessages();
+}
+
+function updateBulkDeleteBar() {
+  const bar = document.getElementById('bulkDeleteBar');
+  if (!bar) return;
+  document.body.classList.toggle('bulk-delete-mode', bulkDeleteMode);
+  bar.classList.toggle('show', bulkDeleteMode);
+  const countEl = document.getElementById('bulkDeleteCount');
+  const delBtn = document.getElementById('bulkDeleteBtn');
+  const count = bulkDeleteSelected.size;
+  const visibleCount = getVisibleMessageIndexes().length;
+  if (countEl) countEl.textContent = count > 0 ? `已选择 ${count} / ${visibleCount} 条` : `可选择 ${visibleCount} 条消息`;
+  if (delBtn) delBtn.disabled = count === 0;
+}
+
+function bulkDeleteSelectedMessages() {
+  if (!bulkDeleteMode) return;
+  const conv = getActiveConv();
+  const indexes = [...bulkDeleteSelected]
+    .filter(i => conv.messages[i] && !conv.messages[i].deleted)
+    .sort((a, b) => a - b);
+  if (indexes.length === 0) {
+    showToast('还没有选择消息');
+    return;
+  }
+  if (!confirm(`确定删除选中的 ${indexes.length} 条消息吗？\n\n删除后消息不再显示，但已发生的费用和消息数仍会保留在统计里。`)) return;
+  const container = document.getElementById('messages');
+  const scrollPos = container ? container.scrollTop : 0;
+  for (const i of indexes) {
+    conv.messages[i].deleted = true;
+  }
+  bulkDeleteMode = false;
+  bulkDeleteSelected.clear();
+  saveState();
+  renderMessages();
+  if (container) container.scrollTop = scrollPos;
+  showToast(`已删除 ${indexes.length} 条消息`);
+}
+
 // --- 聊天气泡渲染 ---
 function renderChatMessages() {
   const container = document.getElementById('messages');
@@ -4652,11 +4874,13 @@ function renderChatMessages() {
   container.innerHTML = conv.messages.map((m, i) => {
     if (m.deleted) return '';
     const menuBtn = `<button class="msg-inline-menu" onclick="toggleMsgMenu(${i}, event)">&#8943;</button>`;
+    const bulkCheck = renderBulkDeleteCheckbox(i);
     if (m.role === 'user') {
       const imgHtml = m.image ? `<img class="msg-image" src="${m.image}">` : '';
       const bubble = m.content ? `<div class="chat-bubble user first">${esc(m.content)}</div>` : '';
       return `
         <div class="msg chat-group user" data-index="${i}">
+          ${bulkCheck}
           ${menuBtn}
           <div class="chat-bubble-col" id="msgContent-${i}">${imgHtml}${bubble}</div>
         </div>`;
@@ -4667,6 +4891,7 @@ function renderChatMessages() {
       ).join('');
       return `
         <div class="msg chat-group asst" data-index="${i}">
+          ${bulkCheck}
           <div class="chat-bubble-col" id="msgContent-${i}">${bubbleHtml}</div>
           ${menuBtn}
         </div>`;
@@ -4712,8 +4937,9 @@ function renderStreamingChat(index, content) {
 }
 
 function renderMessages() {
-  if (isChatConvActive()) return renderChatMessages();
-  return renderRoleplayMessages();
+  const result = isChatConvActive() ? renderChatMessages() : renderRoleplayMessages();
+  updateBulkDeleteBar();
+  return result;
 }
 
 function renderRoleplayMessages() {
@@ -4766,6 +4992,7 @@ function renderRoleplayMessages() {
 
     // The "..." button
     const menuBtn = `<button class="msg-inline-menu" onclick="toggleMsgMenu(${i}, event)">&#8943;</button>`;
+    const bulkCheck = renderBulkDeleteCheckbox(i);
 
     // Footer (only for assistant with meta)
     const footerHtml = metaParts ? `<div class="msg-footer">${metaParts}</div>` : '';
@@ -4779,6 +5006,7 @@ function renderRoleplayMessages() {
       return `
         <div class="msg user" data-index="${i}">
           <div class="msg-top-row">
+            ${bulkCheck}
             ${menuBtn}
             <div class="msg-content" id="msgContent-${i}">${imgHtml}${esc(m.content)}</div>
           </div>
@@ -4792,6 +5020,7 @@ function renderRoleplayMessages() {
       const regenBtn = (isLast || isError) ? `<button class="regen-btn" onclick="regenerateResponse(${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>重新生成</button>` : '';
       return `
         <div class="msg assistant" data-index="${i}">
+          ${bulkCheck}
           <div class="msg-model-row">
             <div class="msg-model">${esc(m.model || getModel())}${m.ts ? '<span class="msg-ts"> 丨 ' + formatMsgTs(m.ts) + '</span>' : ''}</div>
             ${menuBtn}
@@ -4895,6 +5124,9 @@ function toggleMsgMenu(index, event) {
     <div class="conv-context-sep"></div>
     <button class="conv-context-menu-item" style="color:var(--danger,#e53935);" onclick="deleteMessage(${index}); closeMsgMenus();">
       <span class="ctx-icon">&#10005;</span>删除
+    </button>
+    <button class="conv-context-menu-item" onclick="startBulkDeleteMode(${index}); closeMsgMenus();">
+      <span class="ctx-icon">&#9745;</span>批量选择
     </button>
     ${canBranchUp ? `<div class="conv-context-sep"></div>
     <button class="conv-context-menu-item" onclick="branchUp(${index}); closeMsgMenus();">
