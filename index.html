@@ -697,6 +697,15 @@ html, body {
 .asst-item:hover .asst-item-more { opacity: 1; pointer-events: auto; }
 @media (hover: none) { .asst-item-more { opacity: 1; pointer-events: auto; } }
 .asst-item-more:hover { background: var(--surface3); color: var(--text); }
+.asst-item-more.force-show { opacity: 1; pointer-events: auto; }
+.contact-item:hover .asst-item-more { opacity: 1; pointer-events: auto; }
+.conv-context-menu-item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.conv-context-menu-item:disabled:hover {
+  background: transparent;
+}
 
 /* Assistant panel nav header */
 .panel-nav {
@@ -2792,6 +2801,20 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
   </div>
 </div>
 
+<!-- Assistant context menu (fixed, outside modal) -->
+<div class="conv-context-menu" id="asstContextMenu">
+  <button class="conv-context-menu-item" onclick="editAsstFromMenu()">
+    编辑助手
+  </button>
+  <div class="conv-context-sep"></div>
+  <button class="conv-context-menu-item" id="asstMoveUpBtn" onclick="moveAsstFromMenu(-1)">
+    向上
+  </button>
+  <button class="conv-context-menu-item" id="asstMoveDownBtn" onclick="moveAsstFromMenu(1)">
+    向下
+  </button>
+</div>
+
 <!-- Conv context menu (fixed, outside modal) -->
 <div class="conv-context-menu" id="convContextMenu">
   <button class="conv-context-menu-item" onclick="startRenameConv()">
@@ -2911,6 +2934,7 @@ function defaultState() {
         provider: 'openrouter'
       }
     },
+    assistantOrder: ['asst_default'],
     activeAssistantId: 'asst_default',
     conversations: {},   // { id: { id, title, created, msgCount, assistantId } } — NO messages
     activeConvId: null,
@@ -2925,6 +2949,22 @@ function defaultState() {
     lastRoleplayConvId: null,
     chatInstruction: CHAT_MODE_INSTRUCTION
   };
+}
+
+function normalizeAssistantOrderForData(data) {
+  if (!data.assistants) data.assistants = {};
+  const ids = Object.keys(data.assistants);
+  if (!Array.isArray(data.assistantOrder)) data.assistantOrder = [];
+  data.assistantOrder = data.assistantOrder.filter(id => data.assistants[id]);
+  for (const id of ids) {
+    if (!data.assistantOrder.includes(id)) data.assistantOrder.push(id);
+  }
+  return data;
+}
+
+function getOrderedAssistants() {
+  normalizeAssistantOrderForData(state);
+  return state.assistantOrder.map(id => state.assistants[id]).filter(Boolean);
 }
 
 // Lightweight synchronous load from localStorage (settings + conversation index only)
@@ -2967,10 +3007,10 @@ function loadState() {
         delete merged.model;
         delete merged.customModel;
       }
-      return merged;
+      return normalizeAssistantOrderForData(merged);
     }
   } catch(e) {}
-  return { ...defaultState(), _activeConvData: null };
+  return normalizeAssistantOrderForData({ ...defaultState(), _activeConvData: null });
 }
 
 let state = loadState();
@@ -3346,6 +3386,7 @@ async function exportLocalBackup(silent) {
       deepseekApiKey: state.deepseekApiKey,
       deepseekEndpoint: state.deepseekEndpoint,
       assistants: state.assistants,
+      assistantOrder: state.assistantOrder,
       activeAssistantId: state.activeAssistantId,
       cacheTTL: state.cacheTTL,
       maxTokens: state.maxTokens,
@@ -3407,7 +3448,9 @@ function importLocalBackup(event) {
       // Import assistants (v2) or migrate from v1
       if (data.assistants) {
         state.assistants = data.assistants;
-        state.activeAssistantId = data.activeAssistantId || Object.keys(data.assistants)[0] || 'asst_default';
+        state.assistantOrder = data.assistantOrder || Object.keys(data.assistants);
+        normalizeAssistantOrderForData(state);
+        state.activeAssistantId = data.activeAssistantId || state.assistantOrder[0] || Object.keys(data.assistants)[0] || 'asst_default';
       } else {
         // v1 format: create default assistant from global model/systemPrompt
         state.assistants = {
@@ -3419,6 +3462,7 @@ function importLocalBackup(event) {
             color: '#DA7756'
           }
         };
+        state.assistantOrder = ['asst_default'];
         state.activeAssistantId = 'asst_default';
       }
 
@@ -3494,11 +3538,13 @@ function getActiveAssistant() {
   const id = state.activeAssistantId;
   if (id && state.assistants[id]) return state.assistants[id];
   // Fallback to first assistant
-  const first = Object.values(state.assistants)[0];
+  normalizeAssistantOrderForData(state);
+  const first = getOrderedAssistants()[0];
   if (first) { state.activeAssistantId = first.id; return first; }
   // Create default if none exist
   const def = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: '#DA7756', provider: 'openrouter' };
   state.assistants['asst_default'] = def;
+  state.assistantOrder = ['asst_default'];
   state.activeAssistantId = 'asst_default';
   return def;
 }
@@ -3518,7 +3564,6 @@ function getModelProvider(model) {
 
 // ============ CONVERSATIONS ============
 function newConversation() {
-  resetBulkDeleteMode();
   const id = 'c_' + Date.now();
   const asstId = state.activeAssistantId || 'asst_default';
   const convData = { id, title: '新对话', messages: [], created: Date.now(), assistantId: asstId };
@@ -3534,7 +3579,6 @@ function newConversation() {
 }
 
 async function switchConversation(id) {
-  resetBulkDeleteMode();
   state.activeConvId = id;
   // Also sync active assistant to match this conversation
   const convMeta = state.conversations[id];
@@ -3640,7 +3684,7 @@ function convInCurrentMode(c) {
 
 function renderAssistantList() {
   const list = document.getElementById('asstList');
-  const assts = Object.values(state.assistants);
+  const assts = getOrderedAssistants();
   // Count conversations per assistant (filtered by current mode)
   const convCounts = {};
   for (const c of Object.values(state.conversations)) {
@@ -3655,9 +3699,79 @@ function renderAssistantList() {
         <div class="asst-item-name">${esc(a.name)}</div>
         <div class="asst-item-meta">${shortModelName(a.model || '')}${convCounts[a.id] ? ' · ' + convCounts[a.id] + ' 个对话' : ''}</div>
       </div>
-      <button class="asst-item-more" onclick="event.stopPropagation();showAsstEdit('${a.id}')">&#8943;</button>
+      <button class="asst-item-more" onclick="showAsstMenu(event, '${a.id}')">&#8943;</button>
     </div>
   `).join('');
+}
+
+let asstMenuTargetId = null;
+
+function showAsstMenu(e, asstId) {
+  e.stopPropagation();
+  asstMenuTargetId = asstId;
+  normalizeAssistantOrderForData(state);
+  const menu = document.getElementById('asstContextMenu');
+  const btn = e.currentTarget;
+  if (!menu || !btn) return;
+
+  const idx = state.assistantOrder.indexOf(asstId);
+  const upBtn = document.getElementById('asstMoveUpBtn');
+  const downBtn = document.getElementById('asstMoveDownBtn');
+  if (upBtn) upBtn.disabled = idx <= 0;
+  if (downBtn) downBtn.disabled = idx < 0 || idx >= state.assistantOrder.length - 1;
+
+  btn.classList.add('force-show');
+  const rect = btn.getBoundingClientRect();
+  menu.style.right = (window.innerWidth - rect.right) + 'px';
+  menu.style.left = 'auto';
+  menu.classList.add('open');
+
+  requestAnimationFrame(() => {
+    const menuH = menu.offsetHeight;
+    if (rect.bottom + 4 + menuH > window.innerHeight - 12) {
+      menu.style.top = (rect.top - menuH - 4) + 'px';
+    } else {
+      menu.style.top = (rect.bottom + 4) + 'px';
+    }
+  });
+
+  setTimeout(() => {
+    document.addEventListener('click', closeAsstMenu, { once: true });
+  }, 0);
+}
+
+function closeAsstMenu() {
+  const menu = document.getElementById('asstContextMenu');
+  if (menu) menu.classList.remove('open');
+  document.querySelectorAll('.asst-item-more.force-show').forEach(b => b.classList.remove('force-show'));
+}
+
+function editAsstFromMenu() {
+  closeAsstMenu();
+  if (!asstMenuTargetId) return;
+  showAsstEdit(asstMenuTargetId);
+}
+
+function moveAsstFromMenu(direction) {
+  if (!asstMenuTargetId) return;
+  moveAssistant(asstMenuTargetId, direction);
+  closeAsstMenu();
+}
+
+function moveAssistant(asstId, direction) {
+  normalizeAssistantOrderForData(state);
+  const i = state.assistantOrder.indexOf(asstId);
+  const j = i + direction;
+  if (i < 0 || j < 0 || j >= state.assistantOrder.length) return;
+  const tmp = state.assistantOrder[i];
+  state.assistantOrder[i] = state.assistantOrder[j];
+  state.assistantOrder[j] = tmp;
+  saveState();
+  renderAssistantList();
+  if (state.uiMode === 'chat' && document.getElementById('contactsView').style.display !== 'none') {
+    renderContacts();
+  }
+  showToast(direction < 0 ? '助手已上移' : '助手已下移');
 }
 
 async function drillIntoAssistant(asstId) {
@@ -4106,6 +4220,8 @@ async function saveAsstEdit() {
     // Create new
     const id = 'asst_' + Date.now();
     state.assistants[id] = { id, name, model, customModel, provider, systemPrompt, chatSystemPrompt, color };
+    normalizeAssistantOrderForData(state);
+    if (!state.assistantOrder.includes(id)) state.assistantOrder.push(id);
     if (editingAsstAvatar) state.assistants[id].avatar = editingAsstAvatar;
     editingAsstId = id;
     // Switch to the new assistant
@@ -4136,14 +4252,19 @@ async function deleteAssistant() {
   }
 
   delete state.assistants[editingAsstId];
+  if (Array.isArray(state.assistantOrder)) {
+    state.assistantOrder = state.assistantOrder.filter(id => id !== editingAsstId);
+  }
 
   // Switch to default assistant
   if (state.activeAssistantId === editingAsstId) {
-    const first = Object.values(state.assistants)[0];
-    if (first) switchAssistant(first.id);
+    normalizeAssistantOrderForData(state);
+    const first = getOrderedAssistants()[0];
+    if (first) await switchAssistant(first.id);
     else {
       // Recreate default
       state.assistants['asst_default'] = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: '#DA7756', provider: 'openrouter' };
+      state.assistantOrder = ['asst_default'];
       await switchAssistant('asst_default');
     }
   }
@@ -4692,7 +4813,7 @@ function showChatView() {
 // --- 联系人列表 ---
 function renderContacts() {
   const el = document.getElementById('contactsView');
-  const assts = Object.values(state.assistants);
+  const assts = getOrderedAssistants();
   const counts = {};
   for (const c of Object.values(state.conversations)) {
     if (c.mode !== 'chat') continue;
@@ -4708,7 +4829,7 @@ function renderContacts() {
         <div class="contact-name"><span class="asst-dot" style="background:${color}"></span>${esc(a.name)}</div>
         <div class="contact-meta">${shortModelName(a.model || '')}${counts[a.id] ? ' · ' + counts[a.id] + ' 个对话' : ''}</div>
       </div>
-      <button class="asst-item-more" onclick="event.stopPropagation();showAsstEdit('${a.id}')">&#8943;</button>
+      <button class="asst-item-more" onclick="showAsstMenu(event, '${a.id}')">&#8943;</button>
     </div>`;
   }).join('');
 }
@@ -4791,8 +4912,7 @@ function resetBulkDeleteMode() {
   bulkDeleteMode = false;
   bulkDeleteSelected.clear();
   document.body.classList.remove('bulk-delete-mode');
-  const bar = document.getElementById('bulkDeleteBar');
-  if (bar) bar.classList.remove('show');
+  updateBulkDeleteBar();
 }
 
 function toggleBulkDeleteSelect(index, event) {
@@ -5124,9 +5244,6 @@ function toggleMsgMenu(index, event) {
     <div class="conv-context-sep"></div>
     <button class="conv-context-menu-item" style="color:var(--danger,#e53935);" onclick="deleteMessage(${index}); closeMsgMenus();">
       <span class="ctx-icon">&#10005;</span>删除
-    </button>
-    <button class="conv-context-menu-item" onclick="startBulkDeleteMode(${index}); closeMsgMenus();">
-      <span class="ctx-icon">&#9745;</span>批量选择
     </button>
     ${canBranchUp ? `<div class="conv-context-sep"></div>
     <button class="conv-context-menu-item" onclick="branchUp(${index}); closeMsgMenus();">
@@ -6212,6 +6329,7 @@ async function buildBackupData() {
     data: {
       // apiKey 不上传到云端，仅保留在本地备份中
       assistants: state.assistants,
+      assistantOrder: state.assistantOrder,
       activeAssistantId: state.activeAssistantId,
       cacheTTL: state.cacheTTL,
       maxTokens: state.maxTokens,
@@ -6378,7 +6496,9 @@ async function doRestore() {
       // Import assistants (v2) or migrate from v1
       if (data.assistants) {
         state.assistants = data.assistants;
-        state.activeAssistantId = data.activeAssistantId || Object.keys(data.assistants)[0] || 'asst_default';
+        state.assistantOrder = data.assistantOrder || Object.keys(data.assistants);
+        normalizeAssistantOrderForData(state);
+        state.activeAssistantId = data.activeAssistantId || state.assistantOrder[0] || Object.keys(data.assistants)[0] || 'asst_default';
       } else {
         state.assistants = {
           'asst_default': {
@@ -6389,6 +6509,7 @@ async function doRestore() {
             color: '#DA7756'
           }
         };
+        state.assistantOrder = ['asst_default'];
         state.activeAssistantId = 'asst_default';
       }
 
@@ -6412,6 +6533,12 @@ async function doRestore() {
         for (const [id, asst] of Object.entries(data.assistants)) {
           if (!state.assistants[id]) state.assistants[id] = asst;
         }
+        const incomingOrder = Array.isArray(data.assistantOrder) ? data.assistantOrder : Object.keys(data.assistants);
+        if (!Array.isArray(state.assistantOrder)) state.assistantOrder = [];
+        for (const id of incomingOrder) {
+          if (state.assistants[id] && !state.assistantOrder.includes(id)) state.assistantOrder.push(id);
+        }
+        normalizeAssistantOrderForData(state);
       }
       const backupConvs = data.conversations || {};
       for (const [id, conv] of Object.entries(backupConvs)) {
