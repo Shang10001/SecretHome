@@ -740,8 +740,8 @@ html, body {
 /* Assistant edit form */
 .asst-edit-form .field { margin-bottom: 16px; }
 .sp-mode-tabs { display: flex; gap: 2px; margin-bottom: 6px; }
-.sp-mode-tabs button { flex: 1; padding: 6px 0; border: 1px solid var(--border); border-radius: 8px 8px 0 0; background: var(--bg); color: var(--dim); font-size: 13px; cursor: pointer; border-bottom: none; }
-.sp-mode-tabs button.active { background: var(--card); color: var(--fg); font-weight: 600; }
+.sp-mode-tabs button { flex: 1; padding: 6px 0; border: 1px solid var(--border); border-radius: 8px 8px 0 0; background: var(--bg); color: var(--text3); font-size: 13px; cursor: pointer; border-bottom: none; }
+.sp-mode-tabs button.active { background: var(--surface); color: var(--text); font-weight: 600; }
 .asst-edit-form label {
   display: block;
   font-size: 13px;
@@ -1280,6 +1280,17 @@ html, body {
 .thinking-content.open {
   display: block;
   animation: msgIn 0.2s ease-out;
+}
+
+.chat-bubble-col .thinking-block {
+  padding-left: 0;
+  margin-bottom: 4px;
+}
+.chat-bubble-col .thinking-toggle {
+  margin-left: 0;
+}
+.chat-bubble-col .thinking-content {
+  max-width: 100%;
 }
 .thinking-content strong {
   color: var(--text);
@@ -3095,6 +3106,13 @@ async function tryLoadFromIDB() {
         };
         if (conv.mode) state.conversations[id].mode = conv.mode;
       }
+      if (!state.activeConvId || !state.conversations[state.activeConvId]) {
+        const newest = Object.values(state.conversations).sort((a, b) => b.created - a.created)[0];
+        state.activeConvId = newest ? newest.id : null;
+      }
+      if (state.activeConvId && !state._activeConvData) {
+        state._activeConvData = await loadConvFromIDB(state.activeConvId);
+      }
       saveSettingsToLS();
       showToast('已从存储恢复对话索引');
     }
@@ -3885,6 +3903,7 @@ function handleAsstAvatarPick(event) {
   if (!file || !file.type.startsWith('image/')) return;
   // 压缩到 192px，控制 localStorage 占用（每个头像约 10KB）
   compressImage(file, 192, 0.82).then(dataUrl => {
+    if (!dataUrl) { showToast('头像读取失败'); return; }
     editingAsstAvatar = dataUrl;
     updateAsstAvatarPreview();
   });
@@ -3946,7 +3965,7 @@ function updateAsstSPCounter() {
   if (el) el.textContent = `${chars} 字符 · ~${tokens} tokens`;
 }
 
-function saveAsstEdit() {
+async function saveAsstEdit() {
   const name = document.getElementById('asstEditName').value.trim();
   if (!name) { alert('请输入助手名称'); return; }
 
@@ -3977,7 +3996,7 @@ function saveAsstEdit() {
     if (editingAsstAvatar) state.assistants[id].avatar = editingAsstAvatar;
     editingAsstId = id;
     // Switch to the new assistant
-    switchAssistant(id);
+    await switchAssistant(id);
   }
 
   saveState();
@@ -3990,7 +4009,7 @@ function saveAsstEdit() {
   }
 }
 
-function deleteAssistant() {
+async function deleteAssistant() {
   if (!editingAsstId || editingAsstId === 'asst_default') return;
   const asst = state.assistants[editingAsstId];
   if (!confirm(`确定删除助手「${asst.name}」及其所有对话？`)) return;
@@ -4011,8 +4030,8 @@ function deleteAssistant() {
     if (first) switchAssistant(first.id);
     else {
       // Recreate default
-      state.assistants['asst_default'] = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: '#DA7756' };
-      switchAssistant('asst_default');
+      state.assistants['asst_default'] = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: '#DA7756', provider: 'openrouter' };
+      await switchAssistant('asst_default');
     }
   }
 
@@ -4801,9 +4820,10 @@ function renderRoleplayMessages() {
 
 function toggleThinking(index) {
   const content = document.getElementById('thinking-' + index);
+  if (!content) return;
   const toggle = content.previousElementSibling;
   content.classList.toggle('open');
-  toggle.classList.toggle('open');
+  if (toggle) toggle.classList.toggle('open');
 }
 
 // ============ MESSAGE EDITING ============
@@ -5029,6 +5049,8 @@ function updateCostBar() {
   let totalTokens = 0;
   let msgCount = conv.messages.length;
 
+  // 统计的是“发生过的消息与消耗”，不是当前可见消息。
+  // 被软删除的消息仍保留在 conv.messages 里，所以这里继续计入费用、条数和 token。
   for (const m of conv.messages) {
     if (m.usage) {
       if (m.usage.cost !== undefined && m.usage.cost !== null) totalCost += m.usage.cost;
@@ -5118,18 +5140,25 @@ async function compressImage(file, maxPx, quality) {
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        let w = img.width, h = img.height;
-        if (w > maxPx || h > maxPx) {
-          if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
-          else { w = Math.round(w * maxPx / h); h = maxPx; }
+        try {
+          let w = img.width, h = img.height;
+          if (w > maxPx || h > maxPx) {
+            if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
+            else { w = Math.round(w * maxPx / h); h = maxPx; }
+          }
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          c.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(c.toDataURL('image/jpeg', quality));
+        } catch(err) {
+          // If canvas encoding fails, keep the original image instead of dropping it.
+          resolve(e.target.result);
         }
-        const c = document.createElement('canvas');
-        c.width = w; c.height = h;
-        c.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(c.toDataURL('image/jpeg', quality));
       };
+      img.onerror = () => resolve(e.target.result);
       img.src = e.target.result;
     };
+    reader.onerror = () => resolve(null);
     reader.readAsDataURL(file);
   });
 }
@@ -5138,6 +5167,7 @@ function handleImagePick(event) {
   const file = event.target.files[0];
   if (!file || !file.type.startsWith('image/')) return;
   compressImage(file).then(dataUrl => {
+    if (!dataUrl) { showToast('图片读取失败'); return; }
     pendingImage = dataUrl;
     document.getElementById('imgPreviewImg').src = dataUrl;
     document.getElementById('imgPreview').style.display = '';
@@ -5238,7 +5268,10 @@ async function sendMessage() {
   const userMsg = { role: 'user', content: text, ts: sendTs };
   if (pendingImage) { userMsg.image = pendingImage; pendingImage = null; document.getElementById('imgPreview').style.display = 'none'; }
   conv.messages.push(userMsg);
-  if (conv.messages.length === 1) conv.title = text.slice(0, 30) + (text.length > 30 ? '...' : '');
+  if (conv.messages.length === 1) {
+    const titleBase = text || (userMsg.image ? '图片消息' : '新对话');
+    conv.title = titleBase.slice(0, 30) + (titleBase.length > 30 ? '...' : '');
+  }
 
   input.value = '';
   autoResize(input);
@@ -5553,8 +5586,7 @@ async function sendMessage() {
 function renderStreamingMessage(index, content) {
   if (isChatConvActive()) return renderStreamingChat(index, content);
   const container = document.getElementById('messages');
-  const msgEls = container.querySelectorAll('.msg');
-  const el = msgEls[index];
+  const el = container.querySelector(`.msg[data-index="${index}"]`);
   if (el) {
     const contentEl = el.querySelector('.msg-content');
     if (contentEl) {
@@ -5575,15 +5607,15 @@ function renderStreamingMessage(index, content) {
 
 function renderStreamingThinking(index, thinking) {
   const container = document.getElementById('messages');
-  const msgEls = container.querySelectorAll('.msg');
-  const el = msgEls[index];
+  const el = container.querySelector(`.msg[data-index="${index}"]`);
   if (!el) return;
 
   // Create or update thinking block
   let thinkingBlock = el.querySelector('.thinking-block');
   if (!thinkingBlock) {
-    // Insert thinking block before msg-content
+    // Roleplay messages have .msg-content; chat-mode bubbles use .chat-bubble-col.
     const contentEl = el.querySelector('.msg-content');
+    const chatCol = el.querySelector('.chat-bubble-col');
     thinkingBlock = document.createElement('div');
     thinkingBlock.className = 'thinking-block';
     thinkingBlock.innerHTML = `
@@ -5593,7 +5625,9 @@ function renderStreamingThinking(index, thinking) {
       </div>
       <div class="thinking-content open thinking-streaming" id="thinking-${index}"></div>
     `;
-    contentEl.before(thinkingBlock);
+    if (contentEl) contentEl.before(thinkingBlock);
+    else if (chatCol) chatCol.prepend(thinkingBlock);
+    else return;
   }
 
   const thinkingContent = thinkingBlock.querySelector('.thinking-content');
@@ -5692,6 +5726,22 @@ function updateModelDots(active) {
 function autoResize(el) {
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+}
+
+function isLikelyMobileInput() {
+  return window.matchMedia('(max-width: 600px)').matches || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+function setupInputShortcuts() {
+  const input = document.getElementById('userInput');
+  if (!input || input._benbenShortcutsReady) return;
+  input._benbenShortcutsReady = true;
+  input.addEventListener('keydown', (e) => {
+    const wantsSend = e.key === 'Enter' && !e.shiftKey && !e.isComposing && (!isLikelyMobileInput() || e.ctrlKey || e.metaKey);
+    if (!wantsSend) return;
+    e.preventDefault();
+    sendMessage();
+  });
 }
 
 // ============ KELIVO IMPORT ============
@@ -6853,13 +6903,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateModeSwitchIcon();
   updateHeaderAssistant();
   updateMemBadge();
+  setupInputShortcuts();
+  // CRITICAL: Load IDB data BEFORE creating/rendering a conversation.
+  // Otherwise a fresh empty conversation can hide older IndexedDB data when localStorage was cleared.
+  await tryLoadFromIDB();
   if (!state.activeConvId) newConversation();
   // Set auto-export toggle state
   const aeToggle = document.getElementById('autoExportToggle');
   if (aeToggle) aeToggle.checked = state.autoExport || false;
-  // CRITICAL: Load IDB data BEFORE rendering to avoid race condition
-  // (renderMessages → getActiveConv would create empty fallback, blocking IDB load)
-  await tryLoadFromIDB();
   renderMessages();
   // 恢复 UI 模式（聊天 / 角色扮演）
   updateModeSwitchIcon();
