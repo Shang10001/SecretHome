@@ -6,10 +6,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="笨笨家园">
-<meta name="theme-color" content="#FAF6F1">
+<meta name="theme-color" content="#FAFAFA">
 <title>笨笨家园</title>
 <!-- PWA manifest (inline) -->
-<link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22%E7%AC%A8%E7%AC%A8%E5%AE%B6%E5%9B%AD%22%2C%22short_name%22%3A%22%E7%AC%A8%E7%AC%A8%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23FAF6F1%22%2C%22theme_color%22%3A%22%23FAF6F1%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%2520viewBox%3D%270%25200%2520512%2520512%27%253E%253Crect%2520width%3D%27512%27%2520height%3D%27512%27%2520rx%3D%27112%27%2520fill%3D%27%2523667761%27%2F%253E%253Ctext%2520x%3D%27256%27%2520y%3D%27360%27%2520font-size%3D%27280%27%2520text-anchor%3D%27middle%27%2520fill%3D%27white%27%253E%25F0%259F%258F%25A0%253C%2Ftext%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
+<link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22%E7%AC%A8%E7%AC%A8%E5%AE%B6%E5%9B%AD%22%2C%22short_name%22%3A%22%E7%AC%A8%E7%AC%A8%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23FAFAFA%22%2C%22theme_color%22%3A%22%23FAFAFA%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%2520viewBox%3D%270%25200%2520512%2520512%27%253E%253Crect%2520width%3D%27512%27%2520height%3D%27512%27%2520rx%3D%27112%27%2520fill%3D%27%2523667761%27%2F%253E%253Ctext%2520x%3D%27256%27%2520y%3D%27360%27%2520font-size%3D%27280%27%2520text-anchor%3D%27middle%27%2520fill%3D%27white%27%253E%25F0%259F%258F%25A0%253C%2Ftext%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
 <!-- Apple touch icon: 指向同目录下的 icon.PNG，换图标只需在 GitHub 替换这张图 -->
 <link rel="apple-touch-icon" href="icon.PNG">
 <style>
@@ -17,7 +17,7 @@
 
 :root {
   /* Kelivo-inspired clean palette */
-  --bg: #FFFFFF;
+  --bg: #FAFAFA;
   --surface: #FFFFFF;
   --surface2: #F7F7F8;
   --surface3: #EDEDF0;
@@ -30,6 +30,8 @@
   --accent2: #55644F;
   --accent-light: #E5EAE3;
   --accent-dim: rgba(102,119,97,0.10);
+  --cache-hit-color: #4F8325;
+  --cache-write-color: #CAA53F;
   --green: #34C759;
   --green-light: #E8F9ED;
   --orange: #FF9500;
@@ -38,8 +40,8 @@
   --red-light: #FFECEB;
   --user-bg: #EEEEF6;
   --assistant-bg: transparent;
-  --chat-asst-bg: #EFEAE2;
-  --chat-user-bg: #DAE4E9;
+  --chat-asst-bg: #EBECEA;
+  --chat-user-bg: #F1E9ED;
   --radius: 16px;
   --radius-sm: 10px;
   --font: 'Noto Sans SC', -apple-system, 'Helvetica Neue', sans-serif;
@@ -154,8 +156,8 @@ html, body {
   min-width: 0;
 }
 .icon-btn {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 10px;
   border: none;
   background: transparent;
@@ -313,12 +315,12 @@ html, body {
 }
 .meta-tag.cache-hit {
   background: transparent;
-  color: var(--green);
+  color: var(--cache-hit-color);
   font-weight: 600;
 }
 .meta-tag.cache-write {
   background: transparent;
-  color: var(--orange);
+  color: var(--cache-write-color);
   font-weight: 600;
 }
 .meta-tag.cache-miss {
@@ -429,7 +431,7 @@ html, body {
   height: 30px;
   border-radius: 50%;
   border: none;
-  background: #CDCBE4;
+  background: #B18CA2;
   color: #fff;
   font-size: 15px;
   cursor: pointer;
@@ -440,7 +442,7 @@ html, body {
   margin-bottom: 2px;
   transition: all 0.15s;
 }
-.send-btn:hover { background: #B8B5D6; }
+.send-btn:hover { background: #9F7C90; }
 .send-btn:disabled {
   background: var(--surface3);
   color: var(--text3);
@@ -650,7 +652,7 @@ html, body {
   margin-bottom: 2px;
 }
 .asst-item:hover { background: var(--surface2); }
-.asst-item.active { background: var(--accent-light); }
+.asst-item.active { background: var(--surface2); }
 .asst-dot {
   width: 10px;
   height: 10px;
@@ -807,6 +809,8 @@ html, body {
   flex-shrink: 0;
 }
 .header-asst-btn:hover { background: var(--surface2); }
+.new-conv-icon { width: 21px; height: 21px; }
+
 .header-asst-dot {
   width: 10px;
   height: 10px;
@@ -998,7 +1002,7 @@ html, body {
   background: var(--surface2);
 }
 .conv-item.active {
-  background: var(--accent-light);
+  background: var(--surface2);
 }
 .conv-item-info {
   min-width: 0;
@@ -2125,19 +2129,19 @@ html, body {
 }
 .chat-header-id:active { background: var(--surface2); }
 .chat-avatar {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 15px;
   flex-shrink: 0;
 }
 .chat-header-name {
   font-weight: 600;
-  font-size: 16px;
+  font-size: 15px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2153,8 +2157,8 @@ html, body {
 }
 @media (max-width: 480px) {
   .roleplay-header-id { max-width: 190px; }
-  .chat-avatar { width: 32px; height: 32px; font-size: 14px; }
-  .chat-header-name { font-size: 15px; }
+  .chat-avatar { width: 30px; height: 30px; font-size: 14px; }
+  .chat-header-name { font-size: 14px; }
 }
 
 /* --- 联系人列表 --- */
@@ -2164,6 +2168,7 @@ html, body {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   background: var(--bg);
+  padding: 8px 10px 14px;
 }
 .contact-item {
   display: flex;
@@ -2171,9 +2176,11 @@ html, body {
   gap: 14px;
   padding: 14px 16px;
   cursor: pointer;
-  border-bottom: 1px solid var(--border);
+  border: 1px solid var(--border);
+  border-radius: 16px;
   background: var(--surface);
   transition: background 0.15s;
+  margin-bottom: 8px;
 }
 .contact-item:active { background: var(--surface2); }
 .contact-avatar {
@@ -2344,6 +2351,8 @@ html, body {
   --accent2: #55644F;
   --accent-light: #283226;
   --accent-dim: rgba(123,140,115,0.14);
+  --cache-hit-color: #4F8325;
+  --cache-write-color: #CAA53F;
   --green: #5BBF6A;
   --green-light: #1E2A1F;
   --orange: #E0922F;
@@ -2364,9 +2373,9 @@ html, body {
 
 /* ========== 奶油暖白模式 (Claude.ai-inspired warm cream) ========== */
 :root.sepia {
-  --bg: #F8F8F6;
+  --bg: #FAFAFA;
   --surface: #FFFFFF;
-  --surface2: #F0EFEC;
+  --surface2: #F0F0F0;
   --surface3: #E5E3E0;
   --border: #E5E3DF;
   --border2: #D5D3CF;
@@ -2377,6 +2386,8 @@ html, body {
   --accent2: #55644F;
   --accent-light: #E5EAE3;
   --accent-dim: rgba(102,119,97,0.10);
+  --cache-hit-color: #4F8325;
+  --cache-write-color: #CAA53F;
   --green: #34C759;
   --green-light: #E8F9ED;
   --orange: #FF9500;
@@ -2385,14 +2396,14 @@ html, body {
   --red-light: #FFECEB;
   --user-bg: #EFEEEB;
   --assistant-bg: transparent;
-  --chat-asst-bg: #EDE7DD;
-  --chat-user-bg: #D9E3E8;
+  --chat-asst-bg: #EBECEA;
+  --chat-user-bg: #F1E9ED;
   --shadow-sm: 0 1px 2px rgba(45,43,40,0.04);
   --shadow: 0 2px 8px rgba(45,43,40,0.07);
   --shadow-lg: 0 4px 16px rgba(45,43,40,0.10);
 }
-:root.sepia .send-btn { background: #667761; }
-:root.sepia .send-btn:hover { background: #55644F; }
+:root.sepia .send-btn { background: #B18CA2; }
+:root.sepia .send-btn:hover { background: #9F7C90; }
 /* 平滑过渡，切换时不刺眼 */
 html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indicator {
   transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
@@ -2412,7 +2423,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     if (t === 'day') t = 'sepia';
     document.documentElement.classList.add(t);
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute('content', t === 'night' ? '#1A1714' : '#F8F8F6');
+    if (m) m.setAttribute('content', t === 'night' ? '#1A1714' : '#FAFAFA');
   } catch(e){}
 })();
 </script>
@@ -2438,7 +2449,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     </div>
     <div class="header-actions" id="homeHeaderActions">
       <button class="header-asst-btn" id="headerAsstBtn" onclick="showAssistants()" title="助手">
-        <span class="header-asst-dot" id="headerAsstDot" style="background:#DA7756"></span>
+        <span class="header-asst-dot" id="headerAsstDot" style="background:#C9795E"></span>
       </button>
       <button class="icon-btn" id="memoryBtn" onclick="showMemoryBank()" title="记忆库">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
@@ -2469,7 +2480,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     </div>
     <div class="header-actions" id="convHeaderActions" style="display:none">
       <button class="icon-btn" onclick="newConversation()" title="新建对话">
-        <svg class="new-conv-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: translateY(1px);"><path d="M5 4h14a2 2 0 0 1 2 2v9.5a2 2 0 0 1-2 2h-7.5L7 21v-3.5H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M12 8v6"/><path d="M9 11h6"/></svg>
+        <svg class="new-conv-icon" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: translateY(1px);"><path d="M5 4h14a2 2 0 0 1 2 2v9.5a2 2 0 0 1-2 2h-7.5L7 21v-3.5H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M12 8v6"/><path d="M9 11h6"/></svg>
       </button>
       <button class="icon-btn" onclick="showAsstEdit(state.activeAssistantId)" title="编辑助手">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -2491,7 +2502,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     </div>
     <div class="chat-header-actions" id="chatHeaderActions">
       <button class="icon-btn" onclick="newConversation()" title="新建对话">
-        <svg class="new-conv-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: translateY(1px);"><path d="M5 4h14a2 2 0 0 1 2 2v9.5a2 2 0 0 1-2 2h-7.5L7 21v-3.5H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M12 8v6"/><path d="M9 11h6"/></svg>
+        <svg class="new-conv-icon" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: translateY(1px);"><path d="M5 4h14a2 2 0 0 1 2 2v9.5a2 2 0 0 1-2 2h-7.5L7 21v-3.5H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M12 8v6"/><path d="M9 11h6"/></svg>
       </button>
       <button class="icon-btn" onclick="showAsstEdit(state.activeAssistantId)" title="编辑助手">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -2950,7 +2961,7 @@ const DB_KEY = 'benben_data';
 // Full conversation data (with messages) lives in IndexedDB, loaded on demand.
 // state._activeConvData holds the currently loaded conversation's full data (with messages).
 
-const ASST_COLORS = ['#DA7756','#228CC7','#379A8B','#3EBCD2','#DB444B','#EBB434','#9467BD','#D27AB7'];
+const ASST_COLORS = ['#C9795E','#5B92AE','#71A294','#A88CBA','#C9BE45','#C85F7F'];
 
 // 聊天模式：追加到 system prompt 末尾的格式说明（默认值，可在设置中修改）
 const CHAT_MODE_INSTRUCTION = `【聊天模式】
@@ -2978,7 +2989,7 @@ function defaultState() {
         systemPrompt: '',
         model: 'anthropic/claude-opus-4.6',
         customModel: '',
-        color: '#DA7756',
+        color: '#C9795E',
         provider: 'openrouter'
       }
     },
@@ -3003,7 +3014,7 @@ function migrateLegacyAccentForData(data) {
   if (!data || !data.assistants) return data;
   // 上一版误把助手默认颜色也迁移成了界面强调色；这里只把误迁移的助手颜色改回原来的橙色。
   const mistakenAssistantColor = '#667761';
-  const originalAssistantColor = '#DA7756';
+  const originalAssistantColor = '#C9795E';
   for (const id in data.assistants) {
     const a = data.assistants[id];
     if (!a || !a.color) continue;
@@ -3055,7 +3066,7 @@ function loadState() {
           systemPrompt: parsed.systemPrompt || '',
           model: parsed.model || 'anthropic/claude-opus-4.6',
           customModel: parsed.customModel || '',
-          color: '#DA7756'
+          color: '#C9795E'
         };
         merged.assistants = { 'asst_default': defaultAsst };
         merged.activeAssistantId = 'asst_default';
@@ -3081,7 +3092,7 @@ let state = loadState();
 // ============ 主题切换：暖白 ↔ 夜间护眼 ============
 const THEME_META = {
   sepia: {
-    color: '#F8F8F6',
+    color: '#FAFAFA',
     label: '暖白',
     otherLabel: '夜间护眼',
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
@@ -3522,7 +3533,7 @@ function importLocalBackup(event) {
             systemPrompt: data.systemPrompt || '',
             model: data.model || 'anthropic/claude-opus-4.6',
             customModel: data.customModel || '',
-            color: '#DA7756'
+            color: '#C9795E'
           }
         };
         state.assistantOrder = ['asst_default'];
@@ -3605,7 +3616,7 @@ function getActiveAssistant() {
   const first = getOrderedAssistants()[0];
   if (first) { state.activeAssistantId = first.id; return first; }
   // Create default if none exist
-  const def = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: '#DA7756', provider: 'openrouter' };
+  const def = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: '#C9795E', provider: 'openrouter' };
   state.assistants['asst_default'] = def;
   state.assistantOrder = ['asst_default'];
   state.activeAssistantId = 'asst_default';
@@ -3759,7 +3770,7 @@ function renderAssistantList() {
   }
   list.innerHTML = assts.map(a => `
     <div class="asst-item ${a.id === state.activeAssistantId ? 'active' : ''}" onclick="drillIntoAssistant('${a.id}')">
-      <span class="asst-dot" style="background:${a.color || '#DA7756'}"></span>
+      <span class="asst-dot" style="background:${a.color || '#C9795E'}"></span>
       <div class="asst-item-info">
         <div class="asst-item-name">${esc(a.name)}</div>
         <div class="asst-item-meta">${shortModelName(a.model || '')}${convCounts[a.id] ? ' · ' + convCounts[a.id] + ' 个对话' : ''}</div>
@@ -3885,7 +3896,7 @@ function showAssistantConvs() {
   const asst = getActiveAssistant();
   document.getElementById('asstListPanel').style.display = 'none';
   document.getElementById('asstConvPanel').style.display = '';
-  document.getElementById('asstConvDot').style.background = asst.color || '#DA7756';
+  document.getElementById('asstConvDot').style.background = asst.color || '#C9795E';
   document.getElementById('asstConvTitle').textContent = asst.name;
 
   const list = document.getElementById('convList');
@@ -4148,7 +4159,7 @@ function showAsstEdit(asstId) {
   // Render color picker
   const picker = document.getElementById('asstColorPicker');
   // Normalize: old saves might have rgb() from style.background, convert back to hex
-  let selColor = asst.color || '#DA7756';
+  let selColor = asst.color || '#C9795E';
   if (selColor.startsWith('rgb')) {
     const m = selColor.match(/(\d+)/g);
     if (m && m.length >= 3) selColor = '#' + m.slice(0,3).map(n => (+n).toString(16).padStart(2,'0')).join('');
@@ -4210,7 +4221,7 @@ function removeAsstAvatar() {
 
 // 头像渲染：有图用图，没图用 名字首字 + 颜色
 function asstAvatarHtml(asst, cls) {
-  const color = (asst && asst.color) || '#DA7756';
+  const color = (asst && asst.color) || '#C9795E';
   if (asst && asst.avatar) {
     return `<div class="${cls}"><img src="${asst.avatar}"></div>`;
   }
@@ -4219,7 +4230,7 @@ function asstAvatarHtml(asst, cls) {
 
 function getSelectedAsstColor() {
   const sel = document.querySelector('.asst-color-opt.selected');
-  return sel ? (sel.dataset.color || '#DA7756') : '#DA7756';
+  return sel ? (sel.dataset.color || '#C9795E') : '#C9795E';
 }
 
 function switchSPTab(mode) {
@@ -4329,7 +4340,7 @@ async function deleteAssistant() {
     if (first) await switchAssistant(first.id);
     else {
       // Recreate default
-      state.assistants['asst_default'] = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: '#DA7756', provider: 'openrouter' };
+      state.assistants['asst_default'] = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: '#C9795E', provider: 'openrouter' };
       state.assistantOrder = ['asst_default'];
       await switchAssistant('asst_default');
     }
@@ -4346,7 +4357,7 @@ function updateHeaderAssistant() {
   const asst = getActiveAssistant();
   const dotEl = document.getElementById('headerAsstDot');
   const inputEl = document.getElementById('userInput');
-  if (dotEl) dotEl.style.background = asst.color || '#DA7756';
+  if (dotEl) dotEl.style.background = asst.color || '#C9795E';
   if (inputEl) inputEl.placeholder = `跟${asst.name}说点什么...`;
 
   const updateIdentity = (avatarId, nameId) => {
@@ -4358,7 +4369,7 @@ function updateHeaderAssistant() {
         av.style.color = '';
         av.innerHTML = `<img src="${asst.avatar}">`;
       } else {
-        const color = asst.color || '#DA7756';
+        const color = asst.color || '#C9795E';
         av.innerHTML = '';
         av.style.background = color + '1F';
         av.style.color = color;
@@ -4897,13 +4908,13 @@ function renderContacts() {
     counts[aid] = (counts[aid] || 0) + 1;
   }
   el.innerHTML = assts.map(a => {
-    const color = a.color || '#DA7756';
+    const color = a.color || '#C9795E';
     return `
     <div class="contact-item" onclick="openHomeAssistant('${a.id}')">
       ${asstAvatarHtml(a, 'contact-avatar')}
       <div class="contact-info">
         <div class="contact-name"><span class="asst-dot" style="background:${color}"></span>${esc(a.name)}</div>
-        <div class="contact-meta">${shortModelName(a.model || '')}${counts[a.id] ? ' · ' + counts[a.id] + ' 个对话' : ' · 还没有对话'} · 点击查看对话列表</div>
+        <div class="contact-meta">${shortModelName(a.model || '')}${counts[a.id] ? ' · ' + counts[a.id] + ' 个对话' : ' · 还没有对话'}</div>
       </div>
       <button class="asst-item-more" onclick="showAsstMenu(event, '${a.id}')">&#8943;</button>
     </div>`;
@@ -5063,7 +5074,7 @@ function renderChatMessages() {
   const container = document.getElementById('messages');
   const conv = getActiveConv();
   const asst = getActiveAssistant();
-  const color = asst.color || '#DA7756';
+  const color = asst.color || '#C9795E';
 
   if (conv.messages.length === 0) {
     container.innerHTML = `
@@ -5537,9 +5548,7 @@ function updateCtxBar() {
   const used = (lastUsage.prompt_tokens || 0) + (lastUsage.completion_tokens || 0);
   const pct = Math.min(100, (used / ctxLimit) * 100);
   fill.style.width = pct + '%';
-  if (pct < 60) fill.style.background = 'var(--green)';
-  else if (pct < 85) fill.style.background = 'var(--orange)';
-  else fill.style.background = 'var(--red)';
+  fill.style.background = '#B18CA2';
   bar.style.display = '';
   bar.title = Math.round(used/1000) + 'k / ' + Math.round(ctxLimit/1000) + 'k tokens (' + pct.toFixed(1) + '%)';
 }
@@ -6604,7 +6613,7 @@ async function doRestore() {
             systemPrompt: data.systemPrompt || '',
             model: data.model || 'anthropic/claude-opus-4.6',
             customModel: data.customModel || '',
-            color: '#DA7756'
+            color: '#C9795E'
           }
         };
         state.assistantOrder = ['asst_default'];
@@ -7023,25 +7032,25 @@ async function showStats() {
       <div class="stats-section">
         <div class="stats-section-title">Token 分布</div>
         <div class="stats-hbar">
-          <div class="stats-hbar-seg" style="flex:${totalIn};background:var(--accent);"></div>
-          <div class="stats-hbar-seg" style="flex:${totalOut};background:var(--green);"></div>
+          <div class="stats-hbar-seg" style="flex:${totalIn};background:#B18CA2;"></div>
+          <div class="stats-hbar-seg" style="flex:${totalOut};background:#667761;"></div>
         </div>
         <div class="stats-hbar-legend">
-          <span><span class="dot" style="background:var(--accent)"></span>输入 ${fmtTokenCount(totalIn)}</span>
-          <span><span class="dot" style="background:var(--green)"></span>输出 ${fmtTokenCount(totalOut)}</span>
+          <span><span class="dot" style="background:#B18CA2"></span>输入 ${fmtTokenCount(totalIn)}</span>
+          <span><span class="dot" style="background:#667761"></span>输出 ${fmtTokenCount(totalOut)}</span>
         </div>
       </div>
 
       <div class="stats-section">
         <div class="stats-section-title">缓存效率</div>
         <div class="stats-hbar">
-          <div class="stats-hbar-seg" style="flex:${totalCached};background:var(--green);"></div>
-          <div class="stats-hbar-seg" style="flex:${totalCacheWrite};background:var(--orange);"></div>
+          <div class="stats-hbar-seg" style="flex:${totalCached};background:var(--cache-hit-color);"></div>
+          <div class="stats-hbar-seg" style="flex:${totalCacheWrite};background:var(--cache-write-color);"></div>
           <div class="stats-hbar-seg" style="flex:${Math.max(0, totalIn - totalCached - totalCacheWrite)};background:var(--surface3);"></div>
         </div>
         <div class="stats-hbar-legend">
-          <span><span class="dot" style="background:var(--green)"></span>命中 ${cacheHitRate}%</span>
-          <span><span class="dot" style="background:var(--orange)"></span>写入 ${cacheWriteRate}%</span>
+          <span><span class="dot" style="background:var(--cache-hit-color)"></span>命中 ${cacheHitRate}%</span>
+          <span><span class="dot" style="background:var(--cache-write-color)"></span>写入 ${cacheWriteRate}%</span>
           <span><span class="dot" style="background:var(--surface3)"></span>未缓存 ${cacheMissRate}%</span>
         </div>
       </div>
