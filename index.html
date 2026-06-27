@@ -181,6 +181,9 @@ html, body {
   .header-actions { gap: 0; }
   .icon-btn { width: 32px; height: 32px; border-radius: 8px; }
   .icon-btn svg { width: 16px; height: 16px; }
+  .chat-header .icon-btn { width: 40px; height: 40px; }
+  .chat-header .icon-btn svg { width: 22px; height: 22px; }
+  .chat-header .new-conv-plus { width: 22px; height: 22px; transform: none; }
   .cache-indicator { padding: 2px 7px; font-size: 10px; }
   .header-asst-btn { width: 32px; height: 32px; border-radius: 8px; }
 }
@@ -809,7 +812,17 @@ html, body {
   flex-shrink: 0;
 }
 .header-asst-btn:hover { background: var(--surface2); }
-.new-conv-icon { width: 21px; height: 21px; }
+.new-conv-plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 24px;
+  font-weight: 300;
+  line-height: 1;
+  transform: translateY(-1px);
+}
 
 .header-asst-dot {
   width: 10px;
@@ -2105,7 +2118,8 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
+  min-height: 56px;
+  padding: 8px 12px;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border);
 }
@@ -2115,6 +2129,7 @@ html, body {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+  height: 40px;
 }
 .chat-header-id {
   display: flex;
@@ -2122,15 +2137,45 @@ html, body {
   gap: 10px;
   flex: 1;
   min-width: 0;
+  height: 40px;
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 0 6px;
   border-radius: 10px;
   transition: background 0.15s;
 }
 .chat-header-id:active { background: var(--surface2); }
+.chat-header .icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  padding: 0;
+}
+
+.chat-header .icon-btn svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.chat-header .new-conv-plus {
+  width: 22px;
+  height: 22px;
+  display: block;
+  transform: none;
+}
+
+.chat-header-actions .icon-btn + .icon-btn {
+  margin-left: 2px;
+}
+
 .chat-avatar {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -2142,6 +2187,7 @@ html, body {
 .chat-header-name {
   font-weight: 600;
   font-size: 15px;
+  line-height: 40px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2480,7 +2526,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     </div>
     <div class="header-actions" id="convHeaderActions" style="display:none">
       <button class="icon-btn" onclick="newConversation()" title="新建对话">
-        <svg class="new-conv-icon" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: translateY(1px);"><path d="M5 4h14a2 2 0 0 1 2 2v9.5a2 2 0 0 1-2 2h-7.5L7 21v-3.5H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M12 8v6"/><path d="M9 11h6"/></svg>
+        <svg class="new-conv-plus" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
       </button>
       <button class="icon-btn" onclick="showAsstEdit(state.activeAssistantId)" title="编辑助手">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -2502,7 +2548,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     </div>
     <div class="chat-header-actions" id="chatHeaderActions">
       <button class="icon-btn" onclick="newConversation()" title="新建对话">
-        <svg class="new-conv-icon" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: translateY(1px);"><path d="M5 4h14a2 2 0 0 1 2 2v9.5a2 2 0 0 1-2 2h-7.5L7 21v-3.5H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M12 8v6"/><path d="M9 11h6"/></svg>
+        <svg class="new-conv-plus" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
       </button>
       <button class="icon-btn" onclick="showAsstEdit(state.activeAssistantId)" title="编辑助手">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
