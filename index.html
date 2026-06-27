@@ -5337,7 +5337,8 @@ function renderRoleplayMessages() {
       // Assistant: reply starts on the same row as the left status dot; model/time move to footer
       const isLast = i === conv.messages.length - 1;
       const isError = m.content.startsWith('[错误]');
-      const regenBtn = (isLast || isError) ? `<button class="regen-btn" onclick="regenerateResponse(${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>重新生成</button>` : '';
+      const isPendingAssistant = isLast && !m.content && !m.thinking && !m.usage;
+      const regenBtn = (!isPendingAssistant && (isLast || isError)) ? `<button class="regen-btn" onclick="regenerateResponse(${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>重新生成</button>` : '';
       return `
         <div class="msg assistant" data-index="${i}">
           ${bulkCheck}
