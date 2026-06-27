@@ -5312,6 +5312,9 @@ function toggleMsgMenu(index, event) {
       <span class="ctx-icon">&#8635;</span>重新生成
     </button>` : ''}
     <div class="conv-context-sep"></div>
+    <button class="conv-context-menu-item" onclick="startBulkDeleteMode(${index});">
+      <span class="ctx-icon">&#9745;</span>批量选择
+    </button>
     <button class="conv-context-menu-item" style="color:var(--danger,#e53935);" onclick="deleteMessage(${index}); closeMsgMenus();">
       <span class="ctx-icon">&#10005;</span>删除
     </button>
