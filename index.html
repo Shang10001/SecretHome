@@ -104,6 +104,9 @@ html, body {
   width: 8px;
   height: 8px;
   margin-top: 7px;
+  margin-left: 0;
+  margin-right: 2px;
+  transform: translateX(-3px);
   border-radius: 50%;
   background: var(--text3);
   flex-shrink: 0;
@@ -113,9 +116,14 @@ html, body {
   animation: pulse 2s infinite;
 }
 .msg-footer-model {
-  flex: 0 0 100%;
-  max-width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   overflow-wrap: anywhere;
+}
+.msg-footer-time {
+  margin-left: auto;
+  flex: 0 0 auto;
+  text-align: right;
 }
 .cache-indicator {
   display: flex;
@@ -221,7 +229,7 @@ html, body {
   display: flex;
   align-items: flex-start;
   gap: 5px;
-  padding-left: 3px;
+  padding-left: 1px;
 }
 .msg-assistant-body {
   flex: 1;
@@ -1340,26 +1348,31 @@ html, body {
 
 /* ========== MESSAGE EDIT ========== */
 .msg-footer {
-  display: flex;
-  align-items: center;
-  gap: 2px 12px;
   margin-top: 16px;
   margin-left: 16px;
   margin-right: 16px;
   font-family: var(--mono);
   font-size: 10px;
   color: var(--text3);
-  flex-wrap: wrap;
   line-height: 1.55;
+}
+.msg-footer-row {
+  display: flex;
+  align-items: center;
+  gap: 2px 12px;
+  flex-wrap: wrap;
+}
+.msg-footer-row + .msg-footer-row {
+  margin-top: 2px;
+}
+.msg-footer-top {
+  justify-content: space-between;
+}
+.msg-footer-bottom .meta-tag:last-child {
+  margin-left: auto;
 }
 /* Hide footer when empty */
 .msg-footer:empty { display: none; }
-.msg-footer .meta-tag:last-child {
-  margin-left: auto;
-}
-.msg-footer .msg-footer-model:last-child {
-  margin-left: 0;
-}
 .msg.user .msg-footer { display: none; }
 
 /* Old msg-menu (desktop click from "..." inline button) */
@@ -5289,11 +5302,20 @@ function renderRoleplayMessages() {
     const menuBtn = `<button class="msg-inline-menu" onclick="toggleMsgMenu(${i}, event)">&#8943;</button>`;
     const bulkCheck = renderBulkDeleteCheckbox(i);
 
-    // Footer: assistant model/time + usage meta live together under the reply
+    // Footer: first row shows model on the left and time on the right; second row shows usage meta
     const footerModel = (m.role === 'assistant')
-      ? `<span class="meta-tag tokens msg-footer-model">${esc(m.model || getModel())}${m.ts ? ' 丨 ' + formatMsgTs(m.ts) : ''}</span>`
+      ? `<span class="meta-tag tokens msg-footer-model">${esc(m.model || getModel())}</span>`
       : '';
-    const footerHtml = (footerModel || metaParts) ? `<div class="msg-footer">${footerModel}${metaParts}</div>` : '';
+    const footerTime = (m.role === 'assistant' && m.ts)
+      ? `<span class="meta-tag tokens msg-footer-time">${formatMsgTs(m.ts)}</span>`
+      : '';
+    const footerTop = (footerModel || footerTime)
+      ? `<div class="msg-footer-row msg-footer-top">${footerModel}${footerTime}</div>`
+      : '';
+    const footerBottom = metaParts
+      ? `<div class="msg-footer-row msg-footer-bottom">${metaParts}</div>`
+      : '';
+    const footerHtml = (footerTop || footerBottom) ? `<div class="msg-footer">${footerTop}${footerBottom}</div>` : '';
 
     if (m.role === 'user') {
       // User: "..." on the left, bubble on the right
