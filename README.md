@@ -2,7 +2,7 @@
 
 个人用 AI 聊天前端，单文件 PWA，通过 OpenRouter API 连接 Claude 等模型。主要用于创意写作和角色扮演。部署在 GitHub Pages 上，日常在 iOS Safari（添加到主屏幕）和桌面浏览器两端使用。
 
-所有代码由 Claude 编写，我负责提需求、设计和测试。
+所有代码由 Claude、ChatGPT 联合编写，我负责提需求、设计和测试。
 
 ---
 
