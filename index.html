@@ -2686,12 +2686,6 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       </div>
 
       <div class="field">
-        <label>Temperature</label>
-        <input type="number" id="temperature" value="0.7" min="0" max="2" step="0.1">
-        <div class="hint">启用思考链时此项会被忽略（Anthropic 要求 temperature=1）</div>
-      </div>
-
-      <div class="field">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
           <input type="checkbox" id="reasoningEnabled" style="accent-color:var(--accent);width:16px;height:16px;">
           启用思考链 (Extended Thinking)
@@ -2901,6 +2895,11 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
         <div class="hint">如需使用列表中没有的模型，在此输入完整 ID</div>
       </div>
       <div class="field">
+        <label>Temperature</label>
+        <input type="number" id="asstEditTemperature" value="0.7" min="0" max="2" step="0.1" inputmode="decimal">
+        <div class="hint">数值越低越稳定，越高越发散。启用思考链时此项会被忽略。</div>
+      </div>
+      <div class="field">
         <label>System Prompt</label>
         <div class="sp-mode-tabs">
           <button class="active" onclick="switchSPTab('rp')">角色扮演</button>
@@ -3049,6 +3048,7 @@ function defaultState() {
         systemPrompt: '',
         model: 'anthropic/claude-opus-4.6',
         customModel: '',
+        temperature: 0.7,
         color: '#C9795E',
         provider: 'openrouter'
       }
@@ -3070,6 +3070,12 @@ function defaultState() {
   };
 }
 
+function normalizeTemperatureValue(value, fallback = 0.7) {
+  const n = parseFloat(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(2, Math.max(0, n));
+}
+
 function migrateLegacyAccentForData(data) {
   if (!data || !data.assistants) return data;
   // 上一版误把助手默认颜色也迁移成了界面强调色；这里只把误迁移的助手颜色改回原来的橙色。
@@ -3088,9 +3094,12 @@ function migrateLegacyAccentForData(data) {
 function normalizeAssistantOrderForData(data) {
   if (!data.assistants) data.assistants = {};
   const ids = Object.keys(data.assistants);
+  const fallbackTemp = normalizeTemperatureValue(data.temperature, 0.7);
   if (!Array.isArray(data.assistantOrder)) data.assistantOrder = [];
   data.assistantOrder = data.assistantOrder.filter(id => data.assistants[id]);
   for (const id of ids) {
+    const asst = data.assistants[id];
+    if (asst) asst.temperature = normalizeTemperatureValue(asst.temperature, fallbackTemp);
     if (!data.assistantOrder.includes(id)) data.assistantOrder.push(id);
   }
   return data;
@@ -3126,7 +3135,9 @@ function loadState() {
           systemPrompt: parsed.systemPrompt || '',
           model: parsed.model || 'anthropic/claude-opus-4.6',
           customModel: parsed.customModel || '',
-          color: '#C9795E'
+          temperature: normalizeTemperatureValue(parsed.temperature, 0.7),
+          color: '#C9795E',
+          provider: parsed.provider || 'openrouter'
         };
         merged.assistants = { 'asst_default': defaultAsst };
         merged.activeAssistantId = 'asst_default';
@@ -3593,7 +3604,9 @@ function importLocalBackup(event) {
             systemPrompt: data.systemPrompt || '',
             model: data.model || 'anthropic/claude-opus-4.6',
             customModel: data.customModel || '',
-            color: '#C9795E'
+            temperature: normalizeTemperatureValue(data.temperature, 0.7),
+            color: '#C9795E',
+            provider: data.provider || 'openrouter'
           }
         };
         state.assistantOrder = ['asst_default'];
@@ -3676,7 +3689,7 @@ function getActiveAssistant() {
   const first = getOrderedAssistants()[0];
   if (first) { state.activeAssistantId = first.id; return first; }
   // Create default if none exist
-  const def = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: '#C9795E', provider: 'openrouter' };
+  const def = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', temperature: 0.7, color: '#C9795E', provider: 'openrouter' };
   state.assistants['asst_default'] = def;
   state.assistantOrder = ['asst_default'];
   state.activeAssistantId = 'asst_default';
@@ -3686,6 +3699,11 @@ function getActiveAssistant() {
 function getModel() {
   const asst = getActiveAssistant();
   return (asst.customModel || '').trim() || asst.model;
+}
+
+function getActiveAssistantTemperature() {
+  const asst = getActiveAssistant();
+  return normalizeTemperatureValue(asst.temperature, normalizeTemperatureValue(state.temperature, 0.7));
 }
 
 function getModelProvider(model) {
@@ -4200,13 +4218,14 @@ function showAsstEdit(asstId) {
   const isNew = !asstId;
   document.getElementById('asstEditTitle').innerHTML = (isNew ? '新助手' : '编辑助手') + ' <button onclick="closeModal(\'asstEditModal\')">&#10005;</button>';
 
-  const asst = isNew ? { name: '', systemPrompt: '', chatSystemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: ASST_COLORS[Object.keys(state.assistants).length % ASST_COLORS.length], provider: 'openrouter' } : state.assistants[asstId];
+  const asst = isNew ? { name: '', systemPrompt: '', chatSystemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', temperature: normalizeTemperatureValue(state.temperature, 0.7), color: ASST_COLORS[Object.keys(state.assistants).length % ASST_COLORS.length], provider: 'openrouter' } : state.assistants[asstId];
 
   document.getElementById('asstEditName').value = asst.name || '';
   document.getElementById('asstEditProvider').value = asst.provider || 'openrouter';
   onProviderChange();
   document.getElementById('asstEditModel').value = asst.model || 'anthropic/claude-opus-4.6';
   document.getElementById('asstEditCustomModel').value = asst.customModel || '';
+  document.getElementById('asstEditTemperature').value = normalizeTemperatureValue(asst.temperature, normalizeTemperatureValue(state.temperature, 0.7));
   document.getElementById('asstEditSP').value = asst.systemPrompt || '';
   document.getElementById('asstEditChatSP').value = asst.chatSystemPrompt || '';
   document.getElementById('asstDeleteBtn').style.display = (isNew || asstId === 'asst_default') ? 'none' : '';
@@ -4339,6 +4358,7 @@ async function saveAsstEdit() {
   const provider = document.getElementById('asstEditProvider').value;
   const systemPrompt = document.getElementById('asstEditSP').value;
   const chatSystemPrompt = document.getElementById('asstEditChatSP').value;
+  const temperature = normalizeTemperatureValue(document.getElementById('asstEditTemperature').value, 0.7);
   const color = getSelectedAsstColor();
 
   if (editingAsstId && state.assistants[editingAsstId]) {
@@ -4348,6 +4368,7 @@ async function saveAsstEdit() {
     asst.model = model;
     asst.customModel = customModel;
     asst.provider = provider;
+    asst.temperature = temperature;
     asst.systemPrompt = systemPrompt;
     asst.chatSystemPrompt = chatSystemPrompt;
     asst.color = color;
@@ -4356,7 +4377,7 @@ async function saveAsstEdit() {
   } else {
     // Create new
     const id = 'asst_' + Date.now();
-    state.assistants[id] = { id, name, model, customModel, provider, systemPrompt, chatSystemPrompt, color };
+    state.assistants[id] = { id, name, model, customModel, provider, temperature, systemPrompt, chatSystemPrompt, color };
     normalizeAssistantOrderForData(state);
     if (!state.assistantOrder.includes(id)) state.assistantOrder.push(id);
     if (editingAsstAvatar) state.assistants[id].avatar = editingAsstAvatar;
@@ -4400,7 +4421,7 @@ async function deleteAssistant() {
     if (first) await switchAssistant(first.id);
     else {
       // Recreate default
-      state.assistants['asst_default'] = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', color: '#C9795E', provider: 'openrouter' };
+      state.assistants['asst_default'] = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', temperature: 0.7, color: '#C9795E', provider: 'openrouter' };
       state.assistantOrder = ['asst_default'];
       await switchAssistant('asst_default');
     }
@@ -4804,7 +4825,6 @@ function showSettings() {
   document.getElementById('cacheTTL').value = state.cacheTTL;
   document.getElementById('maxTokens').value = state.maxTokens;
   document.getElementById('contextLen').value = state.contextLen || 0;
-  document.getElementById('temperature').value = state.temperature;
   // WebDAV
   const wd = state.webdav || {};
   document.getElementById('webdavUrl').value = wd.url || '';
@@ -4833,7 +4853,6 @@ function saveSettings() {
   state.cacheTTL = document.getElementById('cacheTTL').value;
   state.maxTokens = parseInt(document.getElementById('maxTokens').value) || 4096;
   state.contextLen = parseInt(document.getElementById('contextLen').value) || 0;
-  state.temperature = parseFloat(document.getElementById('temperature').value) || 0.7;
   state.reasoningEnabled = document.getElementById('reasoningEnabled').checked;
   state.timestampEnabled = document.getElementById('timestampEnabled').checked;
   state.reasoningEffort = document.getElementById('reasoningEffort').value;
@@ -5912,7 +5931,7 @@ async function sendMessage() {
       model: getModel(),
       messages,
       max_tokens: state.maxTokens,
-      temperature: state.temperature,
+      temperature: getActiveAssistantTemperature(),
       stream: true
     };
 
@@ -6678,7 +6697,9 @@ async function doRestore() {
             systemPrompt: data.systemPrompt || '',
             model: data.model || 'anthropic/claude-opus-4.6',
             customModel: data.customModel || '',
-            color: '#C9795E'
+            temperature: normalizeTemperatureValue(data.temperature, 0.7),
+            color: '#C9795E',
+            provider: data.provider || 'openrouter'
           }
         };
         state.assistantOrder = ['asst_default'];
