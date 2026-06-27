@@ -4178,8 +4178,9 @@ function updateAsstAvatarPreview(asst) {
 function handleAsstAvatarPick(event) {
   const file = event.target.files[0];
   if (!file || !file.type.startsWith('image/')) return;
-  // 压缩到 192px，控制 localStorage 占用（每个头像约 10KB）
-  compressImage(file, 192, 0.82).then(dataUrl => {
+  // 压缩到 192px；PNG 会保留透明底，避免头像变黑。
+  const outputType = file.type === 'image/png' ? 'image/png' : undefined;
+  compressImage(file, 192, 0.82, outputType).then(dataUrl => {
     if (!dataUrl) { showToast('头像读取失败'); return; }
     editingAsstAvatar = dataUrl;
     updateAsstAvatarPreview();
@@ -5550,7 +5551,7 @@ function renderMd(str) {
 // ============ IMAGE HANDLING ============
 let pendingImage = null;
 
-async function compressImage(file, maxPx, quality) {
+async function compressImage(file, maxPx, quality, outputType) {
   maxPx = maxPx || 800;
   quality = quality || 0.7;
   return new Promise((resolve) => {
@@ -5566,8 +5567,18 @@ async function compressImage(file, maxPx, quality) {
           }
           const c = document.createElement('canvas');
           c.width = w; c.height = h;
-          c.getContext('2d').drawImage(img, 0, 0, w, h);
-          resolve(c.toDataURL('image/jpeg', quality));
+          const ctx = c.getContext('2d');
+          const originalType = (file.type || '').toLowerCase();
+          const canvasType = outputType || (originalType === 'image/png' ? 'image/png' : 'image/jpeg');
+          // PNG 头像常带透明底，转成 JPG 会把透明区域压黑；PNG 保留透明，JPG 则铺一层白底。
+          if (canvasType === 'image/jpeg') {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, w, h);
+          } else {
+            ctx.clearRect(0, 0, w, h);
+          }
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(c.toDataURL(canvasType, quality));
         } catch(err) {
           // If canvas encoding fails, keep the original image instead of dropping it.
           resolve(e.target.result);
