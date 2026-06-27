@@ -1582,7 +1582,8 @@ html, body {
   background: var(--border);
   border-radius: 1px;
   overflow: hidden;
-  margin: 4px 0 2px;
+  margin: 0 16px;
+  flex-shrink: 0;
 }
 .ctx-bar-fill {
   height: 100%;
@@ -2104,6 +2105,13 @@ html, body {
   flex-shrink: 0;
   border-bottom: 1px solid var(--border);
 }
+.chat-header-left,
+.chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
 .chat-header-id {
   display: flex;
   align-items: center;
@@ -2133,6 +2141,20 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.roleplay-header-left {
+  flex: 1;
+  min-width: 0;
+}
+.roleplay-header-id {
+  flex: 1;
+  min-width: 0;
+  max-width: 260px;
+}
+@media (max-width: 480px) {
+  .roleplay-header-id { max-width: 190px; }
+  .chat-avatar { width: 32px; height: 32px; font-size: 14px; }
+  .chat-header-name { font-size: 15px; }
 }
 
 /* --- 联系人列表 --- */
@@ -2402,12 +2424,19 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
   <div class="header">
     <div class="header-left">
       <button class="icon-btn" id="modeSwitchBtn" onclick="switchUIMode()" title="聊天模式"></button>
+      <button class="icon-btn" id="headerBackBtn" onclick="showContactsView()" title="返回主页" style="display:none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="chat-header-id roleplay-header-id" id="roleplayHeaderId" onclick="showAssistantConvs()" title="对话列表" style="display:none">
+        <div class="chat-avatar" id="roleplayHeaderAvatar">笨</div>
+        <div class="chat-header-name" id="roleplayHeaderName">笨笨</div>
+      </div>
       <div class="cache-indicator" id="cacheStatus">
         <span class="cache-dot" id="cacheDot"></span>
         <span id="cacheLabel">--</span>
       </div>
     </div>
-    <div class="header-actions">
+    <div class="header-actions" id="homeHeaderActions">
       <button class="header-asst-btn" id="headerAsstBtn" onclick="showAssistants()" title="助手">
         <span class="header-asst-dot" id="headerAsstDot" style="background:#DA7756"></span>
       </button>
@@ -2438,19 +2467,41 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
     </div>
+    <div class="header-actions" id="convHeaderActions" style="display:none">
+      <button class="icon-btn" onclick="newConversation()" title="新建对话">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button class="icon-btn" onclick="showAsstEdit(state.activeAssistantId)" title="编辑助手">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+    </div>
   </div>
 
   <!-- CHAT HEADER (聊天模式专用顶栏) -->
   <div class="chat-header" id="chatHeader" style="display:none">
-    <button class="icon-btn" onclick="showContactsView()" title="返回联系人">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-    </button>
+    <div class="chat-header-left">
+      <button class="icon-btn" onclick="showContactsView()" title="返回主页">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+    </div>
     <div class="chat-header-id" onclick="showChatConvList()" title="对话列表">
       <div class="chat-avatar" id="chatAvatar">笨</div>
       <div class="chat-header-name" id="chatHeaderName">笨笨</div>
       <span class="chat-cache-dot" id="chatCacheDot"></span>
     </div>
-    <div id="chatHeaderRight" style="display:flex;align-items:center;flex-shrink:0;"></div>
+    <div class="chat-header-actions" id="chatHeaderActions">
+      <button class="icon-btn" onclick="newConversation()" title="新建对话">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button class="icon-btn" onclick="showAsstEdit(state.activeAssistantId)" title="编辑助手">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- CONTEXT USAGE BAR -->
+  <div class="ctx-bar" id="ctxBar" style="display:none">
+    <div class="ctx-bar-fill" id="ctxBarFill"></div>
   </div>
 
   <!-- MESSAGES -->
@@ -2476,9 +2527,6 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       <span class="cost-item" id="cacheInfoDisplay" style="display:none">
         <span id="cacheInfoText">--</span>
       </span>
-    </div>
-    <div class="ctx-bar" id="ctxBar" style="display:none">
-      <div class="ctx-bar-fill" id="ctxBarFill"></div>
     </div>
     <input type="file" id="imgPicker" accept="image/*" style="display:none" onchange="handleImagePick(event)">
     <div class="input-box">
@@ -3574,6 +3622,8 @@ function newConversation() {
   state.activeConvId = id;
   state._activeConvData = convData;
   saveState();
+  if (state.uiMode === 'chat') showChatView();
+  else showRoleplayView();
   renderMessages();
   closeModal('convModal');
 }
@@ -4282,23 +4332,28 @@ function updateHeaderAssistant() {
   const inputEl = document.getElementById('userInput');
   if (dotEl) dotEl.style.background = asst.color || '#DA7756';
   if (inputEl) inputEl.placeholder = `跟${asst.name}说点什么...`;
-  // 聊天模式顶栏
-  const av = document.getElementById('chatAvatar');
-  const nm = document.getElementById('chatHeaderName');
-  if (av) {
-    if (asst.avatar) {
-      av.style.background = 'none';
-      av.style.color = '';
-      av.innerHTML = `<img src="${asst.avatar}">`;
-    } else {
-      const color = asst.color || '#DA7756';
-      av.innerHTML = '';
-      av.style.background = color + '1F';
-      av.style.color = color;
-      av.textContent = (asst.name || '?').charAt(0);
+
+  const updateIdentity = (avatarId, nameId) => {
+    const av = document.getElementById(avatarId);
+    const nm = document.getElementById(nameId);
+    if (av) {
+      if (asst.avatar) {
+        av.style.background = 'none';
+        av.style.color = '';
+        av.innerHTML = `<img src="${asst.avatar}">`;
+      } else {
+        const color = asst.color || '#DA7756';
+        av.innerHTML = '';
+        av.style.background = color + '1F';
+        av.style.color = color;
+        av.textContent = (asst.name || '?').charAt(0);
+      }
     }
-  }
-  if (nm) nm.textContent = asst.name;
+    if (nm) nm.textContent = asst.name;
+  };
+
+  updateIdentity('chatAvatar', 'chatHeaderName');
+  updateIdentity('roleplayHeaderAvatar', 'roleplayHeaderName');
 }
 
 function showConvMenu(e, convId) {
@@ -4732,32 +4787,18 @@ function splitChatBubbles(content) {
 
 // --- 模式切换（门 ←→ 气泡）---
 async function switchUIMode() {
+  // 顶栏模式按钮只在主页显示：连续点击时只切换主页类型，不自动跳进某个对话。
   if (state.uiMode !== 'chat') {
-    // 回家：进入聊天模式，先看到联系人列表
-    state.lastRoleplayConvId = state.activeConvId;
+    if (state.activeConvId && state.conversations[state.activeConvId]?.mode !== 'chat') {
+      state.lastRoleplayConvId = state.activeConvId;
+    }
     state.uiMode = 'chat';
-    saveState();
-    updateModeSwitchIcon();
-    showContactsView();
   } else {
-    // 出门：回到角色扮演模式，恢复之前的对话
     state.uiMode = 'roleplay';
-    updateModeSwitchIcon();
-    showRoleplayView();
-    let target = state.lastRoleplayConvId;
-    if (!target || !state.conversations[target] || state.conversations[target].mode === 'chat') {
-      const rp = Object.values(state.conversations)
-        .filter(c => c.mode !== 'chat' && (c.assistantId || 'asst_default') === state.activeAssistantId)
-        .sort((a, b) => b.created - a.created);
-      target = rp.length ? rp[0].id : null;
-    }
-    if (target) {
-      await switchConversation(target);
-    } else {
-      newConversation();
-    }
-    saveState();
   }
+  saveState();
+  updateModeSwitchIcon();
+  showContactsView();
 }
 
 function updateModeSwitchIcon() {
@@ -4775,22 +4816,42 @@ function updateModeSwitchIcon() {
 }
 
 // --- 视图切换 ---
+function setMainHeaderMode(mode) {
+  const isHome = mode === 'home';
+  const modeBtn = document.getElementById('modeSwitchBtn');
+  const backBtn = document.getElementById('headerBackBtn');
+  const homeActions = document.getElementById('homeHeaderActions');
+  const convActions = document.getElementById('convHeaderActions');
+  const cacheStatus = document.getElementById('cacheStatus');
+  const roleplayHeaderId = document.getElementById('roleplayHeaderId');
+  const headerLeft = document.querySelector('.header-left');
+  if (modeBtn) modeBtn.style.display = isHome ? '' : 'none';
+  if (backBtn) backBtn.style.display = isHome ? 'none' : '';
+  if (roleplayHeaderId) roleplayHeaderId.style.display = isHome ? 'none' : 'flex';
+  if (headerLeft) headerLeft.classList.toggle('roleplay-header-left', !isHome);
+  if (homeActions) homeActions.style.display = isHome ? '' : 'none';
+  if (convActions) convActions.style.display = isHome ? 'none' : '';
+  if (cacheStatus) cacheStatus.style.display = 'none';
+}
+
 function showRoleplayView() {
   document.getElementById('chatHeader').style.display = 'none';
   document.querySelector('.header').style.display = '';
+  setMainHeaderMode('conversation');
   document.getElementById('contactsView').style.display = 'none';
   document.getElementById('messages').style.display = '';
   document.querySelector('.input-area').style.display = '';
-  const ci = document.getElementById('cacheStatus');
-  const hl = document.querySelector('.header-left');
-  if (ci && hl && ci.parentElement !== hl) hl.appendChild(ci);
+  updateHeaderAssistant();
 }
 
 function showContactsView() {
   document.getElementById('chatHeader').style.display = 'none';
   document.querySelector('.header').style.display = '';
+  setMainHeaderMode('home');
   document.getElementById('messages').style.display = 'none';
   document.querySelector('.input-area').style.display = 'none';
+  const ctxBar = document.getElementById('ctxBar');
+  if (ctxBar) ctxBar.style.display = 'none';
   document.getElementById('contactsView').style.display = '';
   const ci = document.getElementById('cacheStatus');
   const hl = document.querySelector('.header-left');
@@ -4805,8 +4866,7 @@ function showChatView() {
   document.getElementById('messages').style.display = '';
   document.querySelector('.input-area').style.display = '';
   const ci = document.getElementById('cacheStatus');
-  const slot = document.getElementById('chatHeaderRight');
-  if (ci && slot && ci.parentElement !== slot) slot.appendChild(ci);
+  if (ci) ci.style.display = 'none';
   updateHeaderAssistant();
 }
 
@@ -4816,22 +4876,31 @@ function renderContacts() {
   const assts = getOrderedAssistants();
   const counts = {};
   for (const c of Object.values(state.conversations)) {
-    if (c.mode !== 'chat') continue;
+    if (!convInCurrentMode(c)) continue;
     const aid = c.assistantId || 'asst_default';
     counts[aid] = (counts[aid] || 0) + 1;
   }
   el.innerHTML = assts.map(a => {
     const color = a.color || '#DA7756';
     return `
-    <div class="contact-item" onclick="openChatWithAssistant('${a.id}')">
+    <div class="contact-item" onclick="openHomeAssistant('${a.id}')">
       ${asstAvatarHtml(a, 'contact-avatar')}
       <div class="contact-info">
         <div class="contact-name"><span class="asst-dot" style="background:${color}"></span>${esc(a.name)}</div>
-        <div class="contact-meta">${shortModelName(a.model || '')}${counts[a.id] ? ' · ' + counts[a.id] + ' 个对话' : ''}</div>
+        <div class="contact-meta">${shortModelName(a.model || '')}${counts[a.id] ? ' · ' + counts[a.id] + ' 个对话' : ' · 还没有对话'} · 点击查看对话列表</div>
       </div>
       <button class="asst-item-more" onclick="showAsstMenu(event, '${a.id}')">&#8943;</button>
     </div>`;
   }).join('');
+}
+
+async function openHomeAssistant(asstId) {
+  // 主页上的助手项现在作为“对话列表入口”，不直接打开最近对话。
+  if (!state.assistants[asstId]) return;
+  state.activeAssistantId = asstId;
+  updateHeaderAssistant();
+  saveState();
+  showAssistantConvs();
 }
 
 async function openChatWithAssistant(asstId) {
@@ -7276,6 +7345,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (state.uiMode === 'chat') {
     if (state.conversations[state.activeConvId]?.mode === 'chat') showChatView();
     else showContactsView();
+  } else {
+    showRoleplayView();
   }
   // Modal close on overlay click
   document.querySelectorAll('.modal-overlay').forEach(o => {
