@@ -309,6 +309,15 @@ html, body {
   text-justify: inter-ideograph;
   text-align-last: left;
 }
+
+/* 方案 B：手机端取消助手正文的两端对齐，改为普通左对齐，避免窄屏换行造成视觉错位 */
+@media (max-width: 480px) {
+  .msg.assistant .msg-content {
+    text-align: left;
+    text-justify: auto;
+    text-align-last: auto;
+  }
+}
 .md-codeblock {
   background: var(--surface2);
   border-radius: 6px;
