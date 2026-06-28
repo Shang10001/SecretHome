@@ -3057,7 +3057,7 @@ const DB_KEY = 'benben_data';
 // Full conversation data (with messages) lives in IndexedDB, loaded on demand.
 // state._activeConvData holds the currently loaded conversation's full data (with messages).
 
-const ASST_COLORS = ['#C9795E','#5B92AE','#71A294','#A88CBA','#C9BE45','#C85F7F'];
+const ASST_COLORS = ['#C9795E','#408BB0','#4A9681','#A88CBA','#C9BE45','#C85F7F'];
 
 // 聊天模式：追加到 system prompt 末尾的格式说明（默认值，可在设置中修改）
 const CHAT_MODE_INSTRUCTION = `【聊天模式】
@@ -3118,11 +3118,20 @@ function migrateLegacyAccentForData(data) {
   // 上一版误把助手默认颜色也迁移成了界面强调色；这里只把误迁移的助手颜色改回原来的橙色。
   const mistakenAssistantColor = '#667761';
   const originalAssistantColor = '#C9795E';
+  const assistantColorMap = {
+    '#5b92ae': '#408BB0',
+    '#71a294': '#4A9681'
+  };
   for (const id in data.assistants) {
     const a = data.assistants[id];
     if (!a || !a.color) continue;
-    if (String(a.color).toLowerCase() === mistakenAssistantColor.toLowerCase()) {
+    const normalizedColor = String(a.color).toLowerCase();
+    if (normalizedColor === mistakenAssistantColor.toLowerCase()) {
       a.color = originalAssistantColor;
+      continue;
+    }
+    if (assistantColorMap[normalizedColor]) {
+      a.color = assistantColorMap[normalizedColor];
     }
   }
   return data;
