@@ -30,7 +30,7 @@
   --accent2: #55644F;
   --accent-light: #E5EAE3;
   --accent-dim: rgba(102,119,97,0.10);
-  --cache-hit-color: #4F8325;
+  --cache-hit-color: #649717;
   --cache-write-color: #CAA53F;
   --green: #34C759;
   --green-light: #E8F9ED;
@@ -183,7 +183,10 @@ html, body {
   .icon-btn svg { width: 16px; height: 16px; }
   .chat-header .icon-btn { width: 40px; height: 40px; }
   .chat-header .icon-btn svg { width: 22px; height: 22px; }
-  .chat-header .new-conv-plus { width: 22px; height: 22px; transform: translateY(3px) !important; }
+  .chat-header-left .icon-btn { width: 40px; height: 40px; }
+  .chat-header-actions .icon-btn { width: 32px; height: 32px; border-radius: 8px; }
+  .chat-header-actions .icon-btn svg { width: 16px; height: 16px; }
+  .chat-header-actions .new-conv-plus { width: 18px; height: 18px; transform: translateY(-1px) !important; }
   .cache-indicator { padding: 2px 7px; font-size: 10px; }
   .header-asst-btn { width: 32px; height: 32px; border-radius: 8px; }
 }
@@ -2170,7 +2173,7 @@ html, body {
   align-items: center;
   gap: 8px;
   min-height: 56px;
-  padding: 8px 12px;
+  padding: 8px 8px 8px 12px;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border);
 }
@@ -2181,6 +2184,9 @@ html, body {
   gap: 6px;
   flex-shrink: 0;
   height: 40px;
+}
+.chat-header-actions {
+  gap: 4px;
 }
 .chat-header-id {
   display: flex;
@@ -2220,8 +2226,36 @@ html, body {
   transform: translateY(3px) !important;
 }
 
+.chat-header-actions .icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+}
+.chat-header-actions .icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+.chat-header-actions .new-conv-plus {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  transform: translateY(-1px) !important;
+}
 .chat-header-actions .icon-btn + .icon-btn {
-  margin-left: 2px;
+  margin-left: 0;
+}
+@media (max-width: 480px) {
+  .chat-header {
+    min-height: 52px;
+    padding: 6px 4px 6px 10px;
+  }
+  .chat-header-actions .icon-btn {
+    border-radius: 8px;
+  }
+  .chat-header-actions .icon-btn svg {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 .chat-avatar {
@@ -2448,7 +2482,7 @@ html, body {
   --accent2: #55644F;
   --accent-light: #283226;
   --accent-dim: rgba(123,140,115,0.14);
-  --cache-hit-color: #4F8325;
+  --cache-hit-color: #649717;
   --cache-write-color: #CAA53F;
   --green: #5BBF6A;
   --green-light: #1E2A1F;
@@ -2483,7 +2517,7 @@ html, body {
   --accent2: #55644F;
   --accent-light: #E5EAE3;
   --accent-dim: rgba(102,119,97,0.10);
-  --cache-hit-color: #4F8325;
+  --cache-hit-color: #649717;
   --cache-write-color: #CAA53F;
   --green: #34C759;
   --green-light: #E8F9ED;
