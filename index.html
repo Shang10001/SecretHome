@@ -2469,34 +2469,34 @@ html, body {
 }
 
 :root.night {
-  --bg: #1A1714;
-  --surface: #1F1B18;
-  --surface2: #262220;
-  --surface3: #322C28;
-  --border: #38322D;
-  --border2: #4A433C;
-  --text: #E6DCCE;
-  --text2: #A89C8C;
-  --text3: #756B5F;
-  --accent: #7B8C73;
-  --accent2: #55644F;
-  --accent-light: #283226;
-  --accent-dim: rgba(123,140,115,0.14);
+  --bg: #171817;
+  --surface: #1E201E;
+  --surface2: #252825;
+  --surface3: #30342F;
+  --border: #353A34;
+  --border2: #475046;
+  --text: #E8E2D8;
+  --text2: #B6AC9F;
+  --text3: #7E756B;
+  --accent: #8CA078;
+  --accent2: #6F8062;
+  --accent-light: #2D3729;
+  --accent-dim: rgba(140,160,120,0.16);
   --cache-hit-color: #649717;
-  --cache-write-color: #CAA53F;
-  --green: #5BBF6A;
-  --green-light: #1E2A1F;
-  --orange: #E0922F;
-  --orange-light: #2E2517;
-  --red: #E0584E;
-  --red-light: #2E1B19;
-  --user-bg: #2C2723;
+  --cache-write-color: #C6A34A;
+  --green: #78B46D;
+  --green-light: #233023;
+  --orange: #D89A45;
+  --orange-light: #342818;
+  --red: #D96A60;
+  --red-light: #351F1D;
+  --user-bg: #2A2F28;
   --assistant-bg: transparent;
-  --chat-asst-bg: #2C2723;
-  --chat-user-bg: #233037;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
-  --shadow: 0 2px 8px rgba(0,0,0,0.4);
-  --shadow-lg: 0 4px 16px rgba(0,0,0,0.5);
+  --chat-asst-bg: #252825;
+  --chat-user-bg: #2D332A;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.28);
+  --shadow: 0 2px 8px rgba(0,0,0,0.36);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.46);
 }
 /* 夜间模式下走硬编码浅色的元素，单独压暗 */
 :root.night .send-btn { background: var(--accent); }
@@ -2554,7 +2554,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     if (t === 'day') t = 'sepia';
     document.documentElement.classList.add(t);
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute('content', t === 'night' ? '#1A1714' : '#FAFAFA');
+    if (m) m.setAttribute('content', t === 'night' ? '#171817' : '#FAFAFA');
   } catch(e){}
 })();
 </script>
@@ -3249,7 +3249,7 @@ const THEME_META = {
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
   },
   night: {
-    color: '#1A1714',
+    color: '#171817',
     label: '夜间护眼',
     otherLabel: '暖白',
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
