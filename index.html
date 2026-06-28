@@ -230,14 +230,31 @@ html, body {
   align-items: flex-start;
   gap: 5px;
   padding-left: 1px;
+  margin-right: 16px;
 }
 .msg-assistant-body {
   flex: 1;
   min-width: 0;
 }
-.msg-assistant-main .msg-inline-menu {
+.msg-assistant-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  margin-left: 16px;
+  margin-right: 16px;
+}
+.msg-assistant-actions .msg-inline-menu {
+  margin-left: auto;
   margin-top: 0;
-  transform: translateY(-2px);
+  transform: none;
+}
+.msg-assistant-actions-spacer {
+  flex: 1 1 auto;
+}
+.msg-assistant-actions .regen-btn {
+  margin-top: 0;
+  margin-left: 0;
 }
 
 /* Inline "..." button next to message */
@@ -303,6 +320,10 @@ html, body {
   padding: 1px 5px;
   font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
   font-size: 0.9em;
+}
+.md-para-gap {
+  display: block;
+  height: 6px;
 }
 .chat-bubble .md-codeblock {
   background: rgba(0,0,0,0.06);
@@ -5339,6 +5360,7 @@ function renderRoleplayMessages() {
       const isError = m.content.startsWith('[错误]');
       const isPendingAssistant = isLast && !m.content && !m.thinking && !m.usage;
       const regenBtn = (!isPendingAssistant && (isLast || isError)) ? `<button class="regen-btn" onclick="regenerateResponse(${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>重新生成</button>` : '';
+      const actionRow = `<div class="msg-assistant-actions">${regenBtn || '<span class="msg-assistant-actions-spacer"></span>'}${menuBtn}</div>`;
       return `
         <div class="msg assistant" data-index="${i}">
           ${bulkCheck}
@@ -5348,10 +5370,9 @@ function renderRoleplayMessages() {
               ${thinkingHtml}
               <div class="msg-content" id="msgContent-${i}">${renderMd(m.content)}</div>
             </div>
-            ${menuBtn}
           </div>
           ${footerHtml}
-          ${regenBtn}
+          ${actionRow}
         </div>
       `;
     }
@@ -5667,10 +5688,17 @@ function esc(str) {
 }
 
 function renderMd(str) {
-  let s = esc(str);
-  // Code blocks: ```lang\n...\n``` → <pre><code>
-  s = s.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) =>
-    `<pre class="md-codeblock"><code>${code}</code></pre>`);
+  const codeBlocks = [];
+  let raw = String(str || '').replace(/\r\n?/g, '\n');
+
+  // 先把代码块临时收起来，避免后面压缩段落空行时影响代码格式
+  raw = raw.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+    const idx = codeBlocks.length;
+    codeBlocks.push(`<pre class="md-codeblock"><code>${esc(code)}</code></pre>`);
+    return `@@CODEBLOCK_${idx}@@`;
+  });
+
+  let s = esc(raw);
   // Inline code: `...` → <code>
   s = s.replace(/`([^`\n]+?)`/g, '<code class="md-inline-code">$1</code>');
   // Bold: **...** → <strong>
@@ -5679,9 +5707,14 @@ function renderMd(str) {
   s = s.replace(/(?<!\w)\*([^\s*](?:.*?[^\s*])?)\*(?!\w)/g, '<em>$1</em>');
   // Strikethrough: ~~...~~ → <del>
   s = s.replace(/~~(.+?)~~/g, '<del>$1</del>');
+
+  // 段落之间的空行改成更小的留白；正文到注脚的距离不受这里影响
+  s = s.replace(/\n{2,}/g, '<br><span class="md-para-gap"></span>');
+  s = s.replace(/\n/g, '<br>');
+
+  s = s.replace(/@@CODEBLOCK_(\d+)@@/g, (_, idx) => codeBlocks[Number(idx)] || '');
   return s;
 }
-
 // ============ IMAGE HANDLING ============
 let pendingImage = null;
 
