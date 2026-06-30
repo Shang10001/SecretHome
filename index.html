@@ -111,6 +111,29 @@ html, body {
   background: var(--text3);
   flex-shrink: 0;
 }
+button.msg-status-dot {
+  display: block;
+  position: relative;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+button.msg-status-dot::after {
+  content: '';
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+}
+button.msg-status-dot:hover:not(.cache-active),
+button.msg-status-dot:active:not(.cache-active) {
+  background: var(--text2);
+}
+button.msg-status-dot:focus-visible {
+  outline: 2px solid var(--accent-dim);
+  outline-offset: 5px;
+}
 .msg-status-dot.cache-active {
   background: var(--green);
   animation: pulse 2s infinite;
@@ -1560,6 +1583,7 @@ html, body {
   color: #fff;
 }
 .bulk-delete-mode .msg-inline-menu { display: none; }
+.bulk-delete-mode .msg-status-dot { pointer-events: none; }
 .msg.assistant > .bulk-msg-check {
   margin-left: 16px;
   margin-bottom: 4px;
@@ -5423,20 +5447,20 @@ function renderRoleplayMessages() {
       // Assistant: reply starts on the same row as the left status dot; model/time move to footer
       const loadingDots = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
       const contentHtml = isLoadingAssistant && !m.content && !m.thinking ? loadingDots : renderMd(m.content);
-      const regenBtn = (!isLoadingAssistant && (isLast || isError)) ? `<button class="regen-btn" onclick="regenerateResponse(${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>重新生成</button>` : '';
-      const actionRow = isLoadingAssistant ? '' : `<div class="msg-assistant-actions">${regenBtn || '<span class="msg-assistant-actions-spacer"></span>'}${menuBtn}</div>`;
+      const statusDot = isLoadingAssistant
+        ? '<span class="msg-status-dot"></span>'
+        : `<button class="msg-status-dot" onclick="toggleMsgMenu(${i}, event)" title="消息操作" aria-label="消息操作"></button>`;
       return `
         <div class="msg assistant" data-index="${i}">
           ${bulkCheck}
           <div class="msg-assistant-main">
-            <span class="msg-status-dot"></span>
+            ${statusDot}
             <div class="msg-assistant-body">
               ${thinkingHtml}
               <div class="msg-content" id="msgContent-${i}">${contentHtml}</div>
             </div>
           </div>
           ${footerHtml}
-          ${actionRow}
         </div>
       `;
     }
