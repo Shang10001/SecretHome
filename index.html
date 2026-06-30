@@ -3335,8 +3335,13 @@ async function saveSettingsToIDB() {
 async function saveConvToIDB(convData) {
   try {
     if (!idb) await openIDB();
+    // _loading 只用于当前页面显示“正在回复”，不要写进备份/存储里。
+    const cleanConvData = JSON.parse(JSON.stringify(convData));
+    if (Array.isArray(cleanConvData.messages)) {
+      cleanConvData.messages.forEach(m => { if (m) delete m._loading; });
+    }
     const tx = idb.transaction('conversations', 'readwrite');
-    tx.objectStore('conversations').put(JSON.stringify(convData), convData.id);
+    tx.objectStore('conversations').put(JSON.stringify(cleanConvData), cleanConvData.id);
   } catch(e) { console.warn('IDB conv save failed:', e); }
 }
 
@@ -5377,18 +5382,23 @@ function renderRoleplayMessages() {
     // The "..." button
     const menuBtn = `<button class="msg-inline-menu" onclick="toggleMsgMenu(${i}, event)">&#8943;</button>`;
     const bulkCheck = renderBulkDeleteCheckbox(i);
+    const isLast = i === conv.messages.length - 1;
+    const isError = m.role === 'assistant' && m.content.startsWith('[错误]');
+    const isPendingAssistant = m.role === 'assistant' && isLast && !m.content && !m.thinking && !m.usage;
+    const isLoadingAssistant = m.role === 'assistant' && (m._loading || isPendingAssistant);
 
-    // Footer: first row shows model on the left and time on the right; second row shows usage meta
-    const footerModel = (m.role === 'assistant')
+    // Footer: first row shows model on the left and time on the right; second row shows usage meta.
+    // 加载中先不显示注脚，等正文结束后再出现。
+    const footerModel = (m.role === 'assistant' && !isLoadingAssistant)
       ? `<span class="meta-tag tokens msg-footer-model">${esc(m.model || getModel())}</span>`
       : '';
-    const footerTime = (m.role === 'assistant' && m.ts)
+    const footerTime = (m.role === 'assistant' && m.ts && !isLoadingAssistant)
       ? `<span class="meta-tag tokens msg-footer-time">${formatMsgTs(m.ts)}</span>`
       : '';
     const footerTop = (footerModel || footerTime)
       ? `<div class="msg-footer-row msg-footer-top">${footerModel}${footerTime}</div>`
       : '';
-    const footerBottom = metaParts
+    const footerBottom = (metaParts && !isLoadingAssistant)
       ? `<div class="msg-footer-row msg-footer-bottom">${metaParts}</div>`
       : '';
     const footerHtml = (footerTop || footerBottom) ? `<div class="msg-footer">${footerTop}${footerBottom}</div>` : '';
@@ -5411,11 +5421,10 @@ function renderRoleplayMessages() {
       `;
     } else {
       // Assistant: reply starts on the same row as the left status dot; model/time move to footer
-      const isLast = i === conv.messages.length - 1;
-      const isError = m.content.startsWith('[错误]');
-      const isPendingAssistant = isLast && !m.content && !m.thinking && !m.usage;
-      const regenBtn = (!isPendingAssistant && (isLast || isError)) ? `<button class="regen-btn" onclick="regenerateResponse(${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>重新生成</button>` : '';
-      const actionRow = `<div class="msg-assistant-actions">${regenBtn || '<span class="msg-assistant-actions-spacer"></span>'}${menuBtn}</div>`;
+      const loadingDots = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+      const contentHtml = isLoadingAssistant && !m.content && !m.thinking ? loadingDots : renderMd(m.content);
+      const regenBtn = (!isLoadingAssistant && (isLast || isError)) ? `<button class="regen-btn" onclick="regenerateResponse(${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>重新生成</button>` : '';
+      const actionRow = isLoadingAssistant ? '' : `<div class="msg-assistant-actions">${regenBtn || '<span class="msg-assistant-actions-spacer"></span>'}${menuBtn}</div>`;
       return `
         <div class="msg assistant" data-index="${i}">
           ${bulkCheck}
@@ -5423,7 +5432,7 @@ function renderRoleplayMessages() {
             <span class="msg-status-dot"></span>
             <div class="msg-assistant-body">
               ${thinkingHtml}
-              <div class="msg-content" id="msgContent-${i}">${renderMd(m.content)}</div>
+              <div class="msg-content" id="msgContent-${i}">${contentHtml}</div>
             </div>
           </div>
           ${footerHtml}
@@ -5934,7 +5943,7 @@ async function sendMessage() {
   _streamLastData = Date.now();
   document.getElementById('sendBtn').disabled = true;
 
-  const assistantMsg = { role: 'assistant', content: '', thinking: '', usage: null, model: getModel(), ts: now.getTime() };
+  const assistantMsg = { role: 'assistant', content: '', thinking: '', usage: null, model: getModel(), ts: now.getTime(), _loading: true };
   conv.messages.push(assistantMsg);
   renderMessages();
 
@@ -5953,11 +5962,6 @@ async function sendMessage() {
       lastMsg.appendChild(tb);
       typingEl = tb;
     }
-  } else {
-    typingEl = document.createElement('div');
-    typingEl.className = 'msg assistant';
-    typingEl.innerHTML = `<div class="msg-content"><div class="typing-indicator"><span></span><span></span><span></span></div></div>`;
-    container.appendChild(typingEl);
   }
   container.scrollTop = container.scrollHeight;
 
@@ -6195,6 +6199,7 @@ async function sendMessage() {
       cache_write_tokens: cacheWrite,
       cost: cost
     };
+    delete assistantMsg._loading;
 
     updateCacheIndicator(cached, cacheWrite);
     saveState();
@@ -6225,6 +6230,7 @@ async function sendMessage() {
         cost: cost
       };
     }
+    delete assistantMsg._loading;
     saveState();
     renderMessages();
   }
