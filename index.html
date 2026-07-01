@@ -2732,6 +2732,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
 
     <div class="tabs">
       <button class="tab active" onclick="switchSettingsTab('general',this)">常规</button>
+      <button class="tab" onclick="switchSettingsTab('companion',this)">伴侣</button>
       <button class="tab" onclick="switchSettingsTab('backup',this)">备份</button>
     </div>
 
@@ -2819,6 +2820,62 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
 
       <div class="btn-row">
         <button class="btn primary" onclick="saveSettings()">保存</button>
+      </div>
+    </div>
+
+    <!-- COMPANION CONTROL TAB -->
+    <div class="tab-panel" id="tab-companion">
+      <div class="field">
+        <label>VPS 接口地址</label>
+        <input type="text" id="companionControlUrl" placeholder="https://你的域名/companion" autocomplete="off">
+        <div class="hint">这是 VPS 上 ai_chat.py 开出来的入口。建议用 HTTPS；如果页面在 HTTPS 下，浏览器通常不允许连接普通 http。</div>
+      </div>
+
+      <div class="field">
+        <label>连接密钥</label>
+        <input type="password" id="companionControlSecret" placeholder="只保存在本机浏览器" autocomplete="off">
+        <div class="hint">它只保存在你的浏览器本机，用来让前端连接 VPS；不要写进 GitHub。</div>
+      </div>
+
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="companionUseChatBackend" style="accent-color:var(--accent);width:16px;height:16px;">
+          用 VPS 作为聊天大脑
+        </label>
+        <div class="hint">开启后，聊天输入框会发给 VPS，由服务器调用模型回复；前端不再直接使用浏览器里的 API Key。</div>
+      </div>
+
+      <div class="field">
+        <label>服务器上的 System Prompt</label>
+        <textarea id="companionSystemPrompt" rows="10" placeholder="这里保存后，会写到 VPS 上的 system_prompt.txt"></textarea>
+        <div class="hint">主动唤醒会读取这里的设定；普通前端聊天会优先使用当前助手的设定，并同步交给 VPS。</div>
+      </div>
+
+      <div class="webdav-status" id="companionStatusBox">
+        <span class="dot idle" id="companionStatusDot"></span>
+        <span id="companionStatusText">未连接</span>
+      </div>
+
+      <div class="btn-row-wrap" style="margin-top:12px;">
+        <button class="btn" onclick="saveCompanionPanelSettings()">保存配置</button>
+        <button class="btn" onclick="companionLoadSystemPrompt()">读取设定</button>
+        <button class="btn primary" onclick="companionSaveSystemPrompt()">保存设定到 VPS</button>
+      </div>
+
+      <div class="btn-row-wrap" style="margin-top:10px;">
+        <button class="btn" onclick="companionGetStatus()">查看状态</button>
+        <button class="btn" onclick="companionWakeNow()">立即唤醒</button>
+        <button class="btn" onclick="companionNewSession()">开新对话</button>
+        <button class="btn danger" onclick="companionResetHistory()">清空上下文</button>
+      </div>
+
+      <div class="btn-row-wrap" style="margin-top:10px;">
+        <button class="btn" onclick="companionEnablePush()">开启 PWA 通知</button>
+        <button class="btn" onclick="companionTestPush()">测试通知</button>
+      </div>
+
+      <div class="hint" style="margin-top:12px;line-height:1.7;">
+        “用 VPS 作为聊天大脑”会让这个前端直接和 VPS 对话；PWA 通知需要 HTTPS、单独的 sw.js，以及 VPS 里配置 VAPID 推送密钥。
       </div>
     </div>
 
@@ -3163,6 +3220,7 @@ function defaultState() {
     activeConvId: null,
     memories: [],
     webdav: { url: '', user: '', pass: '', path: '/BenBenHome/', proxy: '' },
+    companionControl: { url: '', secret: '', useChatBackend: false, pushEnabled: false },
     autoExport: false,
     autoExportInterval: 50,
     msgsSinceExport: 0,
@@ -4956,6 +5014,13 @@ function showSettings() {
   document.getElementById('timestampEnabled').checked = state.timestampEnabled !== false;
   document.getElementById('reasoningEffort').value = state.reasoningEffort || 'medium';
   document.getElementById('chatInstructionInput').value = (typeof state.chatInstruction === 'string') ? state.chatInstruction : CHAT_MODE_INSTRUCTION;
+  const companionCfg = state.companionControl || {};
+  const companionUrlEl = document.getElementById('companionControlUrl');
+  const companionSecretEl = document.getElementById('companionControlSecret');
+  const companionUseChatEl = document.getElementById('companionUseChatBackend');
+  if (companionUrlEl) companionUrlEl.value = companionCfg.url || '';
+  if (companionSecretEl) companionSecretEl.value = companionCfg.secret || '';
+  if (companionUseChatEl) companionUseChatEl.checked = !!companionCfg.useChatBackend;
   openModal('settingsModal', true);
   updateStorageUsage();
   updateLastBackupInfo();
@@ -4975,6 +5040,15 @@ function saveSettings() {
   state.timestampEnabled = document.getElementById('timestampEnabled').checked;
   state.reasoningEffort = document.getElementById('reasoningEffort').value;
   state.chatInstruction = document.getElementById('chatInstructionInput').value;
+  const companionUrlEl = document.getElementById('companionControlUrl');
+  const companionSecretEl = document.getElementById('companionControlSecret');
+  const companionUseChatEl = document.getElementById('companionUseChatBackend');
+  state.companionControl = {
+    url: companionUrlEl ? companionUrlEl.value.trim().replace(/\/+$/, '') : '',
+    secret: companionSecretEl ? companionSecretEl.value.trim() : '',
+    useChatBackend: companionUseChatEl ? companionUseChatEl.checked : !!(state.companionControl && state.companionControl.useChatBackend),
+    pushEnabled: !!(state.companionControl && state.companionControl.pushEnabled)
+  };
   const newAutoInterval = parseInt(document.getElementById('autoExportInterval').value) || 50;
   if (newAutoInterval !== state.autoExportInterval) {
     state.msgsSinceExport = 0;
@@ -5925,23 +5999,26 @@ async function sendMessage() {
 
   const asst = getActiveAssistant();
   const asstProvider = asst.provider || 'openrouter';
+  const useCompanionChat = isCompanionChatEnabled();
 
-  if (asstProvider === 'siliconflow') {
-    if (!state.siliconflowApiKey) {
-      alert('请先在设置中填入 SiliconFlow API Key');
+  if (!useCompanionChat) {
+    if (asstProvider === 'siliconflow') {
+      if (!state.siliconflowApiKey) {
+        alert('请先在设置中填入 SiliconFlow API Key');
+        showSettings();
+        return;
+      }
+    } else if (asstProvider === 'deepseek') {
+      if (!state.deepseekApiKey) {
+        alert('请先在设置中填入 DeepSeek API Key');
+        showSettings();
+        return;
+      }
+    } else if (!state.apiKey) {
+      alert('请先在设置中填入 OpenRouter API Key，或在“设置 → 伴侣”里开启“用 VPS 作为聊天大脑”');
       showSettings();
       return;
     }
-  } else if (asstProvider === 'deepseek') {
-    if (!state.deepseekApiKey) {
-      alert('请先在设置中填入 DeepSeek API Key');
-      showSettings();
-      return;
-    }
-  } else if (!state.apiKey) {
-    alert('请先在设置中填入 OpenRouter API Key');
-    showSettings();
-    return;
   }
 
   const conv = getActiveConv();
@@ -5988,6 +6065,31 @@ async function sendMessage() {
     }
   }
   container.scrollTop = container.scrollHeight;
+
+  if (useCompanionChat) {
+    try {
+      const data = await sendCompanionChatRequest(text, asst, isChatConvActive(), userMsg);
+      if (typingEl) typingEl.remove();
+      assistantMsg.content = data.reply || '';
+      assistantMsg.model = data.model || 'VPS';
+      assistantMsg.usage = null;
+      delete assistantMsg._loading;
+      updateCacheIndicator(0, 0);
+      saveState();
+      renderMessages();
+      checkAutoExport();
+    } catch(err) {
+      if (typingEl) typingEl.remove();
+      assistantMsg.content = '[VPS错误] ' + err.message;
+      delete assistantMsg._loading;
+      saveState();
+      renderMessages();
+    }
+    isStreaming = false;
+    _streamAbort = null;
+    document.getElementById('sendBtn').disabled = false;
+    return;
+  }
 
   let usage = {};
   try {
@@ -6550,6 +6652,235 @@ function importKelivo(event) {
 }
 
 // ============ SETTINGS TABS ============
+
+// ============ VPS COMPANION CONTROL ============
+function getCompanionConfigFromInputs() {
+  const saved = state.companionControl || {};
+  const urlEl = document.getElementById('companionControlUrl');
+  const secretEl = document.getElementById('companionControlSecret');
+  const useChatEl = document.getElementById('companionUseChatBackend');
+  return {
+    url: ((urlEl ? urlEl.value : saved.url) || '').trim().replace(/\/+$/, ''),
+    secret: ((secretEl ? secretEl.value : saved.secret) || '').trim(),
+    useChatBackend: useChatEl ? useChatEl.checked : !!saved.useChatBackend,
+    pushEnabled: !!saved.pushEnabled
+  };
+}
+
+function setCompanionStatus(kind, text) {
+  const dot = document.getElementById('companionStatusDot');
+  const label = document.getElementById('companionStatusText');
+  if (!dot || !label) return;
+  dot.className = 'dot ' + (kind === 'ok' ? 'ok' : kind === 'err' ? 'err' : 'idle');
+  label.textContent = text;
+}
+
+function saveCompanionPanelSettings() {
+  const cfg = getCompanionConfigFromInputs();
+  state.companionControl = cfg;
+  saveState();
+  setCompanionStatus('idle', cfg.url ? '控制配置已保存' : '还没有填写控制接口地址');
+  showToast('控制配置已保存');
+}
+
+async function companionRequest(path, options = {}) {
+  const cfg = getCompanionConfigFromInputs();
+  if (!cfg.url || !cfg.secret) {
+    throw new Error('请先填写 VPS 控制接口地址和控制密钥');
+  }
+  state.companionControl = cfg;
+  saveState();
+  const headers = Object.assign({
+    'Authorization': 'Bearer ' + cfg.secret,
+    'Content-Type': 'application/json'
+  }, options.headers || {});
+  const res = await fetch(cfg.url + path, Object.assign({}, options, { headers }));
+  let data = null;
+  try { data = await res.json(); } catch(e) {}
+  if (!res.ok) {
+    throw new Error((data && (data.error || data.message)) || ('请求失败：' + res.status));
+  }
+  return data || {};
+}
+
+function formatCompanionTime(ts) {
+  if (!ts) return '无记录';
+  const d = new Date(ts * 1000);
+  if (Number.isNaN(d.getTime())) return '无记录';
+  return formatMsgTs(d.getTime());
+}
+
+function isCompanionChatEnabled() {
+  const cfg = state.companionControl || {};
+  return !!(cfg.useChatBackend && cfg.url && cfg.secret);
+}
+
+function buildCompanionSystemPrompt(asst, isChatMode) {
+  let fullSystem = isChatMode
+    ? ((asst.chatSystemPrompt || asst.systemPrompt) || '').trim()
+    : (asst.systemPrompt || '').trim();
+  if (isChatMode) {
+    const instr = (typeof state.chatInstruction === 'string' ? state.chatInstruction : CHAT_MODE_INSTRUCTION).trim();
+    if (instr) fullSystem = (fullSystem ? fullSystem + '\n\n' : '') + instr;
+  }
+  return fullSystem;
+}
+
+async function sendCompanionChatRequest(text, asst, isChatMode, userMsg) {
+  const matchedMems = matchMemories(text);
+  let memoryInjection = '';
+  if (matchedMems.length > 0) {
+    memoryInjection = buildMemoryInjection(matchedMems);
+    if (userMsg) userMsg._mems = matchedMems.map(m => ({ title: m.title, content: m.content }));
+    saveState();
+  }
+  return await companionRequest('/chat', {
+    method: 'POST',
+    body: JSON.stringify({
+      text,
+      mode: isChatMode ? 'chat' : 'roleplay',
+      assistant_name: asst.name || '助手',
+      system_prompt: buildCompanionSystemPrompt(asst, isChatMode),
+      memory_injection: memoryInjection
+    })
+  });
+}
+
+async function companionGetStatus() {
+  try {
+    setCompanionStatus('idle', '正在读取状态...');
+    const data = await companionRequest('/status', { method: 'GET' });
+    const parts = [];
+    parts.push(data.running ? '在线' : '未知');
+    if (data.model) parts.push(data.model);
+    if (typeof data.history_messages === 'number') parts.push(data.history_messages + ' 条上下文');
+    if (typeof data.push_subscriptions === 'number') parts.push('PWA通知 ' + data.push_subscriptions + ' 个设备');
+    if (data.last_interaction_time) parts.push('上次互动 ' + formatCompanionTime(data.last_interaction_time));
+    setCompanionStatus('ok', parts.join(' · ') || '已连接');
+  } catch(e) {
+    setCompanionStatus('err', e.message);
+  }
+}
+
+async function companionLoadSystemPrompt() {
+  try {
+    setCompanionStatus('idle', '正在读取服务器设定...');
+    const data = await companionRequest('/system_prompt', { method: 'GET' });
+    const ta = document.getElementById('companionSystemPrompt');
+    if (ta) ta.value = data.system_prompt || '';
+    setCompanionStatus('ok', '服务器设定已读取');
+  } catch(e) {
+    setCompanionStatus('err', e.message);
+  }
+}
+
+async function companionSaveSystemPrompt() {
+  try {
+    const ta = document.getElementById('companionSystemPrompt');
+    setCompanionStatus('idle', '正在保存设定到 VPS...');
+    await companionRequest('/system_prompt', {
+      method: 'POST',
+      body: JSON.stringify({ system_prompt: ta ? ta.value : '' })
+    });
+    setCompanionStatus('ok', 'System Prompt 已保存到 VPS');
+    showToast('设定已保存到 VPS');
+  } catch(e) {
+    setCompanionStatus('err', e.message);
+  }
+}
+
+async function companionResetHistory() {
+  if (!confirm('确定清空 VPS 上当前上下文吗？')) return;
+  try {
+    setCompanionStatus('idle', '正在清空上下文...');
+    await companionRequest('/reset', { method: 'POST', body: '{}' });
+    setCompanionStatus('ok', '上下文已清空');
+    showToast('VPS 上下文已清空');
+  } catch(e) {
+    setCompanionStatus('err', e.message);
+  }
+}
+
+async function companionNewSession() {
+  try {
+    setCompanionStatus('idle', '正在开启新对话...');
+    await companionRequest('/new_session', { method: 'POST', body: '{}' });
+    setCompanionStatus('ok', '已开启新对话，旧上下文已归档');
+    showToast('VPS 已开启新对话');
+  } catch(e) {
+    setCompanionStatus('err', e.message);
+  }
+}
+
+async function companionWakeNow() {
+  try {
+    setCompanionStatus('idle', '正在唤醒...');
+    const data = await companionRequest('/wake', { method: 'POST', body: '{}' });
+    if (data.sent && data.text) {
+      setCompanionStatus('ok', '已主动发出：' + data.text.slice(0, 40));
+    } else {
+      setCompanionStatus('ok', '已唤醒，但它决定不打扰');
+    }
+  } catch(e) {
+    setCompanionStatus('err', e.message);
+  }
+}
+
+function companionUrlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+async function companionEnablePush() {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      throw new Error('当前浏览器不支持 PWA 推送');
+    }
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') throw new Error('你还没有允许通知权限');
+
+    setCompanionStatus('idle', '正在注册 PWA 通知...');
+    const reg = await navigator.serviceWorker.ready;
+    const keyData = await companionRequest('/push/public_key', { method: 'GET' });
+    if (!keyData.public_key) throw new Error('VPS 还没有配置 VAPID 公钥');
+
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: companionUrlBase64ToUint8Array(keyData.public_key)
+      });
+    }
+    await companionRequest('/push/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ subscription: sub.toJSON() })
+    });
+    state.companionControl = Object.assign({}, state.companionControl || {}, getCompanionConfigFromInputs(), { pushEnabled: true });
+    saveState();
+    setCompanionStatus('ok', 'PWA 通知已开启');
+    showToast('PWA 通知已开启');
+  } catch(e) {
+    setCompanionStatus('err', e.message);
+  }
+}
+
+async function companionTestPush() {
+  try {
+    setCompanionStatus('idle', '正在发送测试通知...');
+    const data = await companionRequest('/push/test', {
+      method: 'POST',
+      body: JSON.stringify({ text: '这是一条来自笨笨家园的测试通知' })
+    });
+    setCompanionStatus(data.sent ? 'ok' : 'err', data.sent ? '测试通知已发送' : '测试通知没有发出，请检查 VAPID/订阅');
+  } catch(e) {
+    setCompanionStatus('err', e.message);
+  }
+}
+
 function switchSettingsTab(tabId, btn) {
   document.querySelectorAll('#settingsModal .tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('#settingsModal .tab-panel').forEach(p => p.classList.remove('active'));
@@ -7692,18 +8023,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ============ SERVICE WORKER (PWA) ============
 if ('serviceWorker' in navigator) {
-  // Register a minimal inline service worker via blob URL
-  const swCode = `
-    self.addEventListener('install', e => self.skipWaiting());
-    self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
-    self.addEventListener('fetch', e => {
-      // For single HTML file PWA, just let everything pass through
-      e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-    });
-  `;
-  const swBlob = new Blob([swCode], { type: 'application/javascript' });
-  const swUrl = URL.createObjectURL(swBlob);
-  navigator.serviceWorker.register(swUrl, { scope: '.' }).catch(() => {});
+  navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
 }
 </script>
 </body>
