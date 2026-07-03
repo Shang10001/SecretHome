@@ -914,6 +914,17 @@ button.msg-status-dot:focus-visible {
   resize: vertical;
   line-height: 1.4;
 }
+#asstEditSP,
+#asstEditChatSP {
+  min-height: 280px;
+  line-height: 1.55;
+}
+@media (max-width: 480px) {
+  #asstEditSP,
+  #asstEditChatSP {
+    min-height: 42vh;
+  }
+}
 .asst-color-picker {
   display: flex;
   gap: 8px;
@@ -929,6 +940,23 @@ button.msg-status-dot:focus-visible {
 }
 .asst-color-opt:hover { transform: scale(1.15); }
 .asst-color-opt.selected { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg); }
+.asst-advanced-card {
+  padding: 14px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+}
+.asst-advanced-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  margin: 2px 0 6px;
+}
+.asst-advanced-card .field:last-child { margin-bottom: 0; }
+.asst-advanced-card input,
+.asst-advanced-card select { background: var(--surface) !important; }
 
 /* Header assistant name button */
 .header-asst-btn {
@@ -2817,24 +2845,6 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
         <div class="hint">在这里统一维护 API Key、Endpoint/Base URL 和模型列表。之后到“编辑助手”里选择供应商和模型。</div>
       </div>
 
-      <div class="field">
-        <label>缓存 TTL</label>
-        <select id="cacheTTL">
-          <option value="">5分钟 (默认)</option>
-          <option value="1h" selected>1小时</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label>Max Tokens</label>
-        <input type="number" id="maxTokens" value="4096" min="256" max="128000">
-      </div>
-
-      <div class="field">
-        <label>上下文消息数</label>
-        <input type="number" id="contextLen" value="0" min="0" max="9999" step="2">
-        <div class="hint">发送最近 N 条消息作为上下文，0 = 不限制（发送全部）。System Prompt 不受影响，始终发送。</div>
-      </div>
 
       <div class="field">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
@@ -2844,24 +2854,6 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
         <div class="hint">开启后每条用户消息末尾会附上发送时间，让助手知道当前日期和时刻。关闭可节省少量 token。</div>
       </div>
 
-      <div class="field">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-          <input type="checkbox" id="reasoningEnabled" style="accent-color:var(--accent);width:16px;height:16px;">
-          启用思考链 (Extended Thinking)
-        </label>
-        <div class="hint">开启后模型会先进行深度思考再回答，思考过程可折叠查看。会增加 output token 用量。</div>
-      </div>
-
-      <div class="field" id="reasoningEffortField">
-        <label>思考力度</label>
-        <select id="reasoningEffort">
-          <option value="low">Low — 轻度思考</option>
-          <option value="medium" selected>Medium — 中等思考</option>
-          <option value="high">High — 深度思考</option>
-          <option value="max">Max — 最大力度 (仅 4.6)</option>
-        </select>
-        <div class="hint">Claude 4.6 支持 adaptive thinking，会根据任务复杂度自动调整思考深度</div>
-      </div>
 
       <div class="field">
         <label style="display:flex;justify-content:space-between;align-items:center;">
@@ -3140,19 +3132,60 @@ deepseek-chat"></textarea>
       </div>
       <div class="field">
         <label>模型</label>
-        <select id="asstEditModel">
+        <select id="asstEditModel" onchange="updateAsstAdvancedHints()">
           <option value="">(使用自定义模型)</option>
         </select>
       </div>
       <div class="field">
         <label>自定义模型 ID (可选)</label>
-        <input type="text" id="asstEditCustomModel" placeholder="留空则使用上面选择的模型">
+        <input type="text" id="asstEditCustomModel" placeholder="留空则使用上面选择的模型" oninput="updateAsstAdvancedHints()">
         <div class="hint">如需使用列表中没有的模型，在此输入完整 ID</div>
       </div>
       <div class="field">
         <label>Temperature</label>
         <input type="number" id="asstEditTemperature" value="0.7" min="0" max="2" step="0.1" inputmode="decimal">
         <div class="hint">数值越低越稳定，越高越发散。启用思考链时此项会被忽略。</div>
+      </div>
+
+      <div class="asst-advanced-title">高级参数</div>
+      <div class="asst-advanced-card">
+        <div class="field">
+          <label>缓存策略</label>
+          <select id="asstEditCacheStrategy" onchange="updateAsstAdvancedHints()">
+            <option value="auto">自动（按模型/供应商默认）</option>
+            <option value="anthropic_1h">Claude 1小时缓存</option>
+            <option value="off">关闭显式缓存</option>
+          </select>
+          <div class="hint" id="asstCacheHint">自动模式下，非 Claude 模型不会强行发送 1 小时缓存参数。</div>
+        </div>
+        <div class="field">
+          <label>回复长度上限</label>
+          <input type="number" id="asstEditMaxTokens" value="4096" min="256" max="128000" inputmode="numeric">
+          <div class="hint">限制单次回复最多生成多少 token；设太低时回复可能提前停止。</div>
+        </div>
+        <div class="field">
+          <label>上下文消息数</label>
+          <input type="number" id="asstEditContextLen" value="0" min="0" max="9999" step="2" inputmode="numeric">
+          <div class="hint">发送最近 N 条消息作为上下文，0 = 不限制（发送全部）。System Prompt 始终发送。</div>
+        </div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="asstEditReasoningEnabled" style="accent-color:var(--accent);width:16px;height:16px;" onchange="updateAsstAdvancedHints()">
+            启用思考链
+          </label>
+          <div class="hint" id="asstReasoningHint">只有支持 reasoning / thinking 的模型才会真正生效。</div>
+        </div>
+        <div class="field">
+          <label>思考力度</label>
+          <select id="asstEditReasoningEffort">
+            <option value="auto">Auto — 自动</option>
+            <option value="low">Low — 轻度思考</option>
+            <option value="medium">Medium — 中等思考</option>
+            <option value="high">High — 深度思考</option>
+            <option value="max">Max — 最大力度</option>
+          </select>
+          <div class="hint">自动 = 只开启思考，不强制指定力度；不支持的模型会忽略。</div>
+        </div>
       </div>
       <div class="field">
         <label>System Prompt</label>
@@ -3353,6 +3386,11 @@ function defaultState() {
         model: 'anthropic/claude-opus-4.6',
         customModel: '',
         temperature: 0.7,
+        cacheStrategy: 'anthropic_1h',
+        maxTokens: 4096,
+        contextLen: 0,
+        reasoningEnabled: false,
+        reasoningEffort: 'auto',
         color: '#C9795E',
         provider: 'openrouter'
       }
@@ -3368,7 +3406,7 @@ function defaultState() {
     autoExportInterval: 50,
     msgsSinceExport: 0,
     reasoningEnabled: false,
-    reasoningEffort: 'medium',
+    reasoningEffort: 'auto',
     uiMode: 'roleplay',
     lastRoleplayConvId: null,
     chatInstruction: CHAT_MODE_INSTRUCTION
@@ -3379,6 +3417,61 @@ function normalizeTemperatureValue(value, fallback = 0.7) {
   const n = parseFloat(value);
   if (!Number.isFinite(n)) return fallback;
   return Math.min(2, Math.max(0, n));
+}
+
+function clampNumber(value, fallback, min, max) {
+  const n = parseInt(value, 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+function cacheStrategyFromLegacyTTL(value) {
+  if (value === 'off') return 'off';
+  if (value === '1h') return 'anthropic_1h';
+  return 'auto';
+}
+
+function normalizeCacheStrategy(value, fallback = 'auto') {
+  const v = String(value || '').trim();
+  if (v === 'anthropic_1h' || v === 'auto' || v === 'off') return v;
+  if (v === '1h') return 'anthropic_1h';
+  if (v === '') return 'auto';
+  return fallback;
+}
+
+function normalizeReasoningEffort(value, fallback = 'auto') {
+  const v = String(value || '').trim();
+  return ['auto', 'low', 'medium', 'high', 'max'].includes(v) ? v : fallback;
+}
+
+function normalizeAssistantRuntimeSettings(asst, data = state) {
+  if (!asst) return asst;
+  asst.cacheStrategy = normalizeCacheStrategy(asst.cacheStrategy, cacheStrategyFromLegacyTTL(data?.cacheTTL));
+  asst.maxTokens = clampNumber(asst.maxTokens ?? data?.maxTokens, 4096, 256, 128000);
+  asst.contextLen = clampNumber(asst.contextLen ?? data?.contextLen, 0, 0, 9999);
+  asst.reasoningEnabled = (asst.reasoningEnabled !== undefined) ? !!asst.reasoningEnabled : !!data?.reasoningEnabled;
+  asst.reasoningEffort = normalizeReasoningEffort(asst.reasoningEffort, data?.reasoningEffort || 'auto');
+  return asst;
+}
+
+function getAssistantCacheStrategy(asst = getActiveAssistant()) {
+  return normalizeCacheStrategy(asst?.cacheStrategy, cacheStrategyFromLegacyTTL(state.cacheTTL));
+}
+
+function getAssistantMaxTokens(asst = getActiveAssistant()) {
+  return clampNumber(asst?.maxTokens ?? state.maxTokens, 4096, 256, 128000);
+}
+
+function getAssistantContextLen(asst = getActiveAssistant()) {
+  return clampNumber(asst?.contextLen ?? state.contextLen, 0, 0, 9999);
+}
+
+function isAssistantReasoningEnabled(asst = getActiveAssistant()) {
+  return (asst?.reasoningEnabled !== undefined) ? !!asst.reasoningEnabled : !!state.reasoningEnabled;
+}
+
+function getAssistantReasoningEffort(asst = getActiveAssistant()) {
+  return normalizeReasoningEffort(asst?.reasoningEffort, state.reasoningEffort || 'auto');
 }
 
 function normalizeModelEntries(models) {
@@ -3586,7 +3679,10 @@ function normalizeAssistantOrderForData(data) {
   data.assistantOrder = data.assistantOrder.filter(id => data.assistants[id]);
   for (const id of ids) {
     const asst = data.assistants[id];
-    if (asst) asst.temperature = normalizeTemperatureValue(asst.temperature, fallbackTemp);
+    if (asst) {
+      asst.temperature = normalizeTemperatureValue(asst.temperature, fallbackTemp);
+      normalizeAssistantRuntimeSettings(asst, data);
+    }
     if (!data.assistantOrder.includes(id)) data.assistantOrder.push(id);
   }
   return data;
@@ -4082,7 +4178,7 @@ function importLocalBackup(event) {
       state.maxTokens = data.maxTokens || 4096;
       state.temperature = data.temperature ?? 0.7;
       state.reasoningEnabled = data.reasoningEnabled ?? false;
-      state.reasoningEffort = data.reasoningEffort || 'medium';
+      state.reasoningEffort = data.reasoningEffort || 'auto';
       state.memories = data.memories || [];
       state.webdav = keepWebdav;
       state.autoExport = keepAutoExport;
@@ -4179,14 +4275,15 @@ function getActiveConv() {
 }
 
 function getActiveAssistant() {
+  normalizeAssistantOrderForData(state);
   const id = state.activeAssistantId;
-  if (id && state.assistants[id]) return state.assistants[id];
+  if (id && state.assistants[id]) return normalizeAssistantRuntimeSettings(state.assistants[id], state);
   // Fallback to first assistant
   normalizeAssistantOrderForData(state);
   const first = getOrderedAssistants()[0];
   if (first) { state.activeAssistantId = first.id; return first; }
   // Create default if none exist
-  const def = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', temperature: 0.7, color: '#C9795E', provider: 'openrouter' };
+  const def = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', temperature: 0.7, cacheStrategy: 'anthropic_1h', maxTokens: 4096, contextLen: 0, reasoningEnabled: false, reasoningEffort: 'auto', color: '#C9795E', provider: 'openrouter' };
   state.assistants['asst_default'] = def;
   state.assistantOrder = ['asst_default'];
   state.activeAssistantId = 'asst_default';
@@ -4682,6 +4779,44 @@ function rebuildAsstModelOptions(providerId, selectedModel) {
 function onProviderChange() {
   const prov = document.getElementById('asstEditProvider').value;
   rebuildAsstModelOptions(prov, '');
+  updateAsstAdvancedHints();
+}
+
+function getAsstEditSelectedModel() {
+  const model = document.getElementById('asstEditModel')?.value || '';
+  const customModel = document.getElementById('asstEditCustomModel')?.value.trim() || '';
+  return customModel || model;
+}
+
+function updateAsstAdvancedHints() {
+  const providerId = document.getElementById('asstEditProvider')?.value || getDefaultProviderId();
+  const providerCfg = getProviderConfig(providerId);
+  const providerKind = providerCfg?.kind === 'openrouter' ? 'openrouter' : 'generic';
+  const model = getAsstEditSelectedModel();
+  const family = getModelProvider(model);
+  const cacheStrategy = document.getElementById('asstEditCacheStrategy')?.value || 'auto';
+  const cacheHint = document.getElementById('asstCacheHint');
+  const reasoningHint = document.getElementById('asstReasoningHint');
+  if (cacheHint) {
+    if (providerKind !== 'openrouter') {
+      cacheHint.textContent = '当前供应商是 OpenAI 兼容接口，前端不会发送 OpenRouter 专用缓存参数。';
+    } else if (family === 'anthropic') {
+      cacheHint.textContent = cacheStrategy === 'anthropic_1h'
+        ? '当前是 Claude 模型，会发送 1 小时显式缓存参数。'
+        : (cacheStrategy === 'off' ? '已关闭显式缓存；是否命中缓存由供应商自己决定。' : '当前是 Claude 模型，自动模式会使用默认 5 分钟显式缓存。');
+    } else {
+      cacheHint.textContent = '当前不是 Claude 模型，不会强行发送 1 小时缓存；是否命中看供应商自己的缓存规则。';
+    }
+  }
+  if (reasoningHint) {
+    if (providerKind !== 'openrouter') {
+      reasoningHint.textContent = '当前供应商是 OpenAI 兼容接口，前端不会发送 OpenRouter 专用思考参数。';
+    } else if (family === 'anthropic') {
+      reasoningHint.textContent = '当前是 Claude 模型，开启后会发送 OpenRouter reasoning 参数；启用时 temperature 会自动忽略。';
+    } else {
+      reasoningHint.textContent = '当前模型不一定支持 reasoning；开启后只在模型和供应商支持时生效。';
+    }
+  }
 }
 
 function showAsstEdit(asstId) {
@@ -4691,7 +4826,7 @@ function showAsstEdit(asstId) {
 
   const defaultProvider = getDefaultProviderId();
   const defaultModel = getProviderModelList(defaultProvider)[0]?.value || '';
-  const asst = isNew ? { name: '', systemPrompt: '', chatSystemPrompt: '', model: defaultModel, customModel: '', temperature: normalizeTemperatureValue(state.temperature, 0.7), color: ASST_COLORS[Object.keys(state.assistants).length % ASST_COLORS.length], provider: defaultProvider } : state.assistants[asstId];
+  const asst = isNew ? { name: '', systemPrompt: '', chatSystemPrompt: '', model: defaultModel, customModel: '', temperature: normalizeTemperatureValue(state.temperature, 0.7), cacheStrategy: 'auto', maxTokens: 4096, contextLen: 0, reasoningEnabled: false, reasoningEffort: 'auto', color: ASST_COLORS[Object.keys(state.assistants).length % ASST_COLORS.length], provider: defaultProvider } : normalizeAssistantRuntimeSettings(state.assistants[asstId], state);
   const providerId = (asst.provider && getProviderConfig(asst.provider)) ? asst.provider : defaultProvider;
 
   document.getElementById('asstEditName').value = asst.name || '';
@@ -4699,6 +4834,12 @@ function showAsstEdit(asstId) {
   rebuildAsstModelOptions(providerId, asst.model || getProviderModelList(providerId)[0]?.value || '');
   document.getElementById('asstEditCustomModel').value = asst.customModel || '';
   document.getElementById('asstEditTemperature').value = normalizeTemperatureValue(asst.temperature, normalizeTemperatureValue(state.temperature, 0.7));
+  document.getElementById('asstEditCacheStrategy').value = getAssistantCacheStrategy(asst);
+  document.getElementById('asstEditMaxTokens').value = getAssistantMaxTokens(asst);
+  document.getElementById('asstEditContextLen').value = getAssistantContextLen(asst);
+  document.getElementById('asstEditReasoningEnabled').checked = isAssistantReasoningEnabled(asst);
+  document.getElementById('asstEditReasoningEffort').value = getAssistantReasoningEffort(asst);
+  updateAsstAdvancedHints();
   document.getElementById('asstEditSP').value = asst.systemPrompt || '';
   document.getElementById('asstEditChatSP').value = asst.chatSystemPrompt || '';
   document.getElementById('asstDeleteBtn').style.display = (isNew || asstId === 'asst_default') ? 'none' : '';
@@ -4832,6 +4973,11 @@ async function saveAsstEdit() {
   const systemPrompt = document.getElementById('asstEditSP').value;
   const chatSystemPrompt = document.getElementById('asstEditChatSP').value;
   const temperature = normalizeTemperatureValue(document.getElementById('asstEditTemperature').value, 0.7);
+  const cacheStrategy = normalizeCacheStrategy(document.getElementById('asstEditCacheStrategy').value, 'auto');
+  const maxTokens = clampNumber(document.getElementById('asstEditMaxTokens').value, 4096, 256, 128000);
+  const contextLen = clampNumber(document.getElementById('asstEditContextLen').value, 0, 0, 9999);
+  const reasoningEnabled = document.getElementById('asstEditReasoningEnabled').checked;
+  const reasoningEffort = normalizeReasoningEffort(document.getElementById('asstEditReasoningEffort').value, 'auto');
   const color = getSelectedAsstColor();
 
   if (editingAsstId && state.assistants[editingAsstId]) {
@@ -4842,6 +4988,11 @@ async function saveAsstEdit() {
     asst.customModel = customModel;
     asst.provider = provider;
     asst.temperature = temperature;
+    asst.cacheStrategy = cacheStrategy;
+    asst.maxTokens = maxTokens;
+    asst.contextLen = contextLen;
+    asst.reasoningEnabled = reasoningEnabled;
+    asst.reasoningEffort = reasoningEffort;
     asst.systemPrompt = systemPrompt;
     asst.chatSystemPrompt = chatSystemPrompt;
     asst.color = color;
@@ -4850,7 +5001,7 @@ async function saveAsstEdit() {
   } else {
     // Create new
     const id = 'asst_' + Date.now();
-    state.assistants[id] = { id, name, model, customModel, provider, temperature, systemPrompt, chatSystemPrompt, color };
+    state.assistants[id] = { id, name, model, customModel, provider, temperature, cacheStrategy, maxTokens, contextLen, reasoningEnabled, reasoningEffort, systemPrompt, chatSystemPrompt, color };
     normalizeAssistantOrderForData(state);
     if (!state.assistantOrder.includes(id)) state.assistantOrder.push(id);
     if (editingAsstAvatar) state.assistants[id].avatar = editingAsstAvatar;
@@ -5291,9 +5442,6 @@ document.addEventListener('click', (e) => {
 function showSettings() {
   normalizeProvidersForData(state);
   renderProviderList();
-  document.getElementById('cacheTTL').value = state.cacheTTL;
-  document.getElementById('maxTokens').value = state.maxTokens;
-  document.getElementById('contextLen').value = state.contextLen || 0;
   // WebDAV
   const wd = state.webdav || {};
   document.getElementById('webdavUrl').value = wd.url || '';
@@ -5303,9 +5451,7 @@ function showSettings() {
   document.getElementById('webdavProxy').value = wd.proxy || '';
   document.getElementById('autoExportToggle').checked = state.autoExport || false;
   document.getElementById('autoExportInterval').value = state.autoExportInterval || 50;
-  document.getElementById('reasoningEnabled').checked = state.reasoningEnabled || false;
   document.getElementById('timestampEnabled').checked = state.timestampEnabled !== false;
-  document.getElementById('reasoningEffort').value = state.reasoningEffort || 'medium';
   document.getElementById('chatInstructionInput').value = (typeof state.chatInstruction === 'string') ? state.chatInstruction : CHAT_MODE_INSTRUCTION;
   const companionCfg = state.companionControl || {};
   const companionUrlEl = document.getElementById('companionControlUrl');
@@ -5322,12 +5468,7 @@ function showSettings() {
 function saveSettings() {
   normalizeProvidersForData(state);
   syncLegacyProviderFields(state);
-  state.cacheTTL = document.getElementById('cacheTTL').value;
-  state.maxTokens = parseInt(document.getElementById('maxTokens').value) || 4096;
-  state.contextLen = parseInt(document.getElementById('contextLen').value) || 0;
-  state.reasoningEnabled = document.getElementById('reasoningEnabled').checked;
   state.timestampEnabled = document.getElementById('timestampEnabled').checked;
-  state.reasoningEffort = document.getElementById('reasoningEffort').value;
   state.chatInstruction = document.getElementById('chatInstructionInput').value;
   const companionUrlEl = document.getElementById('companionControlUrl');
   const companionSecretEl = document.getElementById('companionControlSecret');
@@ -6393,6 +6534,11 @@ async function sendMessage() {
   const asst = getActiveAssistant();
   const asstProvider = asst.provider || getDefaultProviderId();
   const providerCfg = getProviderConfig(asstProvider);
+  const asstCacheStrategy = getAssistantCacheStrategy(asst);
+  const asstMaxTokens = getAssistantMaxTokens(asst);
+  const asstContextLen = getAssistantContextLen(asst);
+  const asstReasoningEnabled = isAssistantReasoningEnabled(asst);
+  const asstReasoningEffort = getAssistantReasoningEffort(asst);
   const useCompanionChat = isCompanionChatEnabled();
 
   if (!useCompanionChat) {
@@ -6507,10 +6653,10 @@ async function sendMessage() {
       messages.push({ role: 'system', content: fullSystem });
     }
 
-    // Apply context length limit (0 = unlimited)
+    // Apply this assistant's context length limit (0 = unlimited)
     let historyMsgs = conv.messages.filter(m => m !== assistantMsg && !m.deleted);
-    if (state.contextLen > 0 && historyMsgs.length > state.contextLen) {
-      historyMsgs = historyMsgs.slice(-state.contextLen);
+    if (asstContextLen > 0 && historyMsgs.length > asstContextLen) {
+      historyMsgs = historyMsgs.slice(-asstContextLen);
     }
     for (let mi = 0; mi < historyMsgs.length; mi++) {
       const m = historyMsgs[mi];
@@ -6541,7 +6687,7 @@ async function sendMessage() {
     // message so SP + conversation history is cached, only new user input is uncached.
     // If first message in conv, fall back to system prompt.
     // OpenRouter uses only the last breakpoint for Gemini.
-    if (providerKind === 'openrouter' && currentProvider === 'google' && messages.length >= 2) {
+    if (providerKind === 'openrouter' && asstCacheStrategy !== 'off' && currentProvider === 'google' && messages.length >= 2) {
       const bpIdx = messages.length - 2; // message before current user input
       const bpMsg = messages[bpIdx];
       if (typeof bpMsg.content === 'string') {
@@ -6560,7 +6706,7 @@ async function sendMessage() {
     const body = {
       model: getModel(),
       messages,
-      max_tokens: state.maxTokens,
+      max_tokens: asstMaxTokens,
       temperature: getActiveAssistantTemperature(),
       stream: true
     };
@@ -6569,17 +6715,19 @@ async function sendMessage() {
 
     if (providerKind === 'openrouter') {
       // OpenRouter: keep cache_control/provider lock/reasoning support.
-      if (currentProvider === 'anthropic') {
+      if (currentProvider === 'anthropic' && asstCacheStrategy !== 'off') {
         const cacheCtl = { type: 'ephemeral' };
-        if (state.cacheTTL) cacheCtl.ttl = state.cacheTTL;
+        if (asstCacheStrategy === 'anthropic_1h') cacheCtl.ttl = '1h';
         body.cache_control = cacheCtl;
         body.provider = { order: ['Anthropic'] };
       }
       // Google Gemini: cache_control breakpoint already placed on messages above
       // Other providers (OpenAI, etc.): rely on their own implicit caching
 
-      if (state.reasoningEnabled) {
-        body.reasoning = { effort: state.reasoningEffort || 'medium' };
+      if (asstReasoningEnabled) {
+        body.reasoning = (asstReasoningEffort && asstReasoningEffort !== 'auto')
+          ? { effort: asstReasoningEffort }
+          : { enabled: true };
         // Anthropic requires temperature=1 when thinking is enabled
         delete body.temperature;
       }
@@ -6815,12 +6963,13 @@ function updateCacheIndicator(cached, cacheWrite) {
   if (totalCached > 0) {
     cacheState.tokens = totalCached;
     cacheState.lastRefresh = Date.now();
-    // TTL: Anthropic respects user setting; Gemini/others always ~5min
+    // TTL: only Claude 1小时策略 uses 1h; other visible/implicit caches are treated as short lived.
     const provider = getModelProvider();
-    if (provider === 'anthropic') {
-      cacheState.ttlMs = state.cacheTTL === '1h' ? 3600000 : 300000;
+    const strategy = getAssistantCacheStrategy();
+    if (provider === 'anthropic' && strategy === 'anthropic_1h') {
+      cacheState.ttlMs = 3600000;
     } else {
-      cacheState.ttlMs = 300000; // 5min for Gemini and others
+      cacheState.ttlMs = 300000;
     }
     updateCacheCountdown();
     startCacheTimer();
@@ -7537,7 +7686,7 @@ async function doRestore() {
       state.maxTokens = data.maxTokens || 4096;
       state.temperature = data.temperature ?? 0.7;
       state.reasoningEnabled = data.reasoningEnabled ?? false;
-      state.reasoningEffort = data.reasoningEffort || 'medium';
+      state.reasoningEffort = data.reasoningEffort || 'auto';
       state.memories = data.memories || [];
       state.webdav = keepWebdav;
 
