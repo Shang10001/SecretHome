@@ -704,6 +704,67 @@ button.msg-status-dot:focus-visible {
   color: var(--red);
 }
 
+/* ========== PROVIDER MANAGER ========== */
+.provider-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.provider-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.provider-item-info {
+  flex: 1;
+  min-width: 0;
+}
+.provider-item-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.provider-item-meta {
+  font-size: 12px;
+  color: var(--text3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+.provider-item-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.provider-mini-btn {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  font-family: var(--font);
+  font-size: 12px;
+  cursor: pointer;
+}
+.provider-mini-btn:hover {
+  background: var(--surface3);
+  color: var(--text);
+}
+.provider-model-textarea {
+  min-height: 150px;
+  font-family: var(--mono) !important;
+  font-size: 12px !important;
+}
+
 /* ========== CONVERSATIONS LIST ========== */
 /* ========== ASSISTANT LIST ========== */
 .asst-list {
@@ -2739,28 +2800,12 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     <!-- GENERAL TAB -->
     <div class="tab-panel active" id="tab-general">
       <div class="field">
-        <label>OpenRouter API Key</label>
-        <input type="password" id="apiKey" placeholder="sk-or-v1-..." autocomplete="off">
-      </div>
-      <div class="field">
-        <label>OpenRouter Endpoint</label>
-        <input type="text" id="openrouterEndpoint" placeholder="https://openrouter.ai/api/v1/chat/completions" autocomplete="off">
-      </div>
-      <div class="field">
-        <label>SiliconFlow API Key</label>
-        <input type="password" id="siliconflowApiKey" placeholder="sk-..." autocomplete="off">
-      </div>
-      <div class="field">
-        <label>SiliconFlow Endpoint</label>
-        <input type="text" id="siliconflowEndpoint" placeholder="https://api.siliconflow.cn/v1/chat/completions" autocomplete="off">
-      </div>
-      <div class="field">
-        <label>DeepSeek API Key</label>
-        <input type="password" id="deepseekApiKey" placeholder="sk-..." autocomplete="off">
-      </div>
-      <div class="field">
-        <label>DeepSeek Endpoint</label>
-        <input type="text" id="deepseekEndpoint" placeholder="https://api.deepseek.com/v1/chat/completions" autocomplete="off">
+        <label style="display:flex;justify-content:space-between;align-items:center;">
+          模型供应商
+          <span style="font-weight:400;font-size:12px;color:var(--accent);cursor:pointer;" onclick="showProviderEdit()">+ 新增</span>
+        </label>
+        <div class="provider-list" id="providerList"></div>
+        <div class="hint">在这里统一维护 API Key、Endpoint/Base URL 和模型列表。之后到“编辑助手”里选择供应商和模型。</div>
       </div>
 
       <div class="field">
@@ -2973,6 +3018,46 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       <div style="font-family:var(--mono);font-size:11px;padding:4px 0;" id="storageUsage">存储: 检测中...</div>
     </div>
 
+  </div>
+</div>
+
+<!-- PROVIDER EDIT MODAL -->
+<div class="modal-overlay" id="providerEditModal">
+  <div class="modal">
+    <h2 id="providerEditTitle">新增供应商 <button onclick="closeModal('providerEditModal')">&#10005;</button></h2>
+    <div class="field">
+      <label>供应商名称</label>
+      <input type="text" id="providerEditName" placeholder="例如：OpenAI / 阿里云 / 自己的 VPS" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>API Key</label>
+      <input type="password" id="providerEditApiKey" placeholder="只保存在本机浏览器和本地备份里" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Endpoint / Base URL</label>
+      <input type="text" id="providerEditEndpoint" placeholder="https://api.example.com/v1 或完整 chat/completions 地址" autocomplete="off">
+      <div class="hint">如果填写到 /v1，发送时会自动补成 /v1/chat/completions；如果你填完整地址，会直接使用。</div>
+    </div>
+    <div class="field">
+      <label>接口类型</label>
+      <select id="providerEditKind">
+        <option value="generic">OpenAI 兼容</option>
+        <option value="openrouter">OpenRouter</option>
+      </select>
+      <div class="hint">普通供应商选“OpenAI 兼容”即可；OpenRouter 会保留缓存和思考链相关参数。</div>
+    </div>
+    <div class="field">
+      <label>模型名称 / 模型 ID</label>
+      <textarea id="providerEditModels" class="provider-model-textarea" placeholder="每行一个模型，例如：
+anthropic/claude-opus-4.6
+gpt-4o
+deepseek-chat"></textarea>
+      <div class="hint">每行写一个模型名称。也可以写“模型ID | 显示名称”，不写显示名称时会直接显示模型 ID。</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="saveProviderEdit()">保存</button>
+      <button class="btn" id="providerDeleteBtn" onclick="deleteProviderEdit()" style="display:none;color:var(--red);">删除</button>
+    </div>
   </div>
 </div>
 
@@ -3189,6 +3274,53 @@ const CHAT_MODE_INSTRUCTION = `【聊天模式】
 用 ||| 分隔多条消息，一次1~4条，每条一两句。口语化、简短。
 只发"打字发出去"的文字——不写动作/神态/旁白，不用Markdown。`;
 
+function defaultProviders() {
+  return {
+    openrouter: {
+      id: 'openrouter',
+      name: 'OpenRouter',
+      apiKey: '',
+      endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+      kind: 'openrouter',
+      models: [
+        { value: 'anthropic/claude-opus-4.6', label: 'Claude Opus 4.6 (笨笨)' },
+        { value: 'anthropic/claude-opus-4.5', label: 'Claude Opus 4.5' },
+        { value: 'anthropic/claude-sonnet-4.5', label: 'Claude Sonnet 4.5' },
+        { value: 'google/gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview' },
+        { value: 'google/gemini-2.5-pro-preview', label: 'Gemini 2.5 Pro Preview' },
+        { value: 'openai/gpt-4o-2024-11-20', label: 'GPT-4o (2024-11-20)' },
+        { value: 'z-ai/glm-5.2', label: 'GLM 5.2' },
+        { value: 'z-ai/glm-5.1', label: 'GLM 5.1' }
+      ]
+    },
+    siliconflow: {
+      id: 'siliconflow',
+      name: 'SiliconFlow',
+      apiKey: '',
+      endpoint: 'https://api.siliconflow.cn/v1/chat/completions',
+      kind: 'generic',
+      models: [
+        { value: 'deepseek-ai/DeepSeek-V4-Pro', label: 'DeepSeek V4 Pro' },
+        { value: 'Pro/zai-org/GLM-5.1', label: 'GLM 5.1' }
+      ]
+    },
+    deepseek: {
+      id: 'deepseek',
+      name: 'DeepSeek',
+      apiKey: '',
+      endpoint: 'https://api.deepseek.com/v1/chat/completions',
+      kind: 'generic',
+      models: [
+        { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' }
+      ]
+    }
+  };
+}
+
+function defaultProviderOrder() {
+  return ['openrouter', 'siliconflow', 'deepseek'];
+}
+
 function defaultState() {
   return {
     apiKey: '',
@@ -3197,6 +3329,8 @@ function defaultState() {
     siliconflowEndpoint: 'https://api.siliconflow.cn/v1/chat/completions',
     deepseekApiKey: '',
     deepseekEndpoint: 'https://api.deepseek.com/v1/chat/completions',
+    providers: defaultProviders(),
+    providerOrder: defaultProviderOrder(),
     cacheTTL: '1h',
     maxTokens: 4096,
     contextLen: 0,
@@ -3236,6 +3370,179 @@ function normalizeTemperatureValue(value, fallback = 0.7) {
   const n = parseFloat(value);
   if (!Number.isFinite(n)) return fallback;
   return Math.min(2, Math.max(0, n));
+}
+
+function normalizeModelEntries(models) {
+  const seen = new Set();
+  const result = [];
+  const add = (value, label) => {
+    value = String(value || '').trim();
+    label = String(label || value).trim();
+    if (!value || seen.has(value)) return;
+    seen.add(value);
+    result.push({ value, label: label || value });
+  };
+  if (Array.isArray(models)) {
+    for (const m of models) {
+      if (typeof m === 'string') add(m, m);
+      else if (m && typeof m === 'object') add(m.value || m.id || m.name, m.label || m.name || m.value || m.id);
+    }
+  }
+  return result;
+}
+
+function parseProviderModelText(text) {
+  return String(text || '').split(/\n+/).map(line => line.trim()).filter(Boolean).map(line => {
+    const parts = line.split('|').map(x => x.trim()).filter(Boolean);
+    return { value: parts[0] || '', label: parts[1] || parts[0] || '' };
+  });
+}
+
+function providerModelsToText(models) {
+  return normalizeModelEntries(models).map(m => {
+    if (m.label && m.label !== m.value) return `${m.value} | ${m.label}`;
+    return m.value;
+  }).join('\n');
+}
+
+function normalizeProviderEndpoint(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  try {
+    const u = new URL(raw);
+    const path = u.pathname.replace(/\/+$/, '');
+    if (/\/chat\/completions$/.test(path)) return raw.replace(/\/+$/, '');
+    if (path === '' || path === '/') {
+      u.pathname = '/v1/chat/completions';
+      return u.toString();
+    }
+    if (/\/v\d+(?:\.\d+)?$/.test(path) || /\/api\/v\d+(?:\.\d+)?$/.test(path)) {
+      u.pathname = path + '/chat/completions';
+      return u.toString();
+    }
+  } catch(e) {}
+  return raw.replace(/\/+$/, '');
+}
+
+function normalizeProvidersForData(data) {
+  const defaults = defaultProviders();
+  if (!data.providers || typeof data.providers !== 'object') data.providers = {};
+
+  const legacy = {
+    openrouter: { apiKey: data.apiKey || '', endpoint: data.openrouterEndpoint || defaults.openrouter.endpoint },
+    siliconflow: { apiKey: data.siliconflowApiKey || '', endpoint: data.siliconflowEndpoint || defaults.siliconflow.endpoint },
+    deepseek: { apiKey: data.deepseekApiKey || '', endpoint: data.deepseekEndpoint || defaults.deepseek.endpoint }
+  };
+
+  for (const id of defaultProviderOrder()) {
+    const existing = data.providers[id] || {};
+    data.providers[id] = {
+      ...defaults[id],
+      ...existing,
+      id,
+      apiKey: existing.apiKey || legacy[id].apiKey || '',
+      endpoint: existing.endpoint || legacy[id].endpoint || defaults[id].endpoint,
+      kind: existing.kind || defaults[id].kind,
+      models: normalizeModelEntries(existing.models && existing.models.length ? existing.models : defaults[id].models)
+    };
+  }
+
+  for (const [id, cfg] of Object.entries(data.providers)) {
+    if (!cfg || typeof cfg !== 'object') { delete data.providers[id]; continue; }
+    cfg.id = cfg.id || id;
+    cfg.name = String(cfg.name || cfg.id || '未命名供应商').trim();
+    cfg.apiKey = String(cfg.apiKey || '').trim();
+    cfg.endpoint = String(cfg.endpoint || '').trim();
+    cfg.kind = cfg.kind === 'openrouter' ? 'openrouter' : 'generic';
+    cfg.models = normalizeModelEntries(cfg.models);
+  }
+
+  if (!Array.isArray(data.providerOrder)) data.providerOrder = defaultProviderOrder();
+  data.providerOrder = data.providerOrder.filter(id => data.providers[id]);
+  for (const id of Object.keys(data.providers)) {
+    if (!data.providerOrder.includes(id)) data.providerOrder.push(id);
+  }
+  if (data.providerOrder.length === 0) {
+    data.providers = defaultProviders();
+    data.providerOrder = defaultProviderOrder();
+  }
+  syncLegacyProviderFields(data);
+  return data;
+}
+
+function syncLegacyProviderFields(data = state) {
+  if (!data || !data.providers) return data;
+  const get = id => data.providers[id] || {};
+  data.apiKey = get('openrouter').apiKey || '';
+  data.openrouterEndpoint = get('openrouter').endpoint || 'https://openrouter.ai/api/v1/chat/completions';
+  data.siliconflowApiKey = get('siliconflow').apiKey || '';
+  data.siliconflowEndpoint = get('siliconflow').endpoint || 'https://api.siliconflow.cn/v1/chat/completions';
+  data.deepseekApiKey = get('deepseek').apiKey || '';
+  data.deepseekEndpoint = get('deepseek').endpoint || 'https://api.deepseek.com/v1/chat/completions';
+  return data;
+}
+
+function normalizeStateData(data) {
+  normalizeProvidersForData(data);
+  normalizeAssistantOrderForData(data);
+  migrateLegacyAccentForData(data);
+  const fallbackProvider = data.providerOrder?.[0] || 'openrouter';
+  for (const id in data.assistants || {}) {
+    const a = data.assistants[id];
+    if (!a) continue;
+    if (!a.provider || !data.providers[a.provider]) a.provider = fallbackProvider;
+    const models = data.providers[a.provider]?.models || [];
+    if (!a.model && models.length) a.model = models[0].value;
+  }
+  return data;
+}
+
+function getOrderedProviders() {
+  normalizeProvidersForData(state);
+  return state.providerOrder.map(id => state.providers[id]).filter(Boolean);
+}
+
+function getDefaultProviderId() {
+  normalizeProvidersForData(state);
+  return state.providerOrder[0] || 'openrouter';
+}
+
+function getProviderConfig(id) {
+  normalizeProvidersForData(state);
+  return state.providers[id] || state.providers[getDefaultProviderId()] || null;
+}
+
+function getProviderEndpoint(cfg) {
+  return normalizeProviderEndpoint(cfg?.endpoint || '');
+}
+
+function getProviderModelList(providerId) {
+  const cfg = getProviderConfig(providerId);
+  return cfg ? normalizeModelEntries(cfg.models) : [];
+}
+
+function providerDisplayName(providerId) {
+  const cfg = getProviderConfig(providerId);
+  return cfg?.name || providerId || '供应商';
+}
+
+function cloneProvidersWithoutApiKeys(providers) {
+  const out = {};
+  for (const [id, cfg] of Object.entries(providers || {})) {
+    out[id] = { ...cfg, apiKey: '' };
+  }
+  return out;
+}
+
+function mergeProviderSecrets(incomingProviders, currentProviders) {
+  const merged = {};
+  for (const [id, cfg] of Object.entries(incomingProviders || {})) {
+    merged[id] = { ...cfg };
+    if (!merged[id].apiKey && currentProviders?.[id]?.apiKey) {
+      merged[id].apiKey = currentProviders[id].apiKey;
+    }
+  }
+  return merged;
 }
 
 function migrateLegacyAccentForData(data) {
@@ -3323,10 +3630,10 @@ function loadState() {
         delete merged.model;
         delete merged.customModel;
       }
-      return normalizeAssistantOrderForData(migrateLegacyAccentForData(merged));
+      return normalizeStateData(merged);
     }
   } catch(e) {}
-  return normalizeAssistantOrderForData(migrateLegacyAccentForData({ ...defaultState(), _activeConvData: null }));
+  return normalizeStateData({ ...defaultState(), _activeConvData: null });
 }
 
 let state = loadState();
@@ -3706,6 +4013,8 @@ async function exportLocalBackup(silent) {
       siliconflowEndpoint: state.siliconflowEndpoint,
       deepseekApiKey: state.deepseekApiKey,
       deepseekEndpoint: state.deepseekEndpoint,
+      providers: state.providers,
+      providerOrder: state.providerOrder,
       assistants: state.assistants,
       assistantOrder: state.assistantOrder,
       activeAssistantId: state.activeAssistantId,
@@ -3751,12 +4060,15 @@ function importLocalBackup(event) {
       if (!confirm('导入将覆盖当前所有数据（包括 API Key，WebDAV 配置不受影响），确定？')) return;
       const keepWebdav = state.webdav;
       const keepAutoExport = state.autoExport;
+      state.providers = data.providers || {};
+      state.providerOrder = data.providerOrder || state.providerOrder || defaultProviderOrder();
       state.apiKey = data.apiKey || state.apiKey;
       state.openrouterEndpoint = data.openrouterEndpoint || state.openrouterEndpoint;
       state.siliconflowApiKey = data.siliconflowApiKey || state.siliconflowApiKey;
       state.siliconflowEndpoint = data.siliconflowEndpoint || state.siliconflowEndpoint;
       state.deepseekApiKey = data.deepseekApiKey || state.deepseekApiKey;
       state.deepseekEndpoint = data.deepseekEndpoint || state.deepseekEndpoint;
+      normalizeProvidersForData(state);
       state.cacheTTL = data.cacheTTL || '1h';
       state.maxTokens = data.maxTokens || 4096;
       state.temperature = data.temperature ?? 0.7;
@@ -4322,71 +4634,45 @@ async function jumpToSearchResult(convId, msgIndex) {
 // ============ ASSISTANT EDIT ============
 let editingAsstId = null;
 
-const PROVIDER_MODELS = {
-  openrouter: [
-    { group: 'Opus', models: [
-      { value: 'anthropic/claude-opus-4.6', label: 'Claude Opus 4.6 (笨笨)' },
-      { value: 'anthropic/claude-opus-4.5', label: 'Claude Opus 4.5' },
-    ]},
-    { group: 'Sonnet', models: [
-      { value: 'anthropic/claude-sonnet-4.5', label: 'Claude Sonnet 4.5' },
-    ]},
-    { group: 'Google', models: [
-      { value: 'google/gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview' },
-      { value: 'google/gemini-2.5-pro-preview', label: 'Gemini 2.5 Pro Preview' },
-    ]},
-    { group: 'OpenAI', models: [
-      { value: 'openai/gpt-4o-2024-11-20', label: 'GPT-4o (2024-11-20)' },
-    ]},
-    { group: 'GLM', models: [
-      { value: 'z-ai/glm-5.2', label: 'GLM 5.2' },
-      { value: 'z-ai/glm-5.1', label: 'GLM 5.1' },
-    ]},
-  ],
-  siliconflow: [
-    { group: 'DeepSeek', models: [
-      { value: 'deepseek-ai/DeepSeek-V4-Pro', label: 'DeepSeek V4 Pro' },
-    ]},
-    { group: 'GLM', models: [
-      { value: 'Pro/zai-org/GLM-5.1', label: 'GLM 5.1' },
-    ]},
-  ],
-  deepseek: [
-    { group: 'DeepSeek', models: [
-      { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
-    ]},
-  ],
-};
+function renderAsstProviderOptions(selectedProvider) {
+  const sel = document.getElementById('asstEditProvider');
+  if (!sel) return;
+  const providers = getOrderedProviders();
+  sel.innerHTML = providers.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+  if (selectedProvider && providers.some(p => p.id === selectedProvider)) sel.value = selectedProvider;
+  else sel.value = providers[0]?.id || '';
+}
 
-function onProviderChange() {
-  const prov = document.getElementById('asstEditProvider').value;
+function rebuildAsstModelOptions(providerId, selectedModel) {
   const modelSel = document.getElementById('asstEditModel');
-  const curVal = modelSel.value;
-
-  // Rebuild options
+  if (!modelSel) return;
+  const models = getProviderModelList(providerId);
   modelSel.innerHTML = '';
-  // Blank option for custom model
   const blank = document.createElement('option');
   blank.value = '';
   blank.textContent = '(使用自定义模型)';
   modelSel.appendChild(blank);
 
-  const groups = PROVIDER_MODELS[prov] || [];
-  for (const g of groups) {
-    const og = document.createElement('optgroup');
-    og.label = g.group;
-    for (const m of g.models) {
-      const opt = document.createElement('option');
-      opt.value = m.value;
-      opt.textContent = m.label;
-      og.appendChild(opt);
-    }
-    modelSel.appendChild(og);
+  for (const m of models) {
+    const opt = document.createElement('option');
+    opt.value = m.value;
+    opt.textContent = m.label || m.value;
+    modelSel.appendChild(opt);
   }
 
-  // Try to restore previous selection if it still exists
-  const exists = Array.from(modelSel.options).some(o => o.value === curVal);
-  modelSel.value = exists ? curVal : (groups[0]?.models[0]?.value || '');
+  const exists = Array.from(modelSel.options).some(o => o.value === selectedModel);
+  if (selectedModel && !exists) {
+    const opt = document.createElement('option');
+    opt.value = selectedModel;
+    opt.textContent = shortModelName(selectedModel) + '（当前）';
+    modelSel.appendChild(opt);
+  }
+  modelSel.value = selectedModel || (models[0]?.value || '');
+}
+
+function onProviderChange() {
+  const prov = document.getElementById('asstEditProvider').value;
+  rebuildAsstModelOptions(prov, '');
 }
 
 function showAsstEdit(asstId) {
@@ -4394,12 +4680,14 @@ function showAsstEdit(asstId) {
   const isNew = !asstId;
   document.getElementById('asstEditTitle').innerHTML = (isNew ? '新助手' : '编辑助手') + ' <button onclick="closeModal(\'asstEditModal\')">&#10005;</button>';
 
-  const asst = isNew ? { name: '', systemPrompt: '', chatSystemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', temperature: normalizeTemperatureValue(state.temperature, 0.7), color: ASST_COLORS[Object.keys(state.assistants).length % ASST_COLORS.length], provider: 'openrouter' } : state.assistants[asstId];
+  const defaultProvider = getDefaultProviderId();
+  const defaultModel = getProviderModelList(defaultProvider)[0]?.value || '';
+  const asst = isNew ? { name: '', systemPrompt: '', chatSystemPrompt: '', model: defaultModel, customModel: '', temperature: normalizeTemperatureValue(state.temperature, 0.7), color: ASST_COLORS[Object.keys(state.assistants).length % ASST_COLORS.length], provider: defaultProvider } : state.assistants[asstId];
+  const providerId = (asst.provider && getProviderConfig(asst.provider)) ? asst.provider : defaultProvider;
 
   document.getElementById('asstEditName').value = asst.name || '';
-  document.getElementById('asstEditProvider').value = asst.provider || 'openrouter';
-  onProviderChange();
-  document.getElementById('asstEditModel').value = asst.model || 'anthropic/claude-opus-4.6';
+  renderAsstProviderOptions(providerId);
+  rebuildAsstModelOptions(providerId, asst.model || getProviderModelList(providerId)[0]?.value || '');
   document.getElementById('asstEditCustomModel').value = asst.customModel || '';
   document.getElementById('asstEditTemperature').value = normalizeTemperatureValue(asst.temperature, normalizeTemperatureValue(state.temperature, 0.7));
   document.getElementById('asstEditSP').value = asst.systemPrompt || '';
@@ -4992,12 +5280,8 @@ document.addEventListener('click', (e) => {
 
 // ============ SETTINGS ============
 function showSettings() {
-  document.getElementById('apiKey').value = state.apiKey;
-  document.getElementById('openrouterEndpoint').value = state.openrouterEndpoint || 'https://openrouter.ai/api/v1/chat/completions';
-  document.getElementById('siliconflowApiKey').value = state.siliconflowApiKey || '';
-  document.getElementById('siliconflowEndpoint').value = state.siliconflowEndpoint || 'https://api.siliconflow.cn/v1/chat/completions';
-  document.getElementById('deepseekApiKey').value = state.deepseekApiKey || '';
-  document.getElementById('deepseekEndpoint').value = state.deepseekEndpoint || 'https://api.deepseek.com/v1/chat/completions';
+  normalizeProvidersForData(state);
+  renderProviderList();
   document.getElementById('cacheTTL').value = state.cacheTTL;
   document.getElementById('maxTokens').value = state.maxTokens;
   document.getElementById('contextLen').value = state.contextLen || 0;
@@ -5027,12 +5311,8 @@ function showSettings() {
 }
 
 function saveSettings() {
-  state.apiKey = document.getElementById('apiKey').value.trim();
-  state.openrouterEndpoint = document.getElementById('openrouterEndpoint').value.trim() || 'https://openrouter.ai/api/v1/chat/completions';
-  state.siliconflowApiKey = document.getElementById('siliconflowApiKey').value.trim();
-  state.siliconflowEndpoint = document.getElementById('siliconflowEndpoint').value.trim() || 'https://api.siliconflow.cn/v1/chat/completions';
-  state.deepseekApiKey = document.getElementById('deepseekApiKey').value.trim();
-  state.deepseekEndpoint = document.getElementById('deepseekEndpoint').value.trim() || 'https://api.deepseek.com/v1/chat/completions';
+  normalizeProvidersForData(state);
+  syncLegacyProviderFields(state);
   state.cacheTTL = document.getElementById('cacheTTL').value;
   state.maxTokens = parseInt(document.getElementById('maxTokens').value) || 4096;
   state.contextLen = parseInt(document.getElementById('contextLen').value) || 0;
@@ -5060,6 +5340,110 @@ function saveSettings() {
 
 function restoreChatInstruction() {
   document.getElementById('chatInstructionInput').value = CHAT_MODE_INSTRUCTION;
+}
+
+// ============ PROVIDER MANAGER ============
+let editingProviderId = null;
+
+function renderProviderList() {
+  const list = document.getElementById('providerList');
+  if (!list) return;
+  normalizeProvidersForData(state);
+  const providers = getOrderedProviders();
+  if (providers.length === 0) {
+    list.innerHTML = '<div class="hint">还没有供应商，请新增一个。</div>';
+    return;
+  }
+  list.innerHTML = providers.map(p => {
+    const modelCount = normalizeModelEntries(p.models).length;
+    const endpoint = p.endpoint ? p.endpoint.replace(/^https?:\/\//, '') : '未填写 Endpoint';
+    const keyState = p.apiKey ? '已填 Key' : '未填 Key';
+    return `
+      <div class="provider-item">
+        <div class="provider-item-info">
+          <div class="provider-item-name">${esc(p.name)}</div>
+          <div class="provider-item-meta">${keyState} · ${modelCount} 个模型 · ${esc(endpoint)}</div>
+        </div>
+        <div class="provider-item-actions">
+          <button class="provider-mini-btn" onclick="showProviderEdit('${esc(p.id)}')">编辑</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function showProviderEdit(providerId) {
+  normalizeProvidersForData(state);
+  editingProviderId = providerId || null;
+  const isNew = !providerId;
+  const cfg = isNew ? { name: '', apiKey: '', endpoint: '', kind: 'generic', models: [] } : getProviderConfig(providerId);
+  document.getElementById('providerEditTitle').innerHTML = (isNew ? '新增供应商' : '编辑供应商') + ' <button onclick="closeModal(\'providerEditModal\')">&#10005;</button>';
+  document.getElementById('providerEditName').value = cfg?.name || '';
+  document.getElementById('providerEditApiKey').value = cfg?.apiKey || '';
+  document.getElementById('providerEditEndpoint').value = cfg?.endpoint || '';
+  document.getElementById('providerEditKind').value = cfg?.kind === 'openrouter' ? 'openrouter' : 'generic';
+  document.getElementById('providerEditModels').value = providerModelsToText(cfg?.models || []);
+  document.getElementById('providerDeleteBtn').style.display = (isNew || defaultProviderOrder().includes(providerId)) ? 'none' : '';
+  openModal('providerEditModal', true);
+}
+
+function makeProviderId(name) {
+  const base = String(name || 'provider').trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'provider';
+  let id = base;
+  let n = 1;
+  while (state.providers && state.providers[id]) {
+    id = base + '_' + (++n);
+  }
+  return id;
+}
+
+function saveProviderEdit() {
+  normalizeProvidersForData(state);
+  const name = document.getElementById('providerEditName').value.trim();
+  const apiKey = document.getElementById('providerEditApiKey').value.trim();
+  const endpoint = document.getElementById('providerEditEndpoint').value.trim();
+  const kind = document.getElementById('providerEditKind').value === 'openrouter' ? 'openrouter' : 'generic';
+  const models = normalizeModelEntries(parseProviderModelText(document.getElementById('providerEditModels').value));
+  if (!name) { alert('请输入供应商名称'); return; }
+  if (!endpoint) { alert('请输入 Endpoint 或 Base URL'); return; }
+  if (models.length === 0) { alert('请至少填写一个模型名称'); return; }
+
+  const id = editingProviderId || makeProviderId(name);
+  state.providers[id] = { id, name, apiKey, endpoint, kind, models };
+  if (!state.providerOrder.includes(id)) state.providerOrder.push(id);
+  normalizeProvidersForData(state);
+  syncLegacyProviderFields(state);
+  saveState();
+  renderProviderList();
+  closeModal('providerEditModal');
+  showToast('供应商已保存');
+}
+
+function deleteProviderEdit() {
+  if (!editingProviderId || !state.providers?.[editingProviderId]) return;
+  if (state.providerOrder.length <= 1) { alert('至少需要保留一个供应商'); return; }
+  const name = state.providers[editingProviderId].name || editingProviderId;
+  if (!confirm(`确定删除供应商「${name}」？使用它的助手会改用列表里的第一个供应商。`)) return;
+  delete state.providers[editingProviderId];
+  state.providerOrder = state.providerOrder.filter(id => id !== editingProviderId);
+  const fallback = state.providerOrder[0];
+  for (const id in state.assistants) {
+    const a = state.assistants[id];
+    if (a && a.provider === editingProviderId) {
+      a.provider = fallback;
+      const models = getProviderModelList(fallback);
+      a.model = models[0]?.value || '';
+      a.customModel = '';
+    }
+  }
+  normalizeProvidersForData(state);
+  syncLegacyProviderFields(state);
+  saveState();
+  renderProviderList();
+  updateHeaderAssistant();
+  closeModal('providerEditModal');
+  showToast('供应商已删除');
 }
 
 // ============ MODAL ============
@@ -5998,24 +6382,18 @@ async function sendMessage() {
   if ((!text && !pendingImage) || isStreaming) return;
 
   const asst = getActiveAssistant();
-  const asstProvider = asst.provider || 'openrouter';
+  const asstProvider = asst.provider || getDefaultProviderId();
+  const providerCfg = getProviderConfig(asstProvider);
   const useCompanionChat = isCompanionChatEnabled();
 
   if (!useCompanionChat) {
-    if (asstProvider === 'siliconflow') {
-      if (!state.siliconflowApiKey) {
-        alert('请先在设置中填入 SiliconFlow API Key');
-        showSettings();
-        return;
-      }
-    } else if (asstProvider === 'deepseek') {
-      if (!state.deepseekApiKey) {
-        alert('请先在设置中填入 DeepSeek API Key');
-        showSettings();
-        return;
-      }
-    } else if (!state.apiKey) {
-      alert('请先在设置中填入 OpenRouter API Key，或在“设置 → 伴侣”里开启“用 VPS 作为聊天大脑”');
+    if (!providerCfg || !providerCfg.apiKey) {
+      alert(`请先在设置中为「${providerDisplayName(asstProvider)}」填入 API Key，或在“设置 → 伴侣”里开启“用 VPS 作为聊天大脑”`);
+      showSettings();
+      return;
+    }
+    if (!getProviderEndpoint(providerCfg)) {
+      alert(`请先在设置中为「${providerDisplayName(asstProvider)}」填入 Endpoint 或 Base URL`);
       showSettings();
       return;
     }
@@ -6146,11 +6524,15 @@ async function sendMessage() {
       }
     }
 
+    const currentProvider = getModelProvider();
+    const activeProviderCfg = getProviderConfig(asstProvider);
+    const providerKind = activeProviderCfg?.kind === 'openrouter' ? 'openrouter' : 'generic';
+
     // Gemini explicit caching: put cache_control breakpoint on the second-to-last
     // message so SP + conversation history is cached, only new user input is uncached.
     // If first message in conv, fall back to system prompt.
     // OpenRouter uses only the last breakpoint for Gemini.
-    if (getModelProvider() === 'google' && messages.length >= 2) {
+    if (providerKind === 'openrouter' && currentProvider === 'google' && messages.length >= 2) {
       const bpIdx = messages.length - 2; // message before current user input
       const bpMsg = messages[bpIdx];
       if (typeof bpMsg.content === 'string') {
@@ -6166,8 +6548,6 @@ async function sendMessage() {
       }
     }
 
-    const currentProvider = getModelProvider();
-
     const body = {
       model: getModel(),
       messages,
@@ -6178,23 +6558,8 @@ async function sendMessage() {
 
     let apiUrl, apiHeaders;
 
-    if (asstProvider === 'siliconflow') {
-      // SiliconFlow: OpenAI-compatible, no cache_control
-      apiUrl = state.siliconflowEndpoint || 'https://api.siliconflow.cn/v1/chat/completions';
-      apiHeaders = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${state.siliconflowApiKey}`
-      };
-    } else if (asstProvider === 'deepseek') {
-      // DeepSeek official: OpenAI-compatible, automatic caching
-      apiUrl = state.deepseekEndpoint || 'https://api.deepseek.com/v1/chat/completions';
-      apiHeaders = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${state.deepseekApiKey}`
-      };
-    } else {
-      // OpenRouter
-      // Anthropic: top-level cache_control + provider lock
+    if (providerKind === 'openrouter') {
+      // OpenRouter: keep cache_control/provider lock/reasoning support.
       if (currentProvider === 'anthropic') {
         const cacheCtl = { type: 'ephemeral' };
         if (state.cacheTTL) cacheCtl.ttl = state.cacheTTL;
@@ -6204,19 +6569,25 @@ async function sendMessage() {
       // Google Gemini: cache_control breakpoint already placed on messages above
       // Other providers (OpenAI, etc.): rely on their own implicit caching
 
-      // Add reasoning (extended thinking) if enabled
       if (state.reasoningEnabled) {
         body.reasoning = { effort: state.reasoningEffort || 'medium' };
         // Anthropic requires temperature=1 when thinking is enabled
         delete body.temperature;
       }
 
-      apiUrl = state.openrouterEndpoint || 'https://openrouter.ai/api/v1/chat/completions';
+      apiUrl = getProviderEndpoint(activeProviderCfg);
       apiHeaders = {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${state.apiKey}`,
+        'Authorization': `Bearer ${activeProviderCfg.apiKey}`,
         'HTTP-Referer': 'https://benben-home.local',
         'X-Title': 'BenBen Home'
+      };
+    } else {
+      // Generic OpenAI-compatible provider.
+      apiUrl = getProviderEndpoint(activeProviderCfg);
+      apiHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${activeProviderCfg.apiKey}`
       };
     }
 
@@ -6991,6 +7362,8 @@ async function buildBackupData() {
     timestamp: new Date().toISOString(),
     data: {
       // apiKey 不上传到云端，仅保留在本地备份中
+      providers: cloneProvidersWithoutApiKeys(state.providers),
+      providerOrder: state.providerOrder,
       assistants: state.assistants,
       assistantOrder: state.assistantOrder,
       activeAssistantId: state.activeAssistantId,
@@ -7142,12 +7515,15 @@ async function doRestore() {
     if (mode === 'overwrite') {
       // Full overwrite (restore apiKey from backup, keep webdav)
       const keepWebdav = state.webdav;
+      state.providers = data.providers ? mergeProviderSecrets(data.providers, state.providers) : (state.providers || {});
+      state.providerOrder = data.providerOrder || state.providerOrder || defaultProviderOrder();
       state.apiKey = data.apiKey || state.apiKey;
       state.openrouterEndpoint = data.openrouterEndpoint || state.openrouterEndpoint;
       state.siliconflowApiKey = data.siliconflowApiKey || state.siliconflowApiKey;
       state.siliconflowEndpoint = data.siliconflowEndpoint || state.siliconflowEndpoint;
       state.deepseekApiKey = data.deepseekApiKey || state.deepseekApiKey;
       state.deepseekEndpoint = data.deepseekEndpoint || state.deepseekEndpoint;
+      normalizeProvidersForData(state);
       state.cacheTTL = data.cacheTTL || '1h';
       state.maxTokens = data.maxTokens || 4096;
       state.temperature = data.temperature ?? 0.7;
@@ -7193,7 +7569,19 @@ async function doRestore() {
       }
       state.activeConvId = Object.keys(state.conversations)[0] || null;
     } else {
-      // Smart merge: only add missing conversations, assistants, and memories
+      // Smart merge: only add missing providers, conversations, assistants, and memories
+      if (data.providers) {
+        if (!state.providers) state.providers = {};
+        if (!Array.isArray(state.providerOrder)) state.providerOrder = defaultProviderOrder();
+        const incomingProviderOrder = Array.isArray(data.providerOrder) ? data.providerOrder : Object.keys(data.providers);
+        for (const id of incomingProviderOrder) {
+          if (data.providers[id] && !state.providers[id]) {
+            state.providers[id] = data.providers[id];
+            state.providerOrder.push(id);
+          }
+        }
+        normalizeProvidersForData(state);
+      }
       if (data.assistants) {
         for (const [id, asst] of Object.entries(data.assistants)) {
           if (!state.assistants[id]) state.assistants[id] = asst;
