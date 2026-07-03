@@ -2997,10 +2997,10 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
           <input type="checkbox" id="autoExportToggle" onchange="toggleAutoExport()" style="accent-color:var(--accent);width:16px;height:16px;">
           启用自动云端备份
         </label>
-        <div class="hint" style="margin:4px 0 0 24px;">每隔指定条数自动静默同步到 WebDAV，无需手动操作</div>
+        <div class="hint" style="margin:4px 0 0 24px;">累计新增消息达到指定数量后，自动同步到 WebDAV；只有云端上传成功后才会清零进度。</div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:8px;">
           <span style="font-size:12px;color:var(--text2);white-space:nowrap;">每</span>
-          <input type="number" id="autoExportInterval" value="50" min="10" max="999" style="width:64px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:13px;text-align:center;outline:none;">
+          <input type="number" id="autoExportInterval" value="50" min="10" max="999" onchange="saveAutoExportSettings(true)" style="width:64px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:13px;text-align:center;outline:none;">
           <span style="font-size:12px;color:var(--text2);white-space:nowrap;">条消息自动备份一次</span>
         </div>
         <div id="lastBackupInfo" style="font-size:11px;color:var(--text3);margin-top:6px;font-family:var(--mono);"></div>
@@ -3404,7 +3404,12 @@ function defaultState() {
     companionControl: { url: '', secret: '', useChatBackend: false, pushEnabled: false },
     autoExport: false,
     autoExportInterval: 50,
+    // 自动云端备份进度：表示自上次云端备份成功后，新增了多少条消息。
     msgsSinceExport: 0,
+    lastLocalBackupTime: null,
+    lastCloudBackupTime: null,
+    lastCloudBackupError: '',
+    lastAutoExportCheckTime: null,
     reasoningEnabled: false,
     reasoningEffort: 'auto',
     uiMode: 'roleplay',
@@ -4071,43 +4076,116 @@ function showToast(msg) {
 }
 
 // ============ AUTO EXPORT ============
-function toggleAutoExport() {
-  state.autoExport = document.getElementById('autoExportToggle').checked;
-  const newInterval = parseInt(document.getElementById('autoExportInterval').value) || 50;
-  if (newInterval !== state.autoExportInterval) {
-    state.msgsSinceExport = 0; // 间隔变了，计数归零
-  }
-  state.autoExportInterval = newInterval;
-  saveState();
+let autoExportInProgress = false;
+
+function readAutoExportInterval() {
+  const el = document.getElementById('autoExportInterval');
+  const raw = el ? el.value : state.autoExportInterval;
+  return clampNumber(raw, state.autoExportInterval || 50, 10, 999);
 }
 
-function checkAutoExport() {
-  if (!state.autoExport) return;
-  state.msgsSinceExport = (state.msgsSinceExport || 0) + 1;
-  const interval = state.autoExportInterval || 50;
-  if (state.msgsSinceExport >= interval) {
-    state.msgsSinceExport = 0;
-    // WebDAV + 代理已配置 → 静默云端备份（无弹窗）
-    const cfg = getWebDAVConfig();
-    if (cfg && cfg.proxy) {
-      silentWebDAVBackup();
-    } else {
-      // 降级到本地文件导出（需要用户手动保存）
-      exportLocalBackup(true);
-    }
+function saveAutoExportSettings(triggerRetry) {
+  const toggle = document.getElementById('autoExportToggle');
+  if (toggle) state.autoExport = !!toggle.checked;
+  state.autoExportInterval = readAutoExportInterval();
+  saveState();
+  updateLastBackupInfo();
+  if (triggerRetry) retryPendingAutoBackupIfNeeded();
+}
+
+function toggleAutoExport() {
+  saveAutoExportSettings(true);
+}
+
+async function checkAutoExport(newMessageCount = 1) {
+  if (!state.autoExport) return false;
+  const inc = Math.max(0, parseInt(newMessageCount, 10) || 0);
+  state.msgsSinceExport = Math.max(0, (parseInt(state.msgsSinceExport, 10) || 0) + inc);
+  state.lastAutoExportCheckTime = Date.now();
+  saveState();
+  updateLastBackupInfo();
+  try {
+    return await retryPendingAutoBackupIfNeeded();
+  } catch(e) {
+    console.warn('Auto backup check failed:', e);
+    state.lastCloudBackupError = '自动备份检查失败: ' + (e && e.message ? e.message : String(e));
+    saveState();
+    updateLastBackupInfo();
+    return false;
   }
+}
+
+async function retryPendingAutoBackupIfNeeded() {
+  if (!state.autoExport || autoExportInProgress) return false;
+  const interval = clampNumber(state.autoExportInterval, 50, 10, 999);
+  const pending = parseInt(state.msgsSinceExport, 10) || 0;
+  if (pending < interval) return false;
+
+  const cfg = getWebDAVConfig();
+  if (!cfg) {
+    state.lastCloudBackupError = '未配置 WebDAV，自动云端备份未执行';
+    saveState();
+    setWebDAVStatus('err', state.lastCloudBackupError);
+    updateLastBackupInfo();
+    return false;
+  }
+  if (!cfg.proxy) {
+    state.lastCloudBackupError = '未配置 CORS 代理，自动云端备份未执行';
+    saveState();
+    setWebDAVStatus('err', state.lastCloudBackupError);
+    showToast('自动云端备份未执行：缺少代理');
+    updateLastBackupInfo();
+    return false;
+  }
+
+  autoExportInProgress = true;
+  setWebDAVStatus('idle', `自动备份中... (${pending}/${interval})`);
+  try {
+    const ok = await silentWebDAVBackup();
+    if (ok) {
+      // 只有云端上传真的成功，才清零待备份计数。
+      state.msgsSinceExport = 0;
+      state.lastCloudBackupError = '';
+      saveState();
+      updateLastBackupInfo();
+      return true;
+    }
+    saveState();
+    updateLastBackupInfo();
+    return false;
+  } finally {
+    autoExportInProgress = false;
+  }
+}
+
+function formatBackupTime(ts) {
+  if (!ts) return '未记录';
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '未记录';
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function updateLastBackupInfo() {
   const el = document.getElementById('lastBackupInfo');
   if (!el) return;
-  if (!state.lastBackupTime) {
-    el.textContent = '尚未备份';
-    return;
+  const interval = clampNumber(state.autoExportInterval, 50, 10, 999);
+  const pending = parseInt(state.msgsSinceExport, 10) || 0;
+  const lines = [
+    `上次本地备份：${formatBackupTime(state.lastLocalBackupTime)}`,
+    `上次云端备份：${formatBackupTime(state.lastCloudBackupTime)}`
+  ];
+  if (!state.lastLocalBackupTime && !state.lastCloudBackupTime && state.lastBackupTime) {
+    lines.push(`旧版备份记录：${formatBackupTime(state.lastBackupTime)}`);
   }
-  const d = new Date(state.lastBackupTime);
-  const pad = n => String(n).padStart(2, '0');
-  el.textContent = `上次备份: ${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  if (state.autoExport) {
+    lines.push(`自动云端进度：${pending}/${interval} 条新增消息`);
+  }
+  if (state.lastCloudBackupError) {
+    lines.push(`云端状态：${state.lastCloudBackupError}`);
+  }
+  el.style.whiteSpace = 'pre-line';
+  el.textContent = lines.join('\n');
 }
 
 async function exportLocalBackup(silent) {
@@ -4141,7 +4219,13 @@ async function exportLocalBackup(silent) {
       reasoningEnabled: state.reasoningEnabled,
       reasoningEffort: state.reasoningEffort,
       conversations: filteredConvs,
-      memories: state.memories
+      memories: state.memories,
+      autoExport: state.autoExport,
+      autoExportInterval: state.autoExportInterval,
+      msgsSinceExport: state.msgsSinceExport,
+      lastLocalBackupTime: state.lastLocalBackupTime,
+      lastCloudBackupTime: state.lastCloudBackupTime,
+      lastCloudBackupError: state.lastCloudBackupError
     }
   };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -4161,7 +4245,10 @@ async function exportLocalBackup(silent) {
   } else {
     showToast('备份文件已导出');
   }
-  state.lastBackupTime = Date.now(); saveState();
+  const backupTime = Date.now();
+  state.lastLocalBackupTime = backupTime;
+  state.lastBackupTime = backupTime; // 兼容旧版字段；界面会优先显示本地/云端分开的时间。
+  saveState();
   updateLastBackupInfo();
 }
 
@@ -4192,6 +4279,11 @@ function importLocalBackup(event) {
       state.reasoningEnabled = data.reasoningEnabled ?? false;
       state.reasoningEffort = data.reasoningEffort || 'auto';
       state.memories = data.memories || [];
+      state.lastLocalBackupTime = data.lastLocalBackupTime || state.lastLocalBackupTime || null;
+      state.lastCloudBackupTime = data.lastCloudBackupTime || state.lastCloudBackupTime || null;
+      state.lastCloudBackupError = data.lastCloudBackupError || '';
+      state.msgsSinceExport = Number.isFinite(parseInt(data.msgsSinceExport, 10)) ? parseInt(data.msgsSinceExport, 10) : (state.msgsSinceExport || 0);
+      state.autoExportInterval = data.autoExportInterval || state.autoExportInterval || 50;
       state.webdav = keepWebdav;
       state.autoExport = keepAutoExport;
 
@@ -5494,12 +5586,12 @@ function saveSettings() {
     useChatBackend: companionUseChatEl ? companionUseChatEl.checked : !!(state.companionControl && state.companionControl.useChatBackend),
     pushEnabled: !!(state.companionControl && state.companionControl.pushEnabled)
   };
-  const newAutoInterval = parseInt(document.getElementById('autoExportInterval').value) || 50;
-  if (newAutoInterval !== state.autoExportInterval) {
-    state.msgsSinceExport = 0;
-  }
-  state.autoExportInterval = newAutoInterval;
+  const aeToggle = document.getElementById('autoExportToggle');
+  if (aeToggle) state.autoExport = !!aeToggle.checked;
+  state.autoExportInterval = readAutoExportInterval();
   saveState();
+  updateLastBackupInfo();
+  retryPendingAutoBackupIfNeeded();
   closeModal('settingsModal');
 }
 
@@ -6625,7 +6717,7 @@ async function sendMessage() {
       updateCacheIndicator(0, 0);
       saveState();
       renderMessages();
-      checkAutoExport();
+      checkAutoExport(2);
     } catch(err) {
       if (typingEl) typingEl.remove();
       assistantMsg.content = '[VPS错误] ' + err.message;
@@ -6873,7 +6965,7 @@ async function sendMessage() {
     updateCacheIndicator(cached, cacheWrite);
     saveState();
     renderMessages();
-    checkAutoExport();
+    checkAutoExport(2);
 
   } catch(err) {
     if (typingEl) typingEl.remove();
@@ -7441,8 +7533,13 @@ function saveWebDAVSettings() {
     path: document.getElementById('webdavPath').value.trim() || '/SecretHome/',
     proxy: document.getElementById('webdavProxy').value.trim()
   };
+  const aeToggle = document.getElementById('autoExportToggle');
+  if (aeToggle) state.autoExport = !!aeToggle.checked;
+  state.autoExportInterval = readAutoExportInterval();
   saveState();
+  updateLastBackupInfo();
   setWebDAVStatus('idle', '配置已保存');
+  retryPendingAutoBackupIfNeeded();
 }
 
 function setWebDAVStatus(type, text) {
@@ -7570,21 +7667,41 @@ async function doBackup() {
     const resp = await webdavRequest('PUT', filename, json, 'application/json');
     if (resp.ok || resp.status === 201 || resp.status === 204) {
       await cleanupOldBackups(5);
-      state.lastBackupTime = Date.now(); saveState();
-      setWebDAVStatus('ok', '备份成功 (' + new Date().toLocaleTimeString() + ')');
+      const backupTime = Date.now();
+      state.lastCloudBackupTime = backupTime;
+      state.lastCloudBackupError = '';
+      state.msgsSinceExport = 0;
+      state.lastBackupTime = backupTime; // 兼容旧版字段
+      saveState();
+      setWebDAVStatus('ok', '云端备份成功 (' + new Date().toLocaleTimeString() + ')');
       updateLastBackupInfo();
     } else {
-      setWebDAVStatus('err', '备份失败 (' + resp.status + ')');
+      state.lastCloudBackupError = '云端备份失败 (' + resp.status + ')';
+      saveState();
+      setWebDAVStatus('err', state.lastCloudBackupError);
+      updateLastBackupInfo();
     }
   } catch(e) {
-    setWebDAVStatus('err', '备份错误: ' + e.message);
+    state.lastCloudBackupError = '云端备份错误: ' + e.message;
+    saveState();
+    setWebDAVStatus('err', state.lastCloudBackupError);
+    updateLastBackupInfo();
   }
 }
 
 // 静默自动备份（后台执行，不弹窗）
 async function silentWebDAVBackup() {
   const cfg = getWebDAVConfig();
-  if (!cfg || !cfg.proxy) return; // 未配置代理则跳过
+  if (!cfg) {
+    state.lastCloudBackupError = '未配置 WebDAV，自动云端备份未执行';
+    saveState();
+    return false;
+  }
+  if (!cfg.proxy) {
+    state.lastCloudBackupError = '未配置 CORS 代理，自动云端备份未执行';
+    saveState();
+    return false;
+  }
   try {
     const backup = await buildBackupData();
     const json = JSON.stringify(backup);
@@ -7592,16 +7709,29 @@ async function silentWebDAVBackup() {
     const resp = await webdavRequest('PUT', filename, json, 'application/json');
     if (resp.ok || resp.status === 201 || resp.status === 204) {
       await cleanupOldBackups(5);
-      state.lastBackupTime = Date.now(); saveState();
-      setWebDAVStatus('ok', '自动备份 ' + new Date().toLocaleTimeString());
+      const backupTime = Date.now();
+      state.lastCloudBackupTime = backupTime;
+      state.lastCloudBackupError = '';
+      state.lastBackupTime = backupTime; // 兼容旧版字段
+      saveState();
+      setWebDAVStatus('ok', '自动云端备份成功 ' + new Date().toLocaleTimeString());
       showToast('已同步到云端');
       updateLastBackupInfo();
+      return true;
     } else {
-      setWebDAVStatus('err', '自动备份失败 (' + resp.status + ')');
+      state.lastCloudBackupError = '自动云端备份失败 (' + resp.status + ')';
+      saveState();
+      setWebDAVStatus('err', state.lastCloudBackupError);
+      updateLastBackupInfo();
+      return false;
     }
   } catch(e) {
     console.warn('Silent WebDAV backup failed:', e);
-    setWebDAVStatus('err', '自动备份错误');
+    state.lastCloudBackupError = '自动云端备份错误: ' + e.message;
+    saveState();
+    setWebDAVStatus('err', state.lastCloudBackupError);
+    updateLastBackupInfo();
+    return false;
   }
 }
 
@@ -8505,6 +8635,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   } else {
     showRoleplayView();
   }
+  // 如果上次自动云端备份被切后台/断网中断，重新打开页面后继续尝试。
+  setTimeout(() => retryPendingAutoBackupIfNeeded(), 1500);
+
   // Modal close on overlay click
   document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); });
@@ -8540,7 +8673,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         startCacheTimer();
       }
 
-      // 3) 流式请求看门狗：如果超过 30 秒没收到数据，说明连接已死
+      // 3) 如果有未完成的自动云端备份进度，回到前台后再尝试一次
+      retryPendingAutoBackupIfNeeded();
+
+      // 4) 流式请求看门狗：如果超过 30 秒没收到数据，说明连接已死
       if (isStreaming && _streamAbort && (Date.now() - _streamLastData > 30000)) {
         console.log('[lifecycle] stream stale, aborting');
         _streamAbort.abort();
