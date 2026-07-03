@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="AI 家园">
+<meta name="apple-mobile-web-app-title" content="秘密家园">
 <meta name="theme-color" content="#FAFAFA">
 <meta name="color-scheme" content="light dark">
-<title>AI 家园</title>
+<title>秘密家园</title>
 <!-- PWA manifest (inline) -->
-<link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22:%22AI%20%E5%AE%B6%E5%9B%AD%22,%22short_name%22:%22AI%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23FAFAFA%22,%22theme_color%22:%22%23FAFAFA%22,%22icons%22:%5B%7B%22src%22:%22data:image/svg%2Bxml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20512%20512%27%3E%3Crect%20width%3D%27512%27%20height%3D%27512%27%20rx%3D%27112%27%20fill%3D%27%23667761%27%2F%3E%3Ctext%20x%3D%27256%27%20y%3D%27360%27%20font-size%3D%27280%27%20text-anchor%3D%27middle%27%20fill%3D%27white%27%3EAI%3C%2Ftext%3E%3C%2Fsvg%3E%22,%22sizes%22:%22512x512%22,%22type%22:%22image/svg%2Bxml%22%7D%5D%7D">
+<link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22:%22%E7%A7%98%E5%AF%86%E5%AE%B6%E5%9B%AD%22,%22short_name%22:%22%E7%A7%98%E5%AF%86%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#FAFAFA%22,%22theme_color%22:%22#FAFAFA%22,%22icons%22:%5B%7B%22src%22:%22data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%20512%20512%27%3E%3Crect%20width=%27512%27%20height=%27512%27%20rx=%27112%27%20fill=%27#667761%27/%3E%3Ctext%20x=%27256%27%20y=%27360%27%20font-size=%27280%27%20text-anchor=%27middle%27%20fill=%27white%27%3E%E5%AF%86%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22512x512%22,%22type%22:%22image/svg+xml%22%7D%5D%7D">
 <!-- Apple touch icon: 指向同目录下的 icon.PNG，换图标只需在 GitHub 替换这张图 -->
 <link rel="apple-touch-icon" href="icon.PNG">
 <style>
@@ -2957,7 +2957,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
 
       <div class="field">
         <label>备份路径</label>
-        <input type="text" id="webdavPath" placeholder="/AIHome/" value="/AIHome/">
+        <input type="text" id="webdavPath" placeholder="/SecretHome/" value="/SecretHome/">
         <div class="hint">备份文件将保存到此目录下</div>
       </div>
 
@@ -3400,7 +3400,7 @@ function defaultState() {
     conversations: {},   // { id: { id, title, created, msgCount, assistantId } } — NO messages
     activeConvId: null,
     memories: [],
-    webdav: { url: '', user: '', pass: '', path: '/AIHome/', proxy: '' },
+    webdav: { url: '', user: '', pass: '', path: '/SecretHome/', proxy: '' },
     companionControl: { url: '', secret: '', useChatBackend: false, pushEnabled: false },
     autoExport: false,
     autoExportInterval: 50,
@@ -3474,12 +3474,24 @@ function getAssistantReasoningEffort(asst = getActiveAssistant()) {
   return normalizeReasoningEffort(asst?.reasoningEffort, state.reasoningEffort || 'auto');
 }
 
+
+function sanitizePublicLabel(text) {
+  let v = String(text || '');
+  // 清理早期本地数据里残留的私人模型备注，避免开源版界面继续显示旧备注。
+  const cn = String.fromCharCode(31528, 31528);
+  const en = String.fromCharCode(66, 101, 110, 66, 101, 110);
+  v = v.replace(new RegExp(cn, 'g'), '').replace(new RegExp(en, 'gi'), '');
+  v = v.replace(/[（(]\s*[）)]/g, '');
+  v = v.replace(/\s{2,}/g, ' ').trim();
+  return v;
+}
+
 function normalizeModelEntries(models) {
   const seen = new Set();
   const result = [];
   const add = (value, label) => {
     value = String(value || '').trim();
-    label = String(label || value).trim();
+    label = sanitizePublicLabel(label || value);
     if (!value || seen.has(value)) return;
     seen.add(value);
     result.push({ value, label: label || value });
@@ -5447,7 +5459,7 @@ function showSettings() {
   document.getElementById('webdavUrl').value = wd.url || '';
   document.getElementById('webdavUser').value = wd.user || '';
   document.getElementById('webdavPass').value = wd.pass || '';
-  document.getElementById('webdavPath').value = wd.path || '/AIHome/';
+  document.getElementById('webdavPath').value = wd.path || '/SecretHome/';
   document.getElementById('webdavProxy').value = wd.proxy || '';
   document.getElementById('autoExportToggle').checked = state.autoExport || false;
   document.getElementById('autoExportInterval').value = state.autoExportInterval || 50;
@@ -7402,7 +7414,7 @@ async function companionTestPush() {
     setCompanionStatus('idle', '正在发送测试通知...');
     const data = await companionRequest('/push/test', {
       method: 'POST',
-      body: JSON.stringify({ text: '这是一条来自 AI 家园的测试通知' })
+      body: JSON.stringify({ text: '这是一条来自秘密家园的测试通知' })
     });
     setCompanionStatus(data.sent ? 'ok' : 'err', data.sent ? '测试通知已发送' : '测试通知没有发出，请检查 VAPID/订阅');
   } catch(e) {
@@ -7423,7 +7435,7 @@ function saveWebDAVSettings() {
     url: document.getElementById('webdavUrl').value.trim(),
     user: document.getElementById('webdavUser').value.trim(),
     pass: document.getElementById('webdavPass').value,
-    path: document.getElementById('webdavPath').value.trim() || '/AIHome/',
+    path: document.getElementById('webdavPath').value.trim() || '/SecretHome/',
     proxy: document.getElementById('webdavProxy').value.trim()
   };
   saveState();
@@ -7443,7 +7455,7 @@ function getWebDAVConfig() {
     return null;
   }
   let base = wd.url.replace(/\/+$/, '');
-  let path = wd.path || '/AIHome/';
+  let path = wd.path || '/SecretHome/';
   if (!path.startsWith('/')) path = '/' + path;
   if (!path.endsWith('/')) path += '/';
   return { base, path, user: wd.user, pass: wd.pass, proxy: (wd.proxy || '').replace(/\/+$/, '') };
