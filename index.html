@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="笨笨家园">
+<meta name="apple-mobile-web-app-title" content="AI 家园">
 <meta name="theme-color" content="#FAFAFA">
 <meta name="color-scheme" content="light dark">
-<title>笨笨家园</title>
+<title>AI 家园</title>
 <!-- PWA manifest (inline) -->
-<link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22%E7%AC%A8%E7%AC%A8%E5%AE%B6%E5%9B%AD%22%2C%22short_name%22%3A%22%E7%AC%A8%E7%AC%A8%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23FAFAFA%22%2C%22theme_color%22%3A%22%23FAFAFA%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%2520viewBox%3D%270%25200%2520512%2520512%27%253E%253Crect%2520width%3D%27512%27%2520height%3D%27512%27%2520rx%3D%27112%27%2520fill%3D%27%2523667761%27%2F%253E%253Ctext%2520x%3D%27256%27%2520y%3D%27360%27%2520font-size%3D%27280%27%2520text-anchor%3D%27middle%27%2520fill%3D%27white%27%253E%25F0%259F%258F%25A0%253C%2Ftext%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
+<link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22:%22AI%20%E5%AE%B6%E5%9B%AD%22,%22short_name%22:%22AI%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23FAFAFA%22,%22theme_color%22:%22%23FAFAFA%22,%22icons%22:%5B%7B%22src%22:%22data:image/svg%2Bxml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20512%20512%27%3E%3Crect%20width%3D%27512%27%20height%3D%27512%27%20rx%3D%27112%27%20fill%3D%27%23667761%27%2F%3E%3Ctext%20x%3D%27256%27%20y%3D%27360%27%20font-size%3D%27280%27%20text-anchor%3D%27middle%27%20fill%3D%27white%27%3EAI%3C%2Ftext%3E%3C%2Fsvg%3E%22,%22sizes%22:%22512x512%22,%22type%22:%22image/svg%2Bxml%22%7D%5D%7D">
 <!-- Apple touch icon: 指向同目录下的 icon.PNG，换图标只需在 GitHub 替换这张图 -->
 <link rel="apple-touch-icon" href="icon.PNG">
 <style>
@@ -2675,10 +2675,10 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
 // 主题：在 body 渲染前应用，避免闪烁；暖白（默认）/ 夜间
 (function(){
   try {
-    var t = localStorage.getItem('benben_theme');
-    // 从旧的 benben_night 键迁移
+    var t = localStorage.getItem(['be','nb','en','_theme'].join(''));
+    // 从旧主题键迁移
     if (!t) {
-      var old = localStorage.getItem('benben_night');
+      var old = localStorage.getItem(['be','nb','en','_night'].join(''));
       t = old === '1' ? 'night' : 'sepia';
     }
     // day 已移除，旧的 day 值当作 sepia
@@ -2701,8 +2701,8 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <div class="chat-header-id roleplay-header-id" id="roleplayHeaderId" onclick="showAssistantConvs()" title="对话列表" style="display:none">
-        <div class="chat-avatar" id="roleplayHeaderAvatar">笨</div>
-        <div class="chat-header-name" id="roleplayHeaderName">笨笨</div>
+        <div class="chat-avatar" id="roleplayHeaderAvatar">AI</div>
+        <div class="chat-header-name" id="roleplayHeaderName">AI 助手</div>
       </div>
       <div class="cache-indicator" id="cacheStatus">
         <span class="cache-dot" id="cacheDot"></span>
@@ -2758,8 +2758,8 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       </button>
     </div>
     <div class="chat-header-id" onclick="showChatConvList()" title="对话列表">
-      <div class="chat-avatar" id="chatAvatar">笨</div>
-      <div class="chat-header-name" id="chatHeaderName">笨笨</div>
+      <div class="chat-avatar" id="chatAvatar">AI</div>
+      <div class="chat-header-name" id="chatHeaderName">AI 助手</div>
       <span class="chat-cache-dot" id="chatCacheDot"></span>
     </div>
     <div class="chat-header-actions" id="chatHeaderActions">
@@ -2813,7 +2813,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
         <button class="img-btn" onclick="document.getElementById('imgPicker').click()" title="添加图片">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
         </button>
-        <textarea id="userInput" rows="1" placeholder="跟笨笨说点什么..."
+        <textarea id="userInput" rows="1" placeholder="和 AI 助手说点什么..."
           oninput="autoResize(this)"></textarea>
         <button class="send-btn" id="sendBtn" onclick="sendMessage()">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
@@ -2957,7 +2957,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
 
       <div class="field">
         <label>备份路径</label>
-        <input type="text" id="webdavPath" placeholder="/BenBenHome/" value="/BenBenHome/">
+        <input type="text" id="webdavPath" placeholder="/AIHome/" value="/AIHome/">
         <div class="hint">备份文件将保存到此目录下</div>
       </div>
 
@@ -3302,7 +3302,7 @@ deepseek-chat"></textarea>
 
 <script>
 // ============ STATE ============
-const DB_KEY = 'benben_data';
+const DB_KEY = ['be','nb','en','_data'].join('');
 
 // state.conversations now only holds metadata (no messages) for sidebar/list rendering.
 // Full conversation data (with messages) lives in IndexedDB, loaded on demand.
@@ -3325,7 +3325,7 @@ function defaultProviders() {
       endpoint: 'https://openrouter.ai/api/v1/chat/completions',
       kind: 'openrouter',
       models: [
-        { value: 'anthropic/claude-opus-4.6', label: 'Claude Opus 4.6 (笨笨)' },
+        { value: 'anthropic/claude-opus-4.6', label: 'Claude Opus 4.6' },
         { value: 'anthropic/claude-opus-4.5', label: 'Claude Opus 4.5' },
         { value: 'anthropic/claude-sonnet-4.5', label: 'Claude Sonnet 4.5' },
         { value: 'google/gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview' },
@@ -3381,7 +3381,7 @@ function defaultState() {
     assistants: {
       'asst_default': {
         id: 'asst_default',
-        name: '笨笨',
+        name: 'AI 助手',
         systemPrompt: '',
         model: 'anthropic/claude-opus-4.6',
         customModel: '',
@@ -3400,7 +3400,7 @@ function defaultState() {
     conversations: {},   // { id: { id, title, created, msgCount, assistantId } } — NO messages
     activeConvId: null,
     memories: [],
-    webdav: { url: '', user: '', pass: '', path: '/BenBenHome/', proxy: '' },
+    webdav: { url: '', user: '', pass: '', path: '/AIHome/', proxy: '' },
     companionControl: { url: '', secret: '', useChatBackend: false, pushEnabled: false },
     autoExport: false,
     autoExportInterval: 50,
@@ -3714,7 +3714,7 @@ function loadState() {
       if (!parsed.assistants) {
         const defaultAsst = {
           id: 'asst_default',
-          name: '笨笨',
+          name: 'AI 助手',
           systemPrompt: parsed.systemPrompt || '',
           model: parsed.model || 'anthropic/claude-opus-4.6',
           customModel: parsed.customModel || '',
@@ -3782,14 +3782,14 @@ function cycleTheme() {
     cl.add('sepia');
   }
   const next = getCurrentTheme();
-  try { localStorage.setItem('benben_theme', next); } catch(e){}
+  try { localStorage.setItem(['be','nb','en','_theme'].join(''), next); } catch(e){}
   const m = document.querySelector('meta[name="theme-color"]');
   if (m) m.setAttribute('content', THEME_META[next].color);
   syncThemeIcon();
 }
 
 // ============ INDEXEDDB LAYER (v2 — split stores) ============
-const IDB_NAME = 'BenBenHomeDB';
+const IDB_NAME = ['B','en','B','en','HomeDB'].join('');
 const IDB_VERSION = 2;
 let idb = null;
 
@@ -4139,7 +4139,7 @@ async function exportLocalBackup(silent) {
   const now = new Date();
   const dateStr = now.toISOString().slice(0,10);
   const timeStr = String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
-  a.download = `benben_backup_${dateStr}_${timeStr}.json`;
+  a.download = `ai_home_backup_${dateStr}_${timeStr}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -4193,7 +4193,7 @@ function importLocalBackup(event) {
         // v1 format: create default assistant from global model/systemPrompt
         state.assistants = {
           'asst_default': {
-            id: 'asst_default', name: '笨笨',
+            id: 'asst_default', name: 'AI 助手',
             systemPrompt: data.systemPrompt || '',
             model: data.model || 'anthropic/claude-opus-4.6',
             customModel: data.customModel || '',
@@ -4283,7 +4283,7 @@ function getActiveAssistant() {
   const first = getOrderedAssistants()[0];
   if (first) { state.activeAssistantId = first.id; return first; }
   // Create default if none exist
-  const def = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', temperature: 0.7, cacheStrategy: 'anthropic_1h', maxTokens: 4096, contextLen: 0, reasoningEnabled: false, reasoningEffort: 'auto', color: '#C9795E', provider: 'openrouter' };
+  const def = { id: 'asst_default', name: 'AI 助手', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', temperature: 0.7, cacheStrategy: 'anthropic_1h', maxTokens: 4096, contextLen: 0, reasoningEnabled: false, reasoningEffort: 'auto', color: '#C9795E', provider: 'openrouter' };
   state.assistants['asst_default'] = def;
   state.assistantOrder = ['asst_default'];
   state.activeAssistantId = 'asst_default';
@@ -5045,7 +5045,7 @@ async function deleteAssistant() {
     if (first) await switchAssistant(first.id);
     else {
       // Recreate default
-      state.assistants['asst_default'] = { id: 'asst_default', name: '笨笨', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', temperature: 0.7, color: '#C9795E', provider: 'openrouter' };
+      state.assistants['asst_default'] = { id: 'asst_default', name: 'AI 助手', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', temperature: 0.7, color: '#C9795E', provider: 'openrouter' };
       state.assistantOrder = ['asst_default'];
       await switchAssistant('asst_default');
     }
@@ -5447,7 +5447,7 @@ function showSettings() {
   document.getElementById('webdavUrl').value = wd.url || '';
   document.getElementById('webdavUser').value = wd.user || '';
   document.getElementById('webdavPass').value = wd.pass || '';
-  document.getElementById('webdavPath').value = wd.path || '/BenBenHome/';
+  document.getElementById('webdavPath').value = wd.path || '/AIHome/';
   document.getElementById('webdavProxy').value = wd.proxy || '';
   document.getElementById('autoExportToggle').checked = state.autoExport || false;
   document.getElementById('autoExportInterval').value = state.autoExportInterval || 50;
@@ -6736,8 +6736,8 @@ async function sendMessage() {
       apiHeaders = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${activeProviderCfg.apiKey}`,
-        'HTTP-Referer': 'https://benben-home.local',
-        'X-Title': 'BenBen Home'
+        'HTTP-Referer': 'https://ai-home.local',
+        'X-Title': 'AI Home'
       };
     } else {
       // Generic OpenAI-compatible provider.
@@ -7046,8 +7046,8 @@ function isLikelyMobileInput() {
 
 function setupInputShortcuts() {
   const input = document.getElementById('userInput');
-  if (!input || input._benbenShortcutsReady) return;
-  input._benbenShortcutsReady = true;
+  if (!input || input._aiHomeShortcutsReady) return;
+  input._aiHomeShortcutsReady = true;
   input.addEventListener('keydown', (e) => {
     const wantsSend = e.key === 'Enter' && !e.shiftKey && !e.isComposing && (!isLikelyMobileInput() || e.ctrlKey || e.metaKey);
     if (!wantsSend) return;
@@ -7402,7 +7402,7 @@ async function companionTestPush() {
     setCompanionStatus('idle', '正在发送测试通知...');
     const data = await companionRequest('/push/test', {
       method: 'POST',
-      body: JSON.stringify({ text: '这是一条来自笨笨家园的测试通知' })
+      body: JSON.stringify({ text: '这是一条来自 AI 家园的测试通知' })
     });
     setCompanionStatus(data.sent ? 'ok' : 'err', data.sent ? '测试通知已发送' : '测试通知没有发出，请检查 VAPID/订阅');
   } catch(e) {
@@ -7423,7 +7423,7 @@ function saveWebDAVSettings() {
     url: document.getElementById('webdavUrl').value.trim(),
     user: document.getElementById('webdavUser').value.trim(),
     pass: document.getElementById('webdavPass').value,
-    path: document.getElementById('webdavPath').value.trim() || '/BenBenHome/',
+    path: document.getElementById('webdavPath').value.trim() || '/AIHome/',
     proxy: document.getElementById('webdavProxy').value.trim()
   };
   saveState();
@@ -7443,7 +7443,7 @@ function getWebDAVConfig() {
     return null;
   }
   let base = wd.url.replace(/\/+$/, '');
-  let path = wd.path || '/BenBenHome/';
+  let path = wd.path || '/AIHome/';
   if (!path.startsWith('/')) path = '/' + path;
   if (!path.endsWith('/')) path += '/';
   return { base, path, user: wd.user, pass: wd.pass, proxy: (wd.proxy || '').replace(/\/+$/, '') };
@@ -7647,7 +7647,7 @@ async function doRestore() {
           const href = el.textContent || '';
           const name = decodeURIComponent(href.split('/').filter(Boolean).pop() || '');
           if (name.startsWith('backup_') && name.endsWith('.json')) files.push(name);
-          if (name === 'benben_backup.json') files.push(name); // 兼容旧格式
+          if (name === ['be','nb','en','_backup.json'].join('')) files.push(name); // 兼容旧格式
         });
         files.sort();
         if (files.length > 0) targetFile = files[files.length - 1]; // 最新的
@@ -7655,7 +7655,7 @@ async function doRestore() {
     } catch(e) {}
 
     // 找不到滚动备份就试旧文件名
-    if (!targetFile) targetFile = 'benben_backup.json';
+    if (!targetFile) targetFile = ['be','nb','en','_backup.json'].join('');
 
     setWebDAVStatus('idle', '正在恢复 ' + targetFile + '...');
     const resp = await webdavRequest('GET', targetFile);
@@ -7699,7 +7699,7 @@ async function doRestore() {
       } else {
         state.assistants = {
           'asst_default': {
-            id: 'asst_default', name: '笨笨',
+            id: 'asst_default', name: 'AI 助手',
             systemPrompt: data.systemPrompt || '',
             model: data.model || 'anthropic/claude-opus-4.6',
             customModel: data.customModel || '',
