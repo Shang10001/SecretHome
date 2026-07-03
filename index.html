@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="笨笨家园">
 <meta name="theme-color" content="#FAFAFA">
+<meta name="color-scheme" content="light dark">
 <title>笨笨家园</title>
 <!-- PWA manifest (inline) -->
 <link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22%E7%AC%A8%E7%AC%A8%E5%AE%B6%E5%9B%AD%22%2C%22short_name%22%3A%22%E7%AC%A8%E7%AC%A8%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23FAFAFA%22%2C%22theme_color%22%3A%22%23FAFAFA%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%2520viewBox%3D%270%25200%2520512%2520512%27%253E%253Crect%2520width%3D%27512%27%2520height%3D%27512%27%2520rx%3D%27112%27%2520fill%3D%27%2523667761%27%2F%253E%253Ctext%2520x%3D%27256%27%2520y%3D%27360%27%2520font-size%3D%27280%27%2520text-anchor%3D%27middle%27%2520fill%3D%27white%27%253E%25F0%259F%258F%25A0%253C%2Ftext%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
@@ -16,6 +17,7 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap');
 
 :root {
+  color-scheme: light;
   /* Kelivo-inspired clean palette */
   --bg: #FAFAFA;
   --surface: #FFFFFF;
@@ -55,6 +57,11 @@
 }
 
 * { margin:0; padding:0; box-sizing:border-box; }
+
+/* 让浏览器原生控件跟随当前主题；在 iOS 上可让键盘上方的输入辅助栏尽量使用深色样式 */
+input, textarea, select, button {
+  color-scheme: inherit;
+}
 html, body {
   height: 100%;
   background: var(--bg);
@@ -2563,6 +2570,7 @@ button.msg-status-dot:focus-visible {
 }
 
 :root.night {
+  color-scheme: dark;
   --bg: #171817;
   --surface: #1E201E;
   --surface2: #252825;
@@ -2598,6 +2606,7 @@ button.msg-status-dot:focus-visible {
 
 /* ========== 奶油暖白模式 (Claude.ai-inspired warm cream) ========== */
 :root.sepia {
+  color-scheme: light;
   --bg: #FAFAFA;
   --surface: #FFFFFF;
   --surface2: #F0F0F0;
