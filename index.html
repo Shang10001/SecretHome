@@ -3186,6 +3186,20 @@ deepseek-chat"></textarea>
           </select>
           <div class="hint">自动 = 只开启思考，不强制指定力度；不支持的模型会忽略。</div>
         </div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="asstEditForceZDR" style="accent-color:var(--accent);width:16px;height:16px;" onchange="updateAsstAdvancedHints()">
+            强制 ZDR（零数据保留）
+          </label>
+          <div class="hint" id="asstZDRHint">仅 OpenRouter 生效。开启后只走支持零数据保留的端点；如果没有可用端点，请求会失败。</div>
+        </div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="asstEditDenyDataCollection" style="accent-color:var(--accent);width:16px;height:16px;" onchange="updateAsstAdvancedHints()">
+            禁止数据收集
+          </label>
+          <div class="hint" id="asstDataCollectionHint">仅 OpenRouter 生效。开启后会排除可能收集/训练数据的端点；它和 ZDR 不是同一个限制。</div>
+        </div>
       </div>
       <div class="field">
         <label>System Prompt</label>
@@ -3391,6 +3405,8 @@ function defaultState() {
         contextLen: 0,
         reasoningEnabled: false,
         reasoningEffort: 'auto',
+        forceZDR: false,
+        denyDataCollection: false,
         color: '#C9795E',
         provider: 'openrouter'
       }
@@ -3456,6 +3472,8 @@ function normalizeAssistantRuntimeSettings(asst, data = state) {
   asst.contextLen = clampNumber(asst.contextLen ?? data?.contextLen, 0, 0, 9999);
   asst.reasoningEnabled = (asst.reasoningEnabled !== undefined) ? !!asst.reasoningEnabled : !!data?.reasoningEnabled;
   asst.reasoningEffort = normalizeReasoningEffort(asst.reasoningEffort, data?.reasoningEffort || 'auto');
+  asst.forceZDR = !!asst.forceZDR;
+  asst.denyDataCollection = !!asst.denyDataCollection;
   return asst;
 }
 
@@ -3477,6 +3495,14 @@ function isAssistantReasoningEnabled(asst = getActiveAssistant()) {
 
 function getAssistantReasoningEffort(asst = getActiveAssistant()) {
   return normalizeReasoningEffort(asst?.reasoningEffort, state.reasoningEffort || 'auto');
+}
+
+function isAssistantZDREnabled(asst = getActiveAssistant()) {
+  return !!asst?.forceZDR;
+}
+
+function isAssistantDataCollectionDenied(asst = getActiveAssistant()) {
+  return !!asst?.denyDataCollection;
 }
 
 
@@ -4387,7 +4413,7 @@ function getActiveAssistant() {
   const first = getOrderedAssistants()[0];
   if (first) { state.activeAssistantId = first.id; return first; }
   // Create default if none exist
-  const def = { id: 'asst_default', name: 'AI 助手', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', temperature: 0.7, cacheStrategy: 'anthropic_1h', maxTokens: 4096, contextLen: 0, reasoningEnabled: false, reasoningEffort: 'auto', color: '#C9795E', provider: 'openrouter' };
+  const def = { id: 'asst_default', name: 'AI 助手', systemPrompt: '', model: 'anthropic/claude-opus-4.6', customModel: '', temperature: 0.7, cacheStrategy: 'anthropic_1h', maxTokens: 4096, contextLen: 0, reasoningEnabled: false, reasoningEffort: 'auto', forceZDR: false, denyDataCollection: false, color: '#C9795E', provider: 'openrouter' };
   state.assistants['asst_default'] = def;
   state.assistantOrder = ['asst_default'];
   state.activeAssistantId = 'asst_default';
@@ -4903,13 +4929,21 @@ function updateAsstAdvancedHints() {
   const cacheStrategy = document.getElementById('asstEditCacheStrategy')?.value || 'auto';
   const cacheHint = document.getElementById('asstCacheHint');
   const reasoningHint = document.getElementById('asstReasoningHint');
+  const zdrHint = document.getElementById('asstZDRHint');
+  const dataCollectionHint = document.getElementById('asstDataCollectionHint');
+  const forceZDR = document.getElementById('asstEditForceZDR')?.checked || false;
+  const denyDataCollection = document.getElementById('asstEditDenyDataCollection')?.checked || false;
   if (cacheHint) {
     if (providerKind !== 'openrouter') {
       cacheHint.textContent = '当前供应商是 OpenAI 兼容接口，前端不会发送 OpenRouter 专用缓存参数。';
     } else if (family === 'anthropic') {
-      cacheHint.textContent = cacheStrategy === 'anthropic_1h'
-        ? '当前是 Claude 模型，会发送 1 小时显式缓存参数。'
-        : (cacheStrategy === 'off' ? '已关闭显式缓存；是否命中缓存由供应商自己决定。' : '当前是 Claude 模型，自动模式会使用默认 5 分钟显式缓存。');
+      if (forceZDR && cacheStrategy !== 'off') {
+        cacheHint.textContent = '当前开启了 ZDR，不会强制锁定 Anthropic 官方端点；缓存命中可能变化。';
+      } else {
+        cacheHint.textContent = cacheStrategy === 'anthropic_1h'
+          ? '当前是 Claude 模型，会发送 1 小时显式缓存参数。'
+          : (cacheStrategy === 'off' ? '已关闭显式缓存；是否命中缓存由供应商自己决定。' : '当前是 Claude 模型，自动模式会使用默认 5 分钟显式缓存。');
+      }
     } else {
       cacheHint.textContent = '当前不是 Claude 模型，不会强行发送 1 小时缓存；是否命中看供应商自己的缓存规则。';
     }
@@ -4923,6 +4957,24 @@ function updateAsstAdvancedHints() {
       reasoningHint.textContent = '当前模型不一定支持 reasoning；开启后只在模型和供应商支持时生效。';
     }
   }
+  if (zdrHint) {
+    if (providerKind !== 'openrouter') {
+      zdrHint.textContent = '当前供应商不是 OpenRouter，此开关不会随请求发送。';
+    } else if (forceZDR) {
+      zdrHint.textContent = '已开启：本助手只走 ZDR 端点；如果没有可用端点，请求会失败，关掉即可恢复。';
+    } else {
+      zdrHint.textContent = '仅 OpenRouter 生效。开启后只走支持零数据保留的端点；如果没有可用端点，请求会失败。';
+    }
+  }
+  if (dataCollectionHint) {
+    if (providerKind !== 'openrouter') {
+      dataCollectionHint.textContent = '当前供应商不是 OpenRouter，此开关不会随请求发送。';
+    } else if (denyDataCollection) {
+      dataCollectionHint.textContent = '已开启：会排除可能收集/训练数据的端点；它不等于零数据保留。';
+    } else {
+      dataCollectionHint.textContent = '仅 OpenRouter 生效。开启后会排除可能收集/训练数据的端点；它和 ZDR 不是同一个限制。';
+    }
+  }
 }
 
 function showAsstEdit(asstId) {
@@ -4932,7 +4984,7 @@ function showAsstEdit(asstId) {
 
   const defaultProvider = getDefaultProviderId();
   const defaultModel = getProviderModelList(defaultProvider)[0]?.value || '';
-  const asst = isNew ? { name: '', systemPrompt: '', chatSystemPrompt: '', model: defaultModel, customModel: '', temperature: normalizeTemperatureValue(state.temperature, 0.7), cacheStrategy: 'auto', maxTokens: 4096, contextLen: 0, reasoningEnabled: false, reasoningEffort: 'auto', color: ASST_COLORS[Object.keys(state.assistants).length % ASST_COLORS.length], provider: defaultProvider } : normalizeAssistantRuntimeSettings(state.assistants[asstId], state);
+  const asst = isNew ? { name: '', systemPrompt: '', chatSystemPrompt: '', model: defaultModel, customModel: '', temperature: normalizeTemperatureValue(state.temperature, 0.7), cacheStrategy: 'auto', maxTokens: 4096, contextLen: 0, reasoningEnabled: false, reasoningEffort: 'auto', forceZDR: false, denyDataCollection: false, color: ASST_COLORS[Object.keys(state.assistants).length % ASST_COLORS.length], provider: defaultProvider } : normalizeAssistantRuntimeSettings(state.assistants[asstId], state);
   const providerId = (asst.provider && getProviderConfig(asst.provider)) ? asst.provider : defaultProvider;
 
   document.getElementById('asstEditName').value = asst.name || '';
@@ -4946,6 +4998,8 @@ function showAsstEdit(asstId) {
   document.getElementById('asstEditContextLen').value = getAssistantContextLen(asst);
   document.getElementById('asstEditReasoningEnabled').checked = isAssistantReasoningEnabled(asst);
   document.getElementById('asstEditReasoningEffort').value = getAssistantReasoningEffort(asst);
+  document.getElementById('asstEditForceZDR').checked = isAssistantZDREnabled(asst);
+  document.getElementById('asstEditDenyDataCollection').checked = isAssistantDataCollectionDenied(asst);
   updateAsstAdvancedHints();
   document.getElementById('asstEditSP').value = asst.systemPrompt || '';
   document.getElementById('asstEditChatSP').value = asst.chatSystemPrompt || '';
@@ -5085,6 +5139,8 @@ async function saveAsstEdit() {
   const contextLen = clampNumber(document.getElementById('asstEditContextLen').value, 0, 0, 9999);
   const reasoningEnabled = document.getElementById('asstEditReasoningEnabled').checked;
   const reasoningEffort = normalizeReasoningEffort(document.getElementById('asstEditReasoningEffort').value, 'auto');
+  const forceZDR = document.getElementById('asstEditForceZDR').checked;
+  const denyDataCollection = document.getElementById('asstEditDenyDataCollection').checked;
   const color = getSelectedAsstColor();
 
   if (editingAsstId && state.assistants[editingAsstId]) {
@@ -5100,6 +5156,8 @@ async function saveAsstEdit() {
     asst.contextLen = contextLen;
     asst.reasoningEnabled = reasoningEnabled;
     asst.reasoningEffort = reasoningEffort;
+    asst.forceZDR = forceZDR;
+    asst.denyDataCollection = denyDataCollection;
     asst.systemPrompt = systemPrompt;
     asst.chatSystemPrompt = chatSystemPrompt;
     asst.color = color;
@@ -5108,7 +5166,7 @@ async function saveAsstEdit() {
   } else {
     // Create new
     const id = 'asst_' + Date.now();
-    state.assistants[id] = { id, name, model, customModel, provider, temperature, cacheStrategy, maxTokens, contextLen, reasoningEnabled, reasoningEffort, systemPrompt, chatSystemPrompt, color };
+    state.assistants[id] = { id, name, model, customModel, provider, temperature, cacheStrategy, maxTokens, contextLen, reasoningEnabled, reasoningEffort, forceZDR, denyDataCollection, systemPrompt, chatSystemPrompt, color };
     normalizeAssistantOrderForData(state);
     if (!state.assistantOrder.includes(id)) state.assistantOrder.push(id);
     if (editingAsstAvatar) state.assistants[id].avatar = editingAsstAvatar;
@@ -6646,6 +6704,8 @@ async function sendMessage() {
   const asstContextLen = getAssistantContextLen(asst);
   const asstReasoningEnabled = isAssistantReasoningEnabled(asst);
   const asstReasoningEffort = getAssistantReasoningEffort(asst);
+  const asstForceZDR = isAssistantZDREnabled(asst);
+  const asstDenyDataCollection = isAssistantDataCollectionDenied(asst);
   const useCompanionChat = isCompanionChatEnabled();
 
   if (!useCompanionChat) {
@@ -6826,10 +6886,17 @@ async function sendMessage() {
         const cacheCtl = { type: 'ephemeral' };
         if (asstCacheStrategy === 'anthropic_1h') cacheCtl.ttl = '1h';
         body.cache_control = cacheCtl;
-        body.provider = { order: ['Anthropic'] };
+        // 只有未强制 ZDR 时才锁定 Anthropic 官方端点；ZDR 需要让 OpenRouter 自己筛选可用端点。
+        if (!asstForceZDR) body.provider = { order: ['Anthropic'] };
       }
       // Google Gemini: cache_control breakpoint already placed on messages above
       // Other providers (OpenAI, etc.): rely on their own implicit caching
+
+      if (asstForceZDR || asstDenyDataCollection) {
+        body.provider = body.provider || {};
+        if (asstForceZDR) body.provider.zdr = true;
+        if (asstDenyDataCollection) body.provider.data_collection = 'deny';
+      }
 
       if (asstReasoningEnabled) {
         body.reasoning = (asstReasoningEffort && asstReasoningEffort !== 'auto')
