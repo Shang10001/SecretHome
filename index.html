@@ -9,10 +9,12 @@
 <meta name="theme-color" content="#FAFAFA">
 <meta name="color-scheme" content="light dark">
 <title>秘密家园</title>
-<!-- PWA manifest (inline) -->
-<link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22:%22%E7%A7%98%E5%AF%86%E5%AE%B6%E5%9B%AD%22,%22short_name%22:%22%E7%A7%98%E5%AF%86%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#FAFAFA%22,%22theme_color%22:%22#FAFAFA%22,%22icons%22:%5B%7B%22src%22:%22data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%20512%20512%27%3E%3Crect%20width=%27512%27%20height=%27512%27%20rx=%27112%27%20fill=%27#667761%27/%3E%3Ctext%20x=%27256%27%20y=%27360%27%20font-size=%27280%27%20text-anchor=%27middle%27%20fill=%27white%27%3E%E5%AF%86%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22512x512%22,%22type%22:%22image/svg+xml%22%7D%5D%7D">
+<!-- PWA manifest：使用独立文件，iOS 更容易识别为可独立打开的 Web App -->
+<link rel="manifest" href="./manifest.webmanifest?v=20260704">
+<meta name="mobile-web-app-capable" content="yes">
 <!-- Apple touch icon: 指向同目录下的 icon.PNG，换图标只需在 GitHub 替换这张图 -->
-<link rel="apple-touch-icon" href="icon.PNG">
+<link rel="apple-touch-icon" href="./icon.PNG">
+<link rel="icon" href="./icon.PNG">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap');
 
