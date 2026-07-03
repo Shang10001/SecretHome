@@ -4562,6 +4562,33 @@ function convInCurrentMode(c) {
   return state.uiMode === 'chat' ? c.mode === 'chat' : c.mode !== 'chat';
 }
 
+function assistantModelLabel(asst) {
+  return shortModelName(((asst?.customModel || '').trim()) || asst?.model || '');
+}
+
+function refreshAssistantViews() {
+  updateHeaderAssistant();
+
+  const contactsView = document.getElementById('contactsView');
+  if (contactsView && contactsView.style.display !== 'none') {
+    renderContacts();
+  }
+
+  const asstListPanel = document.getElementById('asstListPanel');
+  if (asstListPanel && asstListPanel.style.display !== 'none') {
+    renderAssistantList();
+  }
+
+  const asstConvPanel = document.getElementById('asstConvPanel');
+  if (asstConvPanel && asstConvPanel.style.display !== 'none') {
+    const asst = getActiveAssistant();
+    const dot = document.getElementById('asstConvDot');
+    const title = document.getElementById('asstConvTitle');
+    if (dot) dot.style.background = asst.color || '#C9795E';
+    if (title) title.textContent = asst.name;
+  }
+}
+
 function renderAssistantList() {
   const list = document.getElementById('asstList');
   const assts = getOrderedAssistants();
@@ -4577,7 +4604,7 @@ function renderAssistantList() {
       <span class="asst-dot" style="background:${a.color || '#C9795E'}"></span>
       <div class="asst-item-info">
         <div class="asst-item-name">${esc(a.name)}</div>
-        <div class="asst-item-meta">${shortModelName(a.model || '')}${convCounts[a.id] ? ' · ' + convCounts[a.id] + ' 个对话' : ''}</div>
+        <div class="asst-item-meta">${assistantModelLabel(a)}${convCounts[a.id] ? ' · ' + convCounts[a.id] + ' 个对话' : ''}</div>
       </div>
       <button class="asst-item-more" onclick="showAsstMenu(event, '${a.id}')">&#8943;</button>
     </div>
@@ -4647,10 +4674,7 @@ function moveAssistant(asstId, direction) {
   state.assistantOrder[i] = state.assistantOrder[j];
   state.assistantOrder[j] = tmp;
   saveState();
-  renderAssistantList();
-  if (state.uiMode === 'chat' && document.getElementById('contactsView').style.display !== 'none') {
-    renderContacts();
-  }
+  refreshAssistantViews();
   showToast(direction < 0 ? '助手已上移' : '助手已下移');
 }
 
@@ -5178,13 +5202,9 @@ async function saveAsstEdit() {
   }
 
   saveState();
-  updateHeaderAssistant();
   closeModal('asstEditModal');
-  renderAssistantList();
-  // 联系人列表如果正打开着也刷新一下
-  if (state.uiMode === 'chat' && document.getElementById('contactsView').style.display !== 'none') {
-    renderContacts();
-  }
+  refreshAssistantViews();
+  showToast('助手已保存');
 }
 
 async function deleteAssistant() {
@@ -5219,9 +5239,8 @@ async function deleteAssistant() {
   }
 
   saveState();
-  updateHeaderAssistant();
   closeModal('asstEditModal');
-  renderAssistantList();
+  refreshAssistantViews();
   renderMessages();
 }
 
@@ -5886,7 +5905,7 @@ function renderContacts() {
       ${asstAvatarHtml(a, 'contact-avatar')}
       <div class="contact-info">
         <div class="contact-name"><span class="asst-dot" style="background:${color}"></span>${esc(a.name)}</div>
-        <div class="contact-meta">${shortModelName(a.model || '')}${counts[a.id] ? ' · ' + counts[a.id] + ' 个对话' : ' · 还没有对话'}</div>
+        <div class="contact-meta">${assistantModelLabel(a)}${counts[a.id] ? ' · ' + counts[a.id] + ' 个对话' : ' · 还没有对话'}</div>
       </div>
       <button class="asst-item-more" onclick="showAsstMenu(event, '${a.id}')">&#8943;</button>
     </div>`;
