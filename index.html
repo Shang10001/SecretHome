@@ -1621,10 +1621,25 @@ button.msg-status-dot:focus-visible {
 }
 .msg-content.editing {
   outline: none;
-  background: var(--surface2) !important;
-  border-radius: 12px !important;
+  box-shadow: 0 0 0 1.5px var(--accent-dim) !important;
+  caret-color: var(--accent);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: inherit;
+  line-height: inherit;
+}
+.msg.user .msg-content.editing {
+  background: var(--user-bg) !important;
+  border-radius: 18px 18px 6px 18px !important;
   padding: 12px 16px !important;
-  box-shadow: 0 0 0 2px var(--accent-dim) !important;
+}
+.msg.assistant .msg-content.editing {
+  background: transparent !important;
+  border-radius: 6px !important;
+  padding: 0 !important;
+  text-align: inherit;
+  text-justify: inherit;
+  text-align-last: inherit;
 }
 .edit-actions {
   display: flex;
@@ -2573,15 +2588,26 @@ button.msg-status-dot:focus-visible {
 }
 .chat-avatar, .contact-avatar, .chat-empty-avatar { overflow: hidden; }
 
-/* 聊天模式编辑态：气泡列变成可编辑文本块 */
+/* 聊天模式编辑态：尽量保持原气泡的字体、行距和宽度，只加轻量编辑提示 */
 .chat-bubble-col.editing {
-  background: var(--surface2);
-  border-radius: 12px;
-  padding: 10px 14px;
-  outline: 1.5px solid var(--accent);
+  border-radius: 16px;
+  padding: 9px 14px;
+  outline: 1.5px solid var(--accent-dim);
   white-space: pre-wrap;
   word-break: break-word;
   font-size: 15px;
+  line-height: 1.55;
+  width: fit-content;
+  max-width: 78%;
+  caret-color: var(--accent);
+}
+.chat-group.user .chat-bubble-col.editing {
+  background: var(--chat-user-bg);
+  align-items: flex-end;
+}
+.chat-group.asst .chat-bubble-col.editing {
+  background: var(--chat-asst-bg);
+  align-items: flex-start;
 }
 
 /* 聊天模式空状态 */
