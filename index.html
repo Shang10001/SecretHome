@@ -1497,6 +1497,13 @@ button.msg-status-dot:focus-visible {
   color: var(--text);
   font-weight: 600;
 }
+.thinking-content .md-codeblock {
+  margin: 6px 0;
+  font-size: 10.5px;
+}
+.thinking-content .md-inline-code {
+  font-size: 0.95em;
+}
 .thinking-streaming {
   display: block;
   border-left: 2px solid var(--accent);
@@ -6092,6 +6099,7 @@ function renderChatMessages() {
           <div class="chat-bubble-col" id="msgContent-${i}">${imgHtml}${bubble}</div>
         </div>`;
     } else {
+      const thinkingHtml = m.thinking ? renderThinkingBlock(i, m.thinking) : '';
       const bubbles = splitChatBubbles(m.content);
       const bubbleHtml = bubbles.map((b, bi) =>
         `<div class="chat-bubble asst ${bi === 0 ? 'first' : ''}">${renderMd(b)}</div>`
@@ -6099,7 +6107,7 @@ function renderChatMessages() {
       return `
         <div class="msg chat-group asst" data-index="${i}">
           ${bulkCheck}
-          <div class="chat-bubble-col" id="msgContent-${i}">${bubbleHtml}</div>
+          <div class="chat-bubble-col" id="msgContent-${i}">${thinkingHtml}${bubbleHtml}</div>
           ${menuBtn}
         </div>`;
     }
@@ -6182,20 +6190,8 @@ function renderRoleplayMessages() {
       metaParts = parts.join('');
     }
 
-    // Thinking block (collapsed by default)
-    let thinkingHtml = '';
-    if (m.thinking) {
-      // Render bold (**text**) in thinking content
-      const thinkingRendered = esc(m.thinking).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      thinkingHtml = `
-        <div class="thinking-block">
-          <div class="thinking-toggle" onclick="toggleThinking(${i})">
-            思考过程
-            <span class="arrow">&#9662;</span>
-          </div>
-          <div class="thinking-content" id="thinking-${i}">${thinkingRendered}</div>
-        </div>`;
-    }
+    // Thinking block (collapsed by default). Use the same Markdown renderer as assistant replies.
+    const thinkingHtml = m.thinking ? renderThinkingBlock(i, m.thinking) : '';
 
     // The "..." button
     const menuBtn = `<button class="msg-inline-menu" onclick="toggleMsgMenu(${i}, event)">&#8943;</button>`;
@@ -6596,6 +6592,21 @@ function renderMd(str) {
 
   s = s.replace(/@@CODEBLOCK_(\d+)@@/g, (_, idx) => codeBlocks[Number(idx)] || '');
   return s;
+}
+
+function renderThinkingBlock(index, thinking, options = {}) {
+  const label = options.label || '思考过程';
+  const open = options.open ? ' open' : '';
+  const streaming = options.streaming ? ' thinking-streaming' : '';
+  const content = renderMd(thinking);
+  return `
+    <div class="thinking-block">
+      <div class="thinking-toggle${open}" onclick="toggleThinking(${index})">
+        ${esc(label)}
+        <span class="arrow">&#9662;</span>
+      </div>
+      <div class="thinking-content${open}${streaming}" id="thinking-${index}">${content}</div>
+    </div>`;
 }
 // ============ IMAGE HANDLING ============
 let pendingImage = null;
@@ -7122,15 +7133,9 @@ function renderStreamingThinking(index, thinking) {
     // Roleplay messages have .msg-content; chat-mode bubbles use .chat-bubble-col.
     const contentEl = el.querySelector('.msg-content');
     const chatCol = el.querySelector('.chat-bubble-col');
-    thinkingBlock = document.createElement('div');
-    thinkingBlock.className = 'thinking-block';
-    thinkingBlock.innerHTML = `
-      <div class="thinking-toggle open" onclick="toggleThinking(${index})">
-        思考中...
-        <span class="arrow">&#9662;</span>
-      </div>
-      <div class="thinking-content open thinking-streaming" id="thinking-${index}"></div>
-    `;
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = renderThinkingBlock(index, '', { label: '思考中...', open: true, streaming: true }).trim();
+    thinkingBlock = wrapper.firstElementChild;
     if (contentEl) contentEl.before(thinkingBlock);
     else if (chatCol) chatCol.prepend(thinkingBlock);
     else return;
@@ -7138,7 +7143,7 @@ function renderStreamingThinking(index, thinking) {
 
   const thinkingContent = thinkingBlock.querySelector('.thinking-content');
   if (thinkingContent) {
-    thinkingContent.textContent = thinking;
+    thinkingContent.innerHTML = renderMd(thinking);
     // Keep scrolled to bottom during streaming
     thinkingContent.scrollTop = thinkingContent.scrollHeight;
   }
