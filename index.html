@@ -6311,8 +6311,8 @@ function startEdit(index) {
   if (isChatConvActive()) {
     el.textContent = getActiveConv().messages[index].content || '';
   } else if (getActiveConv().messages[index].role === 'assistant') {
-    // 角色扮演模式：编辑时显示原始文本（含 markdown 标记）
-    el.textContent = getActiveConv().messages[index].content || '';
+    // 角色扮演模式：编辑时显示原始文本（含 markdown 标记），但段落间距保持和渲染态一致。
+    el.innerHTML = renderEditText(getActiveConv().messages[index].content || '');
   }
   el.contentEditable = 'true';
   el.classList.add('editing');
@@ -6339,7 +6339,7 @@ function saveEdit(index) {
   const el = document.getElementById('msgContent-' + index);
   if (!el) return;
   const conv = getActiveConv();
-  conv.messages[index].content = el.innerText;
+  conv.messages[index].content = editableToPlainText(el);
   el.contentEditable = 'false';
   el.classList.remove('editing');
   saveState();
@@ -6618,6 +6618,44 @@ function renderMd(str) {
 
   s = s.replace(/@@CODEBLOCK_(\d+)@@/g, (_, idx) => codeBlocks[Number(idx)] || '');
   return s;
+}
+
+
+function renderEditText(str) {
+  // 编辑态仍显示原始文本，但把“空行”压成和正文 Markdown 渲染一致的小段落间距，避免编辑时行距突然变大。
+  let raw = String(str || '').replace(/\r\n?/g, '\n');
+  let s = esc(raw);
+  s = s.replace(/\n{2,}/g, '<br><span class="md-para-gap edit-para-gap" data-edit-gap="1"></span>');
+  s = s.replace(/\n/g, '<br>');
+  return s;
+}
+
+function editableToPlainText(root) {
+  // contentEditable 在不同浏览器里会生成 br / div / p 等不同结构；这里统一还原成纯文本。
+  let out = '';
+  const walk = (node) => {
+    if (!node) return;
+    if (node.nodeType === Node.TEXT_NODE) {
+      out += node.nodeValue || '';
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    const tag = node.tagName;
+    if (tag === 'BR') {
+      out += '\n';
+      return;
+    }
+    if (node.classList && node.classList.contains('edit-para-gap')) {
+      out += '\n';
+      return;
+    }
+    const isBlock = tag === 'DIV' || tag === 'P';
+    if (isBlock && out && !out.endsWith('\n')) out += '\n';
+    for (const child of Array.from(node.childNodes)) walk(child);
+    if (isBlock && !out.endsWith('\n')) out += '\n';
+  };
+  for (const child of Array.from(root.childNodes)) walk(child);
+  return out.replace(/\u00a0/g, ' ').replace(/\n$/g, '');
 }
 
 function renderThinkingBlock(index, thinking, options = {}) {
