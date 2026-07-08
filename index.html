@@ -372,27 +372,27 @@ button.msg-status-dot:focus-visible {
   display: block;
   height: 6px;
 }
- .md-heading {
+.md-heading {
   font-weight: 600;
   line-height: 1.35;
-  margin: 10px 0 6px;
+  margin: 3px 0 2px;
 }
-.md-h1 { font-size: 1.35em; }
-.md-h2 { font-size: 1.24em; }
-.md-h3 { font-size: 1.14em; }
-.md-h4, .md-h5, .md-h6 { font-size: 1.05em; }
+.md-h1 { font-size: 1.28em; }
+.md-h2 { font-size: 1.20em; }
+.md-h3 { font-size: 1.12em; }
+.md-h4, .md-h5, .md-h6 { font-size: 1.04em; }
 .md-hr {
   border: none;
   border-top: 1px solid var(--border);
-  margin: 10px 0;
+  margin: 4px 0;
 }
 .md-list {
-  margin: 6px 0 6px 1.35em;
+  margin: 2px 0 2px 1.25em;
   padding: 0;
 }
-.md-list li { margin: 2px 0; }
+.md-list li { margin: 0; }
 .md-quote {
-  margin: 6px 0;
+  margin: 2px 0;
   padding-left: 10px;
   border-left: 2px solid var(--border2);
   color: var(--text2);
@@ -6716,7 +6716,12 @@ function renderMd(str) {
     i++;
   }
 
-  return out.join('<br>').replace(/<br>(<(?:ul|ol|blockquote|hr|pre|div)\b)/g, '$1').replace(/(<\/(?:ul|ol|blockquote|pre|div)>|<hr class="md-hr">)<br>/g, '$1');
+  return out.join('<br>')
+    .replace(/<br><span class="md-para-gap"><\/span><br>/g, '<span class="md-para-gap"></span>')
+    .replace(/<br>(<(?:ul|ol|blockquote|hr|pre|div)\b)/g, '$1')
+    .replace(/(<\/(?:ul|ol|blockquote|pre|div)>|<hr class="md-hr">)<br>/g, '$1')
+    .replace(/<span class="md-para-gap"><\/span><br>(<(?:ul|ol|blockquote|hr|pre|div)\b)/g, '<span class="md-para-gap"></span>$1')
+    .replace(/(<\/(?:ul|ol|blockquote|pre|div)>|<hr class="md-hr">)<br><span class="md-para-gap"><\/span>/g, '$1<span class="md-para-gap"></span>');
 }
 
 function renderEditText(str) {
