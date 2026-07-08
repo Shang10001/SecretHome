@@ -372,6 +372,31 @@ button.msg-status-dot:focus-visible {
   display: block;
   height: 6px;
 }
+ .md-heading {
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 10px 0 6px;
+}
+.md-h1 { font-size: 1.35em; }
+.md-h2 { font-size: 1.24em; }
+.md-h3 { font-size: 1.14em; }
+.md-h4, .md-h5, .md-h6 { font-size: 1.05em; }
+.md-hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 10px 0;
+}
+.md-list {
+  margin: 6px 0 6px 1.35em;
+  padding: 0;
+}
+.md-list li { margin: 2px 0; }
+.md-quote {
+  margin: 6px 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--border2);
+  color: var(--text2);
+}
 .chat-bubble .md-codeblock {
   background: rgba(0,0,0,0.06);
 }
@@ -6600,31 +6625,99 @@ function renderMd(str) {
   const codeBlocks = [];
   let raw = String(str || '').replace(/\r\n?/g, '\n');
 
-  // 先把代码块临时收起来，避免后面压缩段落空行时影响代码格式
+  // 先把代码块临时收起来，避免后面处理标题、列表、分隔线时破坏代码格式。
   raw = raw.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
     const idx = codeBlocks.length;
     codeBlocks.push(`<pre class="md-codeblock"><code>${esc(code)}</code></pre>`);
     return `@@CODEBLOCK_${idx}@@`;
   });
 
-  let s = esc(raw);
-  // Inline code: `...` → <code>
-  s = s.replace(/`([^`\n]+?)`/g, '<code class="md-inline-code">$1</code>');
-  // Bold: **...** → <strong>
-  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  // Italic: *...* → <em> (but not inside words with *)
-  s = s.replace(/(?<!\w)\*([^\s*](?:.*?[^\s*])?)\*(?!\w)/g, '<em>$1</em>');
-  // Strikethrough: ~~...~~ → <del>
-  s = s.replace(/~~(.+?)~~/g, '<del>$1</del>');
+  const inlineMd = (text) => {
+    let s = esc(text);
+    s = s.replace(/`([^`\n]+?)`/g, '<code class="md-inline-code">$1</code>');
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/~~(.+?)~~/g, '<del>$1</del>');
+    s = s.replace(/(^|[^\w])\*([^\s*](?:.*?[^\s*])?)\*(?!\w)/g, '$1<em>$2</em>');
+    return s;
+  };
 
-  // 段落之间的空行改成更小的留白；正文到注脚的距离不受这里影响
-  s = s.replace(/\n{2,}/g, '<br><span class="md-para-gap"></span>');
-  s = s.replace(/\n/g, '<br>');
+  const lines = raw.split('\n');
+  const out = [];
+  let i = 0;
 
-  s = s.replace(/@@CODEBLOCK_(\d+)@@/g, (_, idx) => codeBlocks[Number(idx)] || '');
-  return s;
+  const addParaGap = () => {
+    if (out.length && out[out.length - 1] !== '<span class="md-para-gap"></span>') {
+      out.push('<span class="md-para-gap"></span>');
+    }
+  };
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      addParaGap();
+      i++;
+      continue;
+    }
+
+    const codeMatch = trimmed.match(/^@@CODEBLOCK_(\d+)@@$/);
+    if (codeMatch) {
+      out.push(codeBlocks[Number(codeMatch[1])] || '');
+      i++;
+      continue;
+    }
+
+    if (/^(?:-{3,}|_{3,}|\*{3,})$/.test(trimmed)) {
+      out.push('<hr class="md-hr">');
+      i++;
+      continue;
+    }
+
+    const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
+    if (headingMatch) {
+      const level = Math.min(6, headingMatch[1].length);
+      out.push(`<div class="md-heading md-h${level}">${inlineMd(headingMatch[2])}</div>`);
+      i++;
+      continue;
+    }
+
+    if (/^>\s?/.test(trimmed)) {
+      const quoteLines = [];
+      while (i < lines.length && /^>\s?/.test(lines[i].trim())) {
+        quoteLines.push(inlineMd(lines[i].trim().replace(/^>\s?/, '')));
+        i++;
+      }
+      out.push(`<blockquote class="md-quote">${quoteLines.join('<br>')}</blockquote>`);
+      continue;
+    }
+
+    if (/^[-*+]\s+/.test(trimmed)) {
+      const items = [];
+      while (i < lines.length && /^[-*+]\s+/.test(lines[i].trim())) {
+        items.push(`<li>${inlineMd(lines[i].trim().replace(/^[-*+]\s+/, ''))}</li>`);
+        i++;
+      }
+      out.push(`<ul class="md-list">${items.join('')}</ul>`);
+      continue;
+    }
+
+    if (/^\d+[.)]\s+/.test(trimmed)) {
+      const items = [];
+      while (i < lines.length && /^\d+[.)]\s+/.test(lines[i].trim())) {
+        items.push(`<li>${inlineMd(lines[i].trim().replace(/^\d+[.)]\s+/, ''))}</li>`);
+        i++;
+      }
+      out.push(`<ol class="md-list">${items.join('')}</ol>`);
+      continue;
+    }
+
+    out.push(inlineMd(line));
+    i++;
+  }
+
+  return out.join('<br>').replace(/<br>(<(?:ul|ol|blockquote|hr|pre|div)\b)/g, '$1').replace(/(<\/(?:ul|ol|blockquote|pre|div)>|<hr class="md-hr">)<br>/g, '$1');
 }
-
 
 function renderEditText(str) {
   // 编辑态仍显示原始文本，但把“空行”压成和正文 Markdown 渲染一致的小段落间距，避免编辑时行距突然变大。
