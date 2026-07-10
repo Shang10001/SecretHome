@@ -7089,7 +7089,17 @@ async function sendMessage() {
         if (!asstForceZDR) body.provider = { order: ['Anthropic'] };
       }
       // Google Gemini: cache_control breakpoint already placed on messages above
-      // Other providers (OpenAI, etc.): rely on their own implicit caching
+      // OpenAI：同一对话使用固定标识，帮助 OpenRouter 保持粘性路由，
+      // 并帮助 OpenAI 将相同前缀尽量送到已有缓存的机器。
+      // 这不会改变实际消息内容，也不会影响 Claude / Gemini。
+      if (currentProvider === 'openai') {
+        const cacheSessionId = String(conv.id || state.activeConvId || '').slice(0, 256);
+        if (cacheSessionId) {
+          body.session_id = cacheSessionId;
+          body.prompt_cache_key = cacheSessionId;
+        }
+      }
+      // Other providers rely on their own implicit caching
 
       if (asstForceZDR || asstDenyDataCollection) {
         body.provider = body.provider || {};
