@@ -8213,7 +8213,12 @@ async function showStats() {
 
   // Load all conversations
   const allConvs = await loadAllConvsFromIDB();
-  const convList = Object.values(allConvs);
+  // 统计只读取当前仍存在的助手。旧版本或异常删除留下的孤立对话不再进入统计。
+  const existingAssistantIds = new Set(Object.keys(state.assistants || {}));
+  const convList = Object.values(allConvs).filter(conv => {
+    const asstId = conv.assistantId || state.conversations[conv.id]?.assistantId || 'asst_default';
+    return existingAssistantIds.has(asstId);
+  });
 
   // Gather all messages
   let allMsgs = [];
@@ -8397,6 +8402,7 @@ async function showStats() {
 
   // ---- Model usage ----
   const modelStats = {};
+  const assistantCostStats = {};
   for (const m of assistMsgs) {
     const model = m.model || 'unknown';
     if (!modelStats[model]) modelStats[model] = { msgs: 0, cost: 0, tokens: 0 };
@@ -8405,8 +8411,29 @@ async function showStats() {
       modelStats[model].cost += m.usage.cost || 0;
       modelStats[model].tokens += (m.usage.prompt_tokens || 0) + (m.usage.completion_tokens || 0);
     }
+
+    const aid = m._assistantId;
+    const asst = aid ? state.assistants[aid] : null;
+    if (!asst) continue;
+    if (!assistantCostStats[aid]) {
+      assistantCostStats[aid] = {
+        name: asst.name || '未命名助手',
+        color: asst.color || '#C9795E',
+        cost: 0,
+        msgs: 0,
+        models: new Set()
+      };
+    }
+    const item = assistantCostStats[aid];
+    item.msgs++;
+    item.cost += m.usage?.cost || 0;
+    if (m.model) item.models.add(m.model);
   }
   const modelEntries = Object.entries(modelStats).sort((a, b) => b[1].msgs - a[1].msgs);
+  const assistantCostEntries = getOrderedAssistants()
+    .map(asst => [asst.id, assistantCostStats[asst.id]])
+    .filter(([, item]) => item && item.msgs > 0)
+    .sort((a, b) => b[1].cost - a[1].cost);
 
   // ---- Top conversations ----
   const convStats = convList.map(c => ({
@@ -8424,8 +8451,58 @@ async function showStats() {
   const cacheWriteRate = totalPromptTokens > 0 ? ((totalCacheWrite / totalPromptTokens) * 100).toFixed(1) : '0';
   const cacheMissRate = totalPromptTokens > 0 ? (100 - parseFloat(cacheHitRate) - parseFloat(cacheWriteRate)).toFixed(1) : '0';
 
-  // Chart colors matching the palette
-  const chartColors = ['var(--accent)', 'var(--green)', 'var(--orange)', '#7C6DDA', '#DA6D97', '#6DB8DA'];
+  // ---- Cache efficiency by current assistant ----
+  const assistantCacheStats = {};
+  for (const m of assistMsgs) {
+    const aid = m._assistantId;
+    if (!aid || !state.assistants[aid] || !m.usage) continue;
+    if (!assistantCacheStats[aid]) {
+      assistantCacheStats[aid] = { input: 0, cached: 0, write: 0, requests: 0, hitRequests: 0, models: new Set() };
+    }
+    const item = assistantCacheStats[aid];
+    const input = m.usage.prompt_tokens || 0;
+    const cached = m.usage.cached_tokens || 0;
+    const write = m.usage.cache_write_tokens || 0;
+    item.input += input;
+    item.cached += cached;
+    item.write += write;
+    item.requests++;
+    if (cached > 0) item.hitRequests++;
+    if (m.model) item.models.add(m.model);
+  }
+  const assistantCacheEntries = getOrderedAssistants()
+    .map(asst => [asst.id, assistantCacheStats[asst.id], asst])
+    .filter(([, item]) => item && item.requests > 0);
+
+  function renderAssistantCacheCard(stats, asst) {
+    const miss = Math.max(0, stats.input - stats.cached - stats.write);
+    const pct = n => stats.input > 0 ? (n / stats.input * 100).toFixed(1) : '0.0';
+    const hitReqRate = stats.requests > 0 ? (stats.hitRequests / stats.requests * 100).toFixed(1) : '0.0';
+    const models = Array.from(stats.models).map(shortModelName).join(' / ') || assistantModelLabel(asst);
+    return `<div style="padding:12px;background:var(--surface2);border-radius:var(--radius-sm);margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:8px;">
+        <div style="min-width:0;">
+          <div style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--text);">
+            <span style="width:8px;height:8px;border-radius:50%;background:${asst.color || '#C9795E'};flex-shrink:0;"></span>
+            <span>${esc(asst.name)}</span>
+          </div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(models)}">${esc(models)}</div>
+        </div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:600;color:var(--cache-hit-color);">${pct(stats.cached)}%</div>
+      </div>
+      <div class="stats-hbar" style="margin-bottom:0;">
+        <div class="stats-hbar-seg" style="flex:${stats.cached};background:var(--cache-hit-color);"></div>
+        <div class="stats-hbar-seg" style="flex:${stats.write};background:var(--cache-write-color);"></div>
+        <div class="stats-hbar-seg" style="flex:${miss};background:var(--surface3);"></div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:7px;font-family:var(--mono);font-size:10px;color:var(--text3);">
+        <span>命中 ${fmtTokenCount(stats.cached)} (${pct(stats.cached)}%)</span>
+        <span>写入 ${fmtTokenCount(stats.write)} (${pct(stats.write)}%)</span>
+        <span>未缓存 ${fmtTokenCount(miss)} (${pct(miss)}%)</span>
+        <span>${stats.requests} 次回复 · ${stats.hitRequests} 次有命中 (${hitReqRate}%)</span>
+      </div>
+    </div>`;
+  }
 
   // ---- RENDER ----
   content.innerHTML = `
@@ -8561,17 +8638,11 @@ async function showStats() {
       </div>
 
       <div class="stats-section">
-        <div class="stats-section-title">缓存效率</div>
-        <div class="stats-hbar">
-          <div class="stats-hbar-seg" style="flex:${totalCached};background:var(--cache-hit-color);"></div>
-          <div class="stats-hbar-seg" style="flex:${totalCacheWrite};background:var(--cache-write-color);"></div>
-          <div class="stats-hbar-seg" style="flex:${Math.max(0, totalIn - totalCached - totalCacheWrite)};background:var(--surface3);"></div>
-        </div>
-        <div class="stats-hbar-legend">
-          <span><span class="dot" style="background:var(--cache-hit-color)"></span>命中 ${cacheHitRate}%</span>
-          <span><span class="dot" style="background:var(--cache-write-color)"></span>写入 ${cacheWriteRate}%</span>
-          <span><span class="dot" style="background:var(--surface3)"></span>未缓存 ${cacheMissRate}%</span>
-        </div>
+        <div class="stats-section-title">缓存效率（按助手）</div>
+        ${assistantCacheEntries.length > 0
+          ? assistantCacheEntries.map(([, stats, asst]) => renderAssistantCacheCard(stats, asst)).join('')
+          : '<div style="color:var(--text3);font-size:13px;">暂无缓存数据</div>'}
+        <div style="font-size:11px;color:var(--text3);line-height:1.6;margin-top:8px;">每位助手独立计算，不再混合不同模型的缓存机制。</div>
       </div>
 
       <div class="stats-section">
@@ -8586,17 +8657,18 @@ async function showStats() {
       </div>
 
       <div class="stats-section">
-        <div class="stats-section-title">模型费用分布</div>
-        ${modelEntries.length > 0 ? `
+        <div class="stats-section-title">助手费用分布</div>
+        ${assistantCostEntries.length > 0 ? `
         <div class="stats-hbar" style="margin-bottom:10px;">
-          ${modelEntries.map(([name, s], i) =>
-            `<div class="stats-hbar-seg" style="flex:${s.cost || 0.001};background:${chartColors[i % chartColors.length]};"></div>`
+          ${assistantCostEntries.map(([, item]) =>
+            `<div class="stats-hbar-seg" style="flex:${item.cost || 0.001};background:${item.color};"></div>`
           ).join('')}
         </div>
         <div class="stats-hbar-legend">
-          ${modelEntries.map(([name, s], i) =>
-            `<span><span class="dot" style="background:${chartColors[i % chartColors.length]}"></span>${esc(shortModelName(name))} $${s.cost.toFixed(3)}</span>`
-          ).join('')}
+          ${assistantCostEntries.map(([, item]) => {
+            const models = Array.from(item.models).map(shortModelName).join(' / ') || '未记录模型';
+            return `<span title="${esc(models)}"><span class="dot" style="background:${item.color}"></span>${esc(item.name)} · ${esc(models)} $${item.cost.toFixed(3)}</span>`;
+          }).join('')}
         </div>` : '<div style="color:var(--text3);font-size:13px;">暂无数据</div>'}
       </div>
     </div>
