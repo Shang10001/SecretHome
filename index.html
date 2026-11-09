@@ -2630,7 +2630,6 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
 :root[data-ui-mode="chat"] .chat-header-actions { gap: 4px; }
 :root[data-ui-mode="chat"] .chat-header-actions .icon-btn { width: 32px; height: 40px; }
 :root[data-ui-mode="chat"] .chat-header-actions .icon-btn svg { width: 19px; height: 19px; }
-:root[data-ui-mode="chat"] .chat-cache-dot { position: absolute; left: 24px; bottom: 3px; width: 8px; height: 8px; border: 1.5px solid var(--phone-header); }
 :root[data-ui-mode="chat"] .ctx-bar { margin: 0 16px; background: rgba(255,255,255,.25); }
 :root[data-ui-mode="chat"] .ctx-bar-fill { background: var(--phone-header); }
 :root[data-ui-mode="chat"] .contacts-view { background: var(--phone-bg); padding: 10px 11px 20px; }
@@ -2705,6 +2704,65 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
   :root[data-ui-mode="chat"] .chat-presence { font-size: 12px; }
   :root[data-ui-mode="chat"] .contact-item { padding-left: 14px; padding-right: 12px; gap: 10px; }
 }
+
+/* RP：灰紫色顶栏、浅灰绿用户气泡，以及更柔和的缓存提示。 */
+:root[data-ui-mode="roleplay"] {
+  --rp-header: #957688;
+  --rp-bg: #dcdddf;
+  --rp-card: #ffffff;
+  --rp-asst: #f7f8fa;
+  --rp-text: #292a28;
+  --rp-secondary: #696b68;
+  --rp-muted: #969994;
+  --rp-cache-miss: #b7483d;
+  --user-bg: #e8eadd;
+}
+:root.night[data-ui-mode="roleplay"] {
+  --rp-header: #56434f;
+  --rp-bg: #202625;
+  --rp-card: #303735;
+  --rp-asst: #343d3a;
+  --rp-text: #eceee8;
+  --rp-secondary: #b5bdb7;
+  --rp-muted: #929e96;
+  --rp-cache-miss: #c17c70;
+  --user-bg: #393e32;
+}
+:root[data-ui-mode="roleplay"] .app {
+  background: linear-gradient(var(--rp-header), var(--rp-header)) top / 100% var(--safe-top) no-repeat, var(--bg);
+}
+:root[data-ui-mode="roleplay"] .header {
+  background: var(--rp-header);
+  border-bottom: none;
+  color: #fff;
+  min-height: 52px;
+  padding: 7px 10px;
+}
+:root[data-ui-mode="roleplay"] .header .icon-btn,
+:root[data-ui-mode="roleplay"] .header .chat-header-name { color: #fff; }
+:root[data-ui-mode="roleplay"] .header .icon-btn:hover,
+:root[data-ui-mode="roleplay"] .header .icon-btn:active,
+:root[data-ui-mode="roleplay"] .header .chat-header-id:active { background: rgba(255,255,255,.12); }
+:root[data-ui-mode="roleplay"] .meta-tag.cache-miss { color: var(--rp-cache-miss); }
+:root[data-ui-mode="roleplay"] .contacts-view { background: var(--rp-bg); padding: 10px 11px 20px; }
+:root[data-ui-mode="roleplay"] .contact-item {
+  min-height: 74px;
+  margin-bottom: 9px;
+  padding: 14px 18px;
+  gap: 14px;
+  background: var(--rp-card);
+  border: none;
+  border-radius: 18px;
+}
+:root[data-ui-mode="roleplay"] .contact-item:active { background: var(--rp-asst); }
+:root[data-ui-mode="roleplay"] .contact-avatar { width: 44px; height: 44px; font-size: 21px; }
+:root[data-ui-mode="roleplay"] .contact-name { gap: 8px; font-size: 16px; line-height: 1.4; color: var(--rp-text); overflow-wrap: anywhere; }
+:root[data-ui-mode="roleplay"] .contact-meta { margin-top: 5px; font-size: 13px; line-height: 1.4; color: var(--rp-secondary); }
+:root[data-ui-mode="roleplay"] .contact-item .asst-dot { width: 10px; height: 10px; }
+:root[data-ui-mode="roleplay"] .contact-item .asst-item-more { opacity: 1; pointer-events: auto; color: var(--rp-muted); }
+@media (max-width: 350px) {
+  :root[data-ui-mode="roleplay"] .contact-item { padding-left: 14px; padding-right: 12px; gap: 10px; }
+}
 </style>
 <script>
 // 主题：在 body 渲染前应用，避免闪烁；暖白（默认）/ 夜间
@@ -2723,7 +2781,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     var isPhone = savedUi && savedUi.uiMode === 'chat';
     document.documentElement.dataset.uiMode = isPhone ? 'chat' : 'roleplay';
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute('content', isPhone ? (t === 'night' ? '#164b49' : '#18716f') : (t === 'night' ? '#171817' : '#FAFAFA'));
+    if (m) m.setAttribute('content', isPhone ? (t === 'night' ? '#164b49' : '#18716f') : (t === 'night' ? '#56434f' : '#957688'));
   } catch(e){}
 })();
 </script>
@@ -2739,7 +2797,6 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <div class="chat-header-id roleplay-header-id" id="roleplayHeaderId" onclick="showAssistantConvs()" title="对话列表" style="display:none">
-        <div class="chat-avatar" id="roleplayHeaderAvatar">AI</div>
         <div class="chat-header-name" id="roleplayHeaderName">AI 助手</div>
       </div>
       <div class="cache-indicator" id="cacheStatus">
@@ -2796,10 +2853,8 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       </button>
     </div>
     <div class="chat-header-id" onclick="showChatConvList()" title="对话列表">
-      <div class="chat-avatar" id="chatAvatar">AI</div>
       <div class="chat-header-name" id="chatHeaderName">AI 助手</div>
       <span class="chat-presence" id="chatPresence" title="暂无有效缓存">· offline</span>
-      <span class="chat-cache-dot" id="chatCacheDot"></span>
     </div>
     <div class="chat-header-actions" id="chatHeaderActions">
       <button class="icon-btn" onclick="newConversation()" title="新建对话">
@@ -5681,7 +5736,7 @@ function syncChatAppearance(mode = state.uiMode) {
   root.dataset.uiMode = isPhone ? 'chat' : 'roleplay';
   const isNight = getCurrentTheme() === 'night';
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', isPhone ? (isNight ? '#164b49' : '#18716f') : THEME_META[getCurrentTheme()].color);
+  if (meta) meta.setAttribute('content', isPhone ? (isNight ? '#164b49' : '#18716f') : (isNight ? '#56434f' : '#957688'));
   updateChatPresence();
 }
 
