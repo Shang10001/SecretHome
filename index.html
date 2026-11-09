@@ -2827,6 +2827,17 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
   .header.conversation-header #convHeaderActions { gap: 0; }
   .header.conversation-header #convHeaderActions .icon-btn { width: 28px; }
 }
+/* 自定义字体只应用于阅读文字，不改变按钮、时间、数据和代码字体。 */
+:root.custom-reading-font .msg-content,
+:root.custom-reading-font .chat-bubble,
+:root.custom-reading-font .chat-bubble-col.editing,
+:root.custom-reading-font .chat-header-name,
+:root.custom-reading-font .contact-name,
+:root.custom-reading-font #userInput,
+:root.custom-reading-font #customFontPreview {
+  font-family: 'SecretHomeReading', var(--font);
+}
+#customFontPreview { margin-top:10px; padding:12px; border-radius:10px; background:var(--surface2); color:var(--text); font-size:16px; line-height:1.8; }
 </style>
 <script>
 // 主题：在 body 渲染前应用，避免闪烁；暖白（默认）/ 夜间
@@ -3001,6 +3012,20 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
 
     <!-- GENERAL TAB -->
     <div class="tab-panel active" id="tab-general">
+      <div class="field">
+        <label>自定义字体</label>
+        <div class="hint">只替换两个模式的消息正文、输入框和助手名字，按钮、时间、数据及代码保留原字体。支持 TTF、OTF、WOFF、WOFF2。</div>
+        <input type="file" id="customFontFile" accept=".ttf,.otf,.woff,.woff2" hidden onchange="importReadingFont(event)">
+        <div class="btn-row">
+          <button class="btn" id="customFontImport" onclick="document.getElementById('customFontFile').click()">选择字体文件</button>
+          <button class="btn" id="customFontToggle" onclick="toggleReadingFont()" disabled>使用默认字体</button>
+        </div>
+        <div class="hint" id="customFontStatus" role="status" aria-live="polite">当前使用默认字体</div>
+        <div id="customFontPreview">今天也在这里陪你。圆圆的字，慢慢地聊。Aa 123</div>
+        <div class="hint">选择后立即生效，无需点保存。字体仅保存在当前设备，不包含在聊天备份中；换设备或清理网站数据后需重新导入。</div>
+      </div>
+
+
       <div class="field">
         <label style="display:flex;justify-content:space-between;align-items:center;">
           模型供应商
@@ -4097,6 +4122,125 @@ async function deleteConvFromIDB(convId) {
     const tx = idb.transaction('conversations', 'readwrite');
     tx.objectStore('conversations').delete(convId);
   } catch(e) {}
+}
+
+// ============ LOCAL READING FONT ============
+let readingFontRecord = null;
+let readingFontFace = null;
+let readingFontBusy = false;
+
+function updateReadingFontControls(message) {
+  const toggle = document.getElementById('customFontToggle');
+  const picker = document.getElementById('customFontImport');
+  if (toggle) {
+    toggle.disabled = readingFontBusy || !readingFontRecord;
+    toggle.textContent = readingFontRecord?.enabled ? '使用默认字体' : '启用自定义字体';
+  }
+  if (picker) picker.disabled = readingFontBusy;
+  const status = document.getElementById('customFontStatus');
+  if (status) status.textContent = message || (readingFontRecord
+    ? `${readingFontRecord.enabled ? '正在使用' : '已停用'}：${readingFontRecord.name}（${(readingFontRecord.bytes.byteLength / 1024 / 1024).toFixed(1)} MB）`
+    : '当前使用默认字体');
+}
+
+// 独立保存二进制字体，避免随 state 反复序列化或进入聊天备份。
+async function writeReadingFont(record) {
+  if (!idb) await openIDB();
+  return new Promise((resolve, reject) => {
+    const tx = idb.transaction('settings', 'readwrite');
+    tx.objectStore('settings').put(record, 'readingFont');
+    tx.oncomplete = () => resolve();
+    tx.onerror = tx.onabort = () => reject(tx.error || new Error('字体保存失败'));
+  });
+}
+
+async function prepareReadingFont(bytes) {
+  if (typeof FontFace === 'undefined' || !document.fonts) throw new Error('当前浏览器不支持自定义字体');
+  const face = new FontFace('SecretHomeReading', bytes);
+  await face.load();
+  return face;
+}
+
+function applyReadingFont(record, face) {
+  if (face !== readingFontFace) {
+    if (readingFontFace) document.fonts.delete(readingFontFace);
+    if (face) document.fonts.add(face);
+    readingFontFace = face;
+  }
+  readingFontRecord = record;
+  document.documentElement.classList.toggle('custom-reading-font', !!record?.enabled);
+  if (typeof autoResize === 'function') autoResize(document.getElementById('userInput'));
+}
+
+async function restoreReadingFont() {
+  readingFontBusy = true;
+  updateReadingFontControls('正在读取本机字体…');
+  try {
+    if (!idb) await openIDB();
+    const record = await new Promise((resolve, reject) => {
+      const tx = idb.transaction('settings', 'readonly');
+      const req = tx.objectStore('settings').get('readingFont');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    if (record?.bytes instanceof ArrayBuffer && record.bytes.byteLength) {
+      const face = record.enabled ? await prepareReadingFont(record.bytes) : null;
+      applyReadingFont(record, face);
+    }
+    updateReadingFontControls();
+  } catch (e) {
+    console.warn('Local font restore failed:', e);
+    updateReadingFontControls('字体未能加载，暂用默认字体，可重新选择字体文件。');
+  } finally {
+    readingFontBusy = false;
+    // 保留失败提示，只更新按钮状态。
+    document.getElementById('customFontImport').disabled = false;
+    document.getElementById('customFontToggle').disabled = !readingFontRecord;
+  }
+}
+
+async function importReadingFont(event) {
+  const input = event.target;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file || readingFontBusy) return;
+  if (!/\.(ttf|otf|woff2?)$/i.test(file.name)) { showToast('请选择 TTF、OTF、WOFF 或 WOFF2 字体文件'); return; }
+  if (!file.size || file.size > 30 * 1024 * 1024) { showToast('请选择非空且不超过 30 MB 的字体文件'); return; }
+  readingFontBusy = true;
+  updateReadingFontControls('正在加载并保存字体…');
+  try {
+    const bytes = await file.arrayBuffer();
+    const face = await prepareReadingFont(bytes);
+    const record = { name: file.name, bytes, enabled: true };
+    await writeReadingFont(record);
+    applyReadingFont(record, face);
+    showToast('字体已应用');
+    readingFontBusy = false;
+    updateReadingFontControls();
+  } catch (e) {
+    console.warn('Local font import failed:', e);
+    readingFontBusy = false;
+    updateReadingFontControls('导入失败，原字体保持不变。请检查字体文件或本机剩余空间后重试。');
+    showToast('字体导入失败');
+  }
+}
+
+async function toggleReadingFont() {
+  if (readingFontBusy || !readingFontRecord) return;
+  readingFontBusy = true;
+  updateReadingFontControls('正在切换字体…');
+  try {
+    const record = { ...readingFontRecord, enabled: !readingFontRecord.enabled };
+    const face = record.enabled ? (readingFontFace || await prepareReadingFont(record.bytes)) : readingFontFace;
+    await writeReadingFont(record);
+    applyReadingFont(record, face);
+    readingFontBusy = false;
+    updateReadingFontControls();
+  } catch (e) {
+    console.warn('Local font switch failed:', e);
+    readingFontBusy = false;
+    updateReadingFontControls('字体切换失败，请重试。');
+  }
 }
 
 // ============ UNIFIED SAVE / LOAD ============
@@ -9204,6 +9348,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // CRITICAL: Load IDB data BEFORE creating/rendering a conversation.
   // Otherwise a fresh empty conversation can hide older IndexedDB data when localStorage was cleared.
   await tryLoadFromIDB();
+  // 字体异步恢复，不阻塞聊天初始化。
+  void restoreReadingFont();
   if (!state.activeConvId) newConversation();
   // Set auto-export toggle state
   const aeToggle = document.getElementById('autoExportToggle');
