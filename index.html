@@ -6157,7 +6157,8 @@ function renderFavorites() {
   }
   list.innerHTML = favorites.map(f => {
     const convExists = !!state.conversations[f.convId];
-    const source = convExists ? `来自对话《${esc(f.conversationTitle || '未命名对话')}》` : `原对话已删除 · 《${esc(f.conversationTitle || '未命名对话')}》`;
+    const title = state.conversations[f.convId]?.title || f.conversationTitle || '未命名对话';
+    const source = convExists ? `来自对话《${esc(title)}》` : `原对话已删除 · 《${esc(title)}》`;
     return `<article class="favorite-card">
       <div class="favorite-content">${renderMd(f.content || '')}</div>
       <div class="favorite-meta">
