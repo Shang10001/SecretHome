@@ -2,9 +2,9 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="秘密家园">
 <meta name="theme-color" content="#FAFAFA">
 <meta name="color-scheme" content="light dark">
@@ -2707,7 +2707,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
 
 /* RP：灰紫色顶栏、浅灰绿用户气泡，以及更柔和的缓存提示。 */
 :root[data-ui-mode="roleplay"] {
-  --rp-header: #957688;
+  --rp-header: #18716f;
   --rp-bg: #dcdddf;
   --rp-card: #ffffff;
   --rp-asst: #f7f8fa;
@@ -2718,7 +2718,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
   --user-bg: #e8eadd;
 }
 :root.night[data-ui-mode="roleplay"] {
-  --rp-header: #56434f;
+  --rp-header: #164b49;
   --rp-bg: #202625;
   --rp-card: #303735;
   --rp-asst: #343d3a;
@@ -2763,6 +2763,29 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
 @media (max-width: 350px) {
   :root[data-ui-mode="roleplay"] .contact-item { padding-left: 14px; padding-right: 12px; gap: 10px; }
 }
+
+/* 系统状态栏下方使用页面本身的顶栏底色，不单独等待系统取色。 */
+:root[data-ui-mode="chat"] { --system-header: var(--phone-header); }
+:root[data-ui-mode="roleplay"] { --system-header: var(--rp-header); }
+:root[data-ui-mode], :root[data-ui-mode] body {
+  background-color: var(--system-header);
+  transition: none;
+}
+:root[data-ui-mode="roleplay"] .input-area {
+  padding-bottom: max(2px, calc(36px - var(--safe-bottom)));
+}
+.modal { padding-bottom: calc(24px + var(--safe-bottom)); }
+
+/* 主要操作与日期分组统一使用灰紫色，不改变聊天气泡及发送按钮。 */
+:root { --action-purple: #957688; --action-purple-hover: #806374; --date-purple: #957688; }
+:root.night { --date-purple: #c5a5b8; }
+.btn.primary, .msg-action-btn.save {
+  background: var(--action-purple);
+  border-color: var(--action-purple);
+  color: #fff;
+}
+.btn.primary:hover, .msg-action-btn.save:hover { background: var(--action-purple-hover); border-color: var(--action-purple-hover); }
+.conv-date-group { color: var(--date-purple); }
 </style>
 <script>
 // 主题：在 body 渲染前应用，避免闪烁；暖白（默认）/ 夜间
@@ -2781,7 +2804,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     var isPhone = savedUi && savedUi.uiMode === 'chat';
     document.documentElement.dataset.uiMode = isPhone ? 'chat' : 'roleplay';
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute('content', isPhone ? (t === 'night' ? '#164b49' : '#18716f') : (t === 'night' ? '#56434f' : '#957688'));
+    if (m) m.setAttribute('content', isPhone ? (t === 'night' ? '#164b49' : '#18716f') : (t === 'night' ? '#164b49' : '#18716f'));
   } catch(e){}
 })();
 </script>
@@ -5736,9 +5759,15 @@ function syncChatAppearance(mode = state.uiMode) {
   root.dataset.uiMode = isPhone ? 'chat' : 'roleplay';
   const isNight = getCurrentTheme() === 'night';
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', isPhone ? (isNight ? '#164b49' : '#18716f') : (isNight ? '#56434f' : '#957688'));
+  if (meta) meta.setAttribute('content', isPhone ? (isNight ? '#164b49' : '#18716f') : (isNight ? '#164b49' : '#18716f'));
   updateChatPresence();
 }
+
+// 从后台返回时重新同步当前模式，恢复系统可能保留的旧顶栏颜色。
+window.addEventListener('pageshow', () => syncChatAppearance());
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') syncChatAppearance();
+});
 
 // online 表示当前对话的缓存仍在有效期内，与设备是否联网无关。
 let chatPresenceExpiryTimer = null;
