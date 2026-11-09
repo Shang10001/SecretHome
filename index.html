@@ -2571,6 +2571,132 @@ button.msg-status-dot:focus-visible {
 html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indicator {
   transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
 }
+
+/* 小手机：仅在聊天模式应用，角色扮演界面沿用原样式。 */
+:root[data-ui-mode="chat"] {
+  --phone-header: #18716f;
+  --phone-header-hover: #21625f;
+  --phone-bg: #dcdddf;
+  --phone-card: #ffffff;
+  --phone-asst: #f7f8fa;
+  --phone-user: #cedc9e;
+  --phone-input: #f2f2f3;
+  --phone-text: #292a28;
+  --phone-secondary: #696b68;
+  --phone-muted: #969994;
+  --chat-asst-bg: var(--phone-asst);
+  --chat-user-bg: var(--phone-user);
+}
+:root.night[data-ui-mode="chat"] {
+  --phone-header: #164b49;
+  --phone-header-hover: #205a57;
+  --phone-bg: #202625;
+  --phone-card: #303735;
+  --phone-asst: #343d3a;
+  --phone-user: #4a5c3e;
+  --phone-input: #303735;
+  --phone-text: #eceee8;
+  --phone-secondary: #b5bdb7;
+  --phone-muted: #929e96;
+}
+:root[data-ui-mode="chat"] body { background: var(--phone-bg); }
+:root[data-ui-mode="chat"] .app {
+  background: linear-gradient(var(--phone-header), var(--phone-header)) top / 100% var(--safe-top) no-repeat, var(--phone-bg);
+}
+:root[data-ui-mode="chat"] .header,
+:root[data-ui-mode="chat"] .chat-header {
+  background: var(--phone-header);
+  border-bottom: none;
+  color: #fff;
+  min-height: 52px;
+  padding: 7px 10px;
+}
+:root[data-ui-mode="chat"] .header .icon-btn,
+:root[data-ui-mode="chat"] .chat-header .icon-btn { color: #fff; }
+:root[data-ui-mode="chat"] .header .icon-btn:hover,
+:root[data-ui-mode="chat"] .header .icon-btn:active,
+:root[data-ui-mode="chat"] .chat-header .icon-btn:hover,
+:root[data-ui-mode="chat"] .chat-header .icon-btn:active,
+:root[data-ui-mode="chat"] .chat-header-id:active { background: rgba(255,255,255,.12); }
+:root[data-ui-mode="chat"] .chat-header { gap: 4px; padding-left: 10px; padding-right: 8px; }
+:root[data-ui-mode="chat"] .chat-header-left { gap: 0; }
+:root[data-ui-mode="chat"] .chat-header-left .icon-btn { width: 24px; }
+:root[data-ui-mode="chat"] .chat-header-id { position: relative; gap: 8px; padding: 0 2px; }
+:root[data-ui-mode="chat"] .chat-avatar { width: 30px; height: 30px; font-size: 14px; }
+:root[data-ui-mode="chat"] .chat-header-name { font-size: 15px; font-weight: 600; color: #fff; }
+.chat-presence { display: none; }
+:root[data-ui-mode="chat"] .chat-presence { display: inline; flex-shrink: 0; font-size: 14px; color: #fff; white-space: nowrap; }
+:root[data-ui-mode="chat"] .chat-header-actions { gap: 4px; }
+:root[data-ui-mode="chat"] .chat-header-actions .icon-btn { width: 32px; height: 40px; }
+:root[data-ui-mode="chat"] .chat-header-actions .icon-btn svg { width: 19px; height: 19px; }
+:root[data-ui-mode="chat"] .chat-cache-dot { position: absolute; left: 24px; bottom: 3px; width: 8px; height: 8px; border: 1.5px solid var(--phone-header); }
+:root[data-ui-mode="chat"] .ctx-bar { margin: 0 16px; background: rgba(255,255,255,.25); }
+:root[data-ui-mode="chat"] .ctx-bar-fill { background: var(--phone-header); }
+:root[data-ui-mode="chat"] .contacts-view { background: var(--phone-bg); padding: 10px 11px 20px; }
+:root[data-ui-mode="chat"] .contact-item {
+  min-height: 74px;
+  margin-bottom: 9px;
+  padding: 14px 18px;
+  gap: 14px;
+  background: var(--phone-card);
+  border: none;
+  border-radius: 18px;
+}
+:root[data-ui-mode="chat"] .contact-item:active { background: var(--phone-asst); }
+:root[data-ui-mode="chat"] .contact-avatar { width: 44px; height: 44px; font-size: 21px; }
+:root[data-ui-mode="chat"] .contact-name { gap: 8px; font-size: 16px; line-height: 1.4; color: var(--phone-text); overflow-wrap: anywhere; }
+:root[data-ui-mode="chat"] .contact-meta { margin-top: 5px; font-size: 13px; line-height: 1.4; color: var(--phone-secondary); }
+:root[data-ui-mode="chat"] .contact-item .asst-dot { width: 10px; height: 10px; }
+:root[data-ui-mode="chat"] .contact-item .asst-item-more { opacity: 1; pointer-events: auto; color: var(--phone-muted); }
+:root[data-ui-mode="chat"] .messages { background: var(--phone-bg); padding: 10px 16px 6px; }
+:root[data-ui-mode="chat"] .chat-group { gap: 6px; margin-bottom: 16px; }
+:root[data-ui-mode="chat"] .chat-bubble-col { gap: 6px; max-width: calc(100% - 32px); }
+:root[data-ui-mode="chat"] .chat-bubble {
+  padding: 10px 14px;
+  border-radius: 18px;
+  color: var(--phone-text);
+  font-size: 15px;
+  line-height: 1.5;
+  isolation: isolate;
+}
+:root[data-ui-mode="chat"] .chat-bubble.first::before {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  z-index: -1;
+}
+:root[data-ui-mode="chat"] .chat-bubble.asst.first::before { left: 4px; border-radius: 0 0 12px 2px; transform: skewX(-30deg); }
+:root[data-ui-mode="chat"] .chat-bubble.user.first::before { right: 4px; border-radius: 0 0 2px 12px; transform: skewX(30deg); }
+:root[data-ui-mode="chat"] .chat-group .msg-inline-menu { margin-top: 9px; min-width: 24px; padding: 5px 3px; color: var(--phone-muted); opacity: .65; }
+:root[data-ui-mode="chat"] .chat-group .msg-inline-menu:hover,
+:root[data-ui-mode="chat"] .chat-group .msg-inline-menu:active { opacity: 1; background: var(--phone-card); }
+:root[data-ui-mode="chat"] .chat-bubble-col.editing { color: var(--phone-text); max-width: calc(100% - 32px); border-radius: 18px; }
+:root[data-ui-mode="chat"] .chat-empty { color: var(--phone-secondary); }
+:root[data-ui-mode="chat"] .input-area { background: var(--phone-bg); padding: 2px 13px max(2px, calc(36px - var(--safe-bottom))); }
+:root[data-ui-mode="chat"] .cost-bar { color: var(--phone-muted); gap: 10px; padding: 0 0 3px; font-size: 10px; }
+:root[data-ui-mode="chat"] .input-box { background: var(--phone-input); border-radius: 24px; }
+:root[data-ui-mode="chat"] .input-box:focus-within { background: var(--phone-input); box-shadow: 0 0 0 1px rgba(24,113,111,.2); }
+:root[data-ui-mode="chat"] .input-row { align-items: flex-end; gap: 5px; padding: 3px 4px 3px 9px; }
+:root[data-ui-mode="chat"] .input-row textarea { color: var(--phone-text); font-size: 15px; line-height: 22px; min-height: 30px; padding: 4px 0; }
+:root[data-ui-mode="chat"] .input-row textarea::placeholder { color: var(--phone-muted); }
+:root[data-ui-mode="chat"] .img-btn { width: 24px; height: 30px; margin: 0; color: var(--phone-muted); }
+:root[data-ui-mode="chat"] .img-btn svg { width: 17px; height: 17px; }
+:root[data-ui-mode="chat"] .send-btn { width: 30px; height: 30px; margin: 0; background: var(--phone-header); color: #fff; }
+:root[data-ui-mode="chat"] .send-btn:hover { background: var(--phone-header-hover); }
+:root[data-ui-mode="chat"] .send-btn:disabled { background: var(--surface3); color: var(--text3); }
+:root[data-ui-mode="chat"] .send-btn svg { width: 17px; height: 17px; }
+:root[data-ui-mode="chat"] .img-preview { padding: 10px 12px 5px; }
+@media (max-width: 350px) {
+  :root[data-ui-mode="chat"] .header { padding-left: 6px; padding-right: 5px; }
+  :root[data-ui-mode="chat"] .chat-header-id { gap: 6px; }
+  :root[data-ui-mode="chat"] .chat-header-actions { gap: 0; }
+  :root[data-ui-mode="chat"] .chat-header-actions .icon-btn { width: 28px; }
+  :root[data-ui-mode="chat"] .chat-presence { font-size: 12px; }
+  :root[data-ui-mode="chat"] .contact-item { padding-left: 14px; padding-right: 12px; gap: 10px; }
+}
 </style>
 <script>
 // 主题：在 body 渲染前应用，避免闪烁；暖白（默认）/ 夜间
@@ -2585,8 +2711,11 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     // day 已移除，旧的 day 值当作 sepia
     if (t === 'day') t = 'sepia';
     document.documentElement.classList.add(t);
+    var savedUi = JSON.parse(localStorage.getItem(['be','nb','en','_data'].join('')) || 'null');
+    var isPhone = savedUi && savedUi.uiMode === 'chat';
+    document.documentElement.dataset.uiMode = isPhone ? 'chat' : 'roleplay';
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute('content', t === 'night' ? '#171817' : '#FAFAFA');
+    if (m) m.setAttribute('content', isPhone ? (t === 'night' ? '#164b49' : '#18716f') : (t === 'night' ? '#171817' : '#FAFAFA'));
   } catch(e){}
 })();
 </script>
@@ -2661,6 +2790,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     <div class="chat-header-id" onclick="showChatConvList()" title="对话列表">
       <div class="chat-avatar" id="chatAvatar">AI</div>
       <div class="chat-header-name" id="chatHeaderName">AI 助手</div>
+      <span class="chat-presence" id="chatPresence" title="设备网络在线">· online</span>
       <span class="chat-cache-dot" id="chatCacheDot"></span>
     </div>
     <div class="chat-header-actions" id="chatHeaderActions">
@@ -3713,6 +3843,7 @@ function cycleTheme() {
   try { localStorage.setItem(['be','nb','en','_theme'].join(''), next); } catch(e){}
   const m = document.querySelector('meta[name="theme-color"]');
   if (m) m.setAttribute('content', THEME_META[next].color);
+  syncChatAppearance();
   syncThemeIcon();
 }
 
@@ -5536,6 +5667,27 @@ function splitChatBubbles(content) {
 }
 
 // --- 模式切换（门 ←→ 气泡）---
+function syncChatAppearance(mode = state.uiMode) {
+  const isPhone = mode === 'chat';
+  const root = document.documentElement;
+  root.dataset.uiMode = isPhone ? 'chat' : 'roleplay';
+  const isNight = getCurrentTheme() === 'night';
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', isPhone ? (isNight ? '#164b49' : '#18716f') : THEME_META[getCurrentTheme()].color);
+  updateChatPresence();
+}
+
+// online 表示设备的网络状态；缓存状态仍由头像旁的原有指示点显示。
+function updateChatPresence() {
+  const label = document.getElementById('chatPresence');
+  if (!label) return;
+  const online = navigator.onLine !== false;
+  label.textContent = online ? '· online' : '· offline';
+  label.title = online ? '设备网络在线' : '设备网络已断开';
+}
+window.addEventListener('online', updateChatPresence);
+window.addEventListener('offline', updateChatPresence);
+
 async function switchUIMode() {
   // 顶栏模式按钮只在主页显示：连续点击时只切换主页类型，不自动跳进某个对话。
   if (state.uiMode !== 'chat') {
@@ -5552,6 +5704,7 @@ async function switchUIMode() {
 }
 
 function updateModeSwitchIcon() {
+  syncChatAppearance();
   const btn = document.getElementById('modeSwitchBtn');
   if (!btn) return;
   if (state.uiMode === 'chat') {
@@ -5585,6 +5738,7 @@ function setMainHeaderMode(mode) {
 }
 
 function showRoleplayView() {
+  syncChatAppearance('roleplay');
   document.getElementById('chatHeader').style.display = 'none';
   document.querySelector('.header').style.display = '';
   setMainHeaderMode('conversation');
@@ -5595,6 +5749,7 @@ function showRoleplayView() {
 }
 
 function showContactsView() {
+  syncChatAppearance();
   document.getElementById('chatHeader').style.display = 'none';
   document.querySelector('.header').style.display = '';
   setMainHeaderMode('home');
@@ -5610,6 +5765,7 @@ function showContactsView() {
 }
 
 function showChatView() {
+  syncChatAppearance('chat');
   document.querySelector('.header').style.display = 'none';
   document.getElementById('chatHeader').style.display = '';
   document.getElementById('contactsView').style.display = 'none';
