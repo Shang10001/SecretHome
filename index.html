@@ -3844,6 +3844,7 @@ function saveState() {
     const meta = state.conversations[state._activeConvData.id];
     meta.title = state._activeConvData.title;
     meta.msgCount = state._activeConvData.messages.length;
+    meta.firstMessageAt = getConversationFirstMessageTime(state._activeConvData);
     meta.totalCost = state._activeConvData.messages.reduce((s, m) => s + (m.usage?.cost || 0), 0) + (state._activeConvData.deletedCost || 0);
   }
   saveSettingsToLS();
@@ -4609,7 +4610,23 @@ function showAssistantListPanel() {
   renderAssistantList();
 }
 
-function showAssistantConvs() {
+function getConversationFirstMessageTime(conv) {
+  const first = conv?.messages?.[0];
+  const date = first ? extractTimestamp(first) : null;
+  return date && Number.isFinite(date.getTime()) ? date.getTime() : null;
+}
+
+function formatConversationStartTime(timestamp) {
+  if (typeof timestamp !== 'number' || !Number.isFinite(timestamp)) return '';
+  const date = new Date(timestamp);
+  if (!Number.isFinite(date.getTime())) return '';
+  return String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
+}
+
+let conversationListRequest = 0;
+
+async function showAssistantConvs() {
+  const request = ++conversationListRequest;
   clearSearch(); // Reset search state when reopening sidebar
   const asst = getActiveAssistant();
   document.getElementById('asstListPanel').style.display = 'none';
@@ -4621,6 +4638,22 @@ function showAssistantConvs() {
   const convs = Object.values(state.conversations)
     .filter(c => (c.assistantId || 'asst_default') === asst.id && convInCurrentMode(c))
     .sort((a,b) => b.created - a.created);
+
+  // 旧对话第一次打开列表时，从消息原始时间补齐；之后直接读取轻量索引。
+  let updated = false;
+  await Promise.all(convs.map(async c => {
+    if (c.firstMessageAt !== undefined) return;
+    const conv = state._activeConvData?.id === c.id
+      ? state._activeConvData : await loadConvFromIDB(c.id);
+    if (!conv) return;
+    c.firstMessageAt = getConversationFirstMessageTime(conv);
+    updated = true;
+  }));
+  if (updated) {
+    saveSettingsToLS();
+    saveSettingsToIDB();
+  }
+  if (request !== conversationListRequest || state.activeAssistantId !== asst.id) return;
 
   // Group by date
   const groups = [];
@@ -4639,11 +4672,12 @@ function showAssistantConvs() {
       return `<div class="conv-date-group">${g.label}</div>`;
     }
     const c = g.data;
+    const startTime = formatConversationStartTime(c.firstMessageAt);
     return `
       <div class="conv-item ${c.id === state.activeConvId ? 'active' : ''}" onclick="switchConversation('${c.id}')">
         <div class="conv-item-info">
           <div class="conv-item-title" id="convTitle-${c.id}">${esc(c.title)}</div>
-          <div class="conv-item-meta">${c.msgCount || 0} 条消息${c.totalCost ? ' · $' + c.totalCost.toFixed(4) : ''}</div>
+          <div class="conv-item-meta">${startTime ? startTime + ' · ' : ''}${c.msgCount || 0} 条消息${c.totalCost ? ' · $' + c.totalCost.toFixed(4) : ''}</div>
         </div>
         <button class="conv-item-more" onclick="showConvMenu(event, '${c.id}')">&#8943;</button>
       </div>
