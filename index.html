@@ -1678,6 +1678,7 @@ button.msg-status-dot:focus-visible {
   flex-shrink: 0;
 }
 .ctx-bar-fill {
+  background: #B18CA2;
   height: 100%;
   border-radius: 1px;
   width: 0%;
@@ -2673,6 +2674,13 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
 :root[data-ui-mode="chat"] .chat-group .msg-inline-menu { margin-top: 9px; min-width: 24px; padding: 5px 3px; color: var(--phone-muted); opacity: .65; }
 :root[data-ui-mode="chat"] .chat-group .msg-inline-menu:hover,
 :root[data-ui-mode="chat"] .chat-group .msg-inline-menu:active { opacity: 1; background: var(--phone-card); }
+:root[data-ui-mode="chat"] .chat-first-row { position: relative; width: fit-content; max-width: 100%; }
+:root[data-ui-mode="chat"] .chat-first-row > .msg-inline-menu {
+  position: absolute;
+  left: calc(100% + 6px);
+  top: 9px;
+  margin-top: 0;
+}
 :root[data-ui-mode="chat"] .chat-bubble-col.editing { color: var(--phone-text); max-width: calc(100% - 32px); border-radius: 18px; }
 :root[data-ui-mode="chat"] .chat-empty { color: var(--phone-secondary); }
 :root[data-ui-mode="chat"] .input-area { background: var(--phone-bg); padding: 2px 13px max(2px, calc(36px - var(--safe-bottom))); }
@@ -2790,7 +2798,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     <div class="chat-header-id" onclick="showChatConvList()" title="对话列表">
       <div class="chat-avatar" id="chatAvatar">AI</div>
       <div class="chat-header-name" id="chatHeaderName">AI 助手</div>
-      <span class="chat-presence" id="chatPresence" title="设备网络在线">· online</span>
+      <span class="chat-presence" id="chatPresence" title="暂无有效缓存">· offline</span>
       <span class="chat-cache-dot" id="chatCacheDot"></span>
     </div>
     <div class="chat-header-actions" id="chatHeaderActions">
@@ -5677,16 +5685,27 @@ function syncChatAppearance(mode = state.uiMode) {
   updateChatPresence();
 }
 
-// online 表示设备的网络状态；缓存状态仍由头像旁的原有指示点显示。
+// online 表示当前对话的缓存仍在有效期内，与设备是否联网无关。
+let chatPresenceExpiryTimer = null;
 function updateChatPresence() {
   const label = document.getElementById('chatPresence');
   if (!label) return;
-  const online = navigator.onLine !== false;
+  const conv = state._activeConvData;
+  const expiresAt = conv && conv.id === state.activeConvId ? Number(conv.cachePresence?.expiresAt) || 0 : 0;
+  const remaining = expiresAt - Date.now();
+  const online = remaining > 0;
   label.textContent = online ? '· online' : '· offline';
-  label.title = online ? '设备网络在线' : '设备网络已断开';
+  label.title = online ? '当前对话缓存有效' : (expiresAt ? '当前对话缓存已过期' : '暂无有效缓存');
+  const dot = document.getElementById('chatCacheDot');
+  if (dot) {
+    dot.classList.toggle('alive', online);
+    dot.classList.toggle('expired', !online && !!expiresAt);
+  }
+  if (chatPresenceExpiryTimer !== null) clearTimeout(chatPresenceExpiryTimer);
+  chatPresenceExpiryTimer = online
+    ? setTimeout(updateChatPresence, Math.min(remaining + 1, 2147483647))
+    : null;
 }
-window.addEventListener('online', updateChatPresence);
-window.addEventListener('offline', updateChatPresence);
 
 async function switchUIMode() {
   // 顶栏模式按钮只在主页显示：连续点击时只切换主页类型，不自动跳进某个对话。
@@ -5952,6 +5971,7 @@ function bulkDeleteSelectedMessages() {
 function renderChatMessages() {
   const container = document.getElementById('messages');
   const conv = getActiveConv();
+  updateChatPresence();
   const asst = getActiveAssistant();
   const color = asst.color || '#C9795E';
 
@@ -5983,13 +6003,15 @@ function renderChatMessages() {
       const thinkingHtml = m.thinking ? renderThinkingBlock(i, m.thinking) : '';
       const bubbles = splitChatBubbles(m.content);
       const bubbleHtml = bubbles.map((b, bi) =>
-        `<div class="chat-bubble asst ${bi === 0 ? 'first' : ''}">${renderMd(b)}</div>`
+        bi === 0
+          ? `<div class="chat-first-row"><div class="chat-bubble asst first">${renderMd(b)}</div>${menuBtn}</div>`
+          : `<div class="chat-bubble asst">${renderMd(b)}</div>`
       ).join('');
       return `
         <div class="msg chat-group asst" data-index="${i}">
           ${bulkCheck}
           <div class="chat-bubble-col" id="msgContent-${i}">${thinkingHtml}${bubbleHtml}</div>
-          ${menuBtn}
+          ${bubbles.length ? '' : menuBtn}
         </div>`;
     }
   }).join('');
@@ -6596,7 +6618,6 @@ function updateCtxBar() {
   const used = (lastUsage.prompt_tokens || 0) + (lastUsage.completion_tokens || 0);
   const pct = Math.min(100, (used / ctxLimit) * 100);
   fill.style.width = pct + '%';
-  fill.style.background = '#B18CA2';
   bar.style.display = '';
   bar.title = Math.round(used/1000) + 'k / ' + Math.round(ctxLimit/1000) + 'k tokens (' + pct.toFixed(1) + '%)';
 }
@@ -7421,6 +7442,11 @@ function updateCacheIndicator(cached, cacheWrite) {
     } else {
       cacheState.ttlMs = 300000;
     }
+    // 随对话保存到期时间：切换对话或重新打开后继续按原期限判断，不重置计时。
+    const conv = state._activeConvData;
+    if (conv?.id === state.activeConvId) {
+      conv.cachePresence = { expiresAt: cacheState.lastRefresh + cacheState.ttlMs };
+    }
     updateCacheCountdown();
     startCacheTimer();
   }
@@ -7476,12 +7502,8 @@ function updateModelDots(active) {
       el.classList.remove('cache-active');
     }
   });
-  // 聊天模式：header 里的缓存指示点
-  const chatDot = document.getElementById('chatCacheDot');
-  if (chatDot) {
-    chatDot.classList.toggle('alive', !!active);
-    chatDot.classList.toggle('expired', !active && !!(cacheState.lastRefresh && cacheState.tokens));
-  }
+  // 聊天顶栏按当前对话自己的缓存到期时间更新，避免串用其他对话的状态。
+  updateChatPresence();
 }
 
 // ============ INPUT HELPERS ============
