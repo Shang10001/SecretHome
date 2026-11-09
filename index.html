@@ -2793,24 +2793,40 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
   --bg: #fafafa; --surface: #ffffff; --surface2: #f0f0f0; --surface3: #e5e5e5;
   --border: #e0dedb; --border2: #d1ceca;
   --text: #2d2b28; --text2: #6b6560; --text3: #a39e98;
-  --accent: #1e1100; --accent2: #3a2815; --accent-light: #e9e2d9; --accent-dim: rgba(30,17,0,.10);
+  --accent: #3a3027; --accent2: #30271f; --accent-light: #e9e2d9; --accent-dim: rgba(58,48,39,.10);
   --user-bg: #e4eeef;
-  --phone-header: #1e1100; --phone-header-hover: #3a2815;
+  --phone-header: #3a3027; --phone-header-hover: #30271f;
   --phone-bg: #e5e5e5; --phone-card: #ffffff; --phone-asst: #f9f9f9;
   --phone-user: #c3d3d0; --phone-input: #f0f0f0;
   --phone-text: #2d2b28; --phone-secondary: #6b6560; --phone-muted: #a39e98;
-  --rp-header: #1e1100; --rp-bg: #e5e5e5; --rp-card: #ffffff;
+  --rp-header: #3a3027; --rp-bg: #e5e5e5; --rp-card: #ffffff;
   --rp-asst: #f9f9f9; --rp-text: #2d2b28; --rp-secondary: #6b6560; --rp-muted: #a39e98;
-  --theme-action: #1e1100; --theme-action-hover: #3a2815; --theme-date: #1e1100;
+  --theme-action: #3a3027; --theme-action-hover: #30271f; --theme-date: #3a3027;
 }
-:root.chocolate[data-ui-mode] .ctx-bar-fill { background: #1e1100; }
-:root.chocolate[data-ui-mode="roleplay"] .send-btn { background: #928b83; }
-:root.chocolate[data-ui-mode="roleplay"] .send-btn:hover { background: #7d756c; }
-:root.chocolate[data-ui-mode="roleplay"] .send-btn:disabled { background: var(--surface3); color: var(--text3); }
+:root.chocolate[data-ui-mode] .ctx-bar-fill { background: #3a3027; }
+:root.chocolate[data-ui-mode] .send-btn { background: #a59b92; }
+:root.chocolate[data-ui-mode] .send-btn:hover { background: #92877d; }
+:root.chocolate[data-ui-mode] .send-btn:disabled { background: var(--surface3); color: var(--text3); }
 .theme-choices { display: grid; gap: 10px; }
 .theme-choice { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 14px; }
 .theme-choice[aria-pressed="true"] { border-color: var(--theme-action); box-shadow: inset 0 0 0 1px var(--theme-action); }
 .theme-swatch { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(128,128,128,.2); }
+
+/* RP 对话顶栏采用与聊天顶栏相同的尺寸与排列，主页不受影响。 */
+:root[data-ui-mode="roleplay"] .header.conversation-header { gap: 4px; padding-left: 10px; padding-right: 8px; }
+.header.conversation-header .header-left { display: contents; }
+.header.conversation-header #headerBackBtn { width: 24px; height: 40px; padding: 0; line-height: 0; }
+.header.conversation-header #headerBackBtn svg { width: 22px; height: 22px; display: block; }
+.header.conversation-header .roleplay-header-id { position: relative; gap: 8px; padding: 0 2px; max-width: none; }
+.header.conversation-header .chat-header-name { font-size: 15px; font-weight: 600; line-height: 40px; }
+.header.conversation-header #convHeaderActions { gap: 4px; flex-shrink: 0; height: 40px; align-items: center; }
+.header.conversation-header #convHeaderActions .icon-btn { width: 32px; height: 40px; padding: 0; line-height: 0; }
+.header.conversation-header #convHeaderActions .icon-btn svg { width: 19px; height: 19px; display: block; flex-shrink: 0; }
+@media (max-width: 350px) {
+  .header.conversation-header .roleplay-header-id { gap: 6px; }
+  .header.conversation-header #convHeaderActions { gap: 0; }
+  .header.conversation-header #convHeaderActions .icon-btn { width: 28px; }
+}
 </style>
 <script>
 // 主题：在 body 渲染前应用，避免闪烁；暖白（默认）/ 夜间
@@ -2829,7 +2845,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     var isPhone = savedUi && savedUi.uiMode === 'chat';
     document.documentElement.dataset.uiMode = isPhone ? 'chat' : 'roleplay';
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute('content', t === 'chocolate' ? '#1e1100' : (t === 'night' ? '#164b49' : '#18716f'));
+    if (m) m.setAttribute('content', t === 'chocolate' ? '#3a3027' : (t === 'night' ? '#164b49' : '#18716f'));
   } catch(e){}
 })();
 </script>
@@ -2966,7 +2982,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
     <h2>主题 <button onclick="closeModal('themeModal')" aria-label="关闭主题选择">&#10005;</button></h2>
     <div class="theme-choices">
       <button class="btn theme-choice" data-theme-choice="sepia" onclick="setTheme('sepia')"><span class="theme-swatch" style="background:#18716f"></span>青绿色</button>
-      <button class="btn theme-choice" data-theme-choice="chocolate" onclick="setTheme('chocolate')"><span class="theme-swatch" style="background:#1e1100"></span>巧克力色</button>
+      <button class="btn theme-choice" data-theme-choice="chocolate" onclick="setTheme('chocolate')"><span class="theme-swatch" style="background:#3a3027"></span>巧克力色</button>
       <button class="btn theme-choice" data-theme-choice="night" onclick="setTheme('night')"><span class="theme-swatch" style="background:#202625"></span>夜间模式</button>
     </div>
   </div>
@@ -3933,7 +3949,7 @@ const THEME_META = {
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg>'
   },
   chocolate: {
-    color: '#1e1100',
+    color: '#3a3027',
     label: '巧克力色',
     icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>'
   },
@@ -5874,6 +5890,7 @@ function updateModeSwitchIcon() {
 // --- 视图切换 ---
 function setMainHeaderMode(mode) {
   const isHome = mode === 'home';
+  document.querySelector('.header').classList.toggle('conversation-header', !isHome);
   const modeBtn = document.getElementById('modeSwitchBtn');
   const backBtn = document.getElementById('headerBackBtn');
   const homeActions = document.getElementById('homeHeaderActions');
