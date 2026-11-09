@@ -2776,16 +2776,41 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
 }
 .modal { padding-bottom: calc(24px + var(--safe-bottom)); }
 
-/* 主要操作与日期分组统一使用灰紫色，不改变聊天气泡及发送按钮。 */
-:root { --action-purple: #957688; --action-purple-hover: #806374; --date-purple: #957688; }
-:root.night { --date-purple: #c5a5b8; }
+/* 主要操作与日期分组跟随主题色，不改变聊天气泡及发送按钮。 */
+:root { --theme-action: #18716f; --theme-action-hover: #21625f; --theme-date: #18716f; }
+:root.night { --theme-action: #164b49; --theme-action-hover: #205a57; --theme-date: #80b9b3; }
 .btn.primary, .msg-action-btn.save {
-  background: var(--action-purple);
-  border-color: var(--action-purple);
+  background: var(--theme-action);
+  border-color: var(--theme-action);
   color: #fff;
 }
-.btn.primary:hover, .msg-action-btn.save:hover { background: var(--action-purple-hover); border-color: var(--action-purple-hover); }
-.conv-date-group { color: var(--date-purple); }
+.btn.primary:hover, .msg-action-btn.save:hover { background: var(--theme-action-hover); border-color: var(--theme-action-hover); }
+.conv-date-group { color: var(--theme-date); }
+
+/* 巧克力主题：取自用户设计稿纯色区域的高频像素。 */
+:root.chocolate {
+  color-scheme: light;
+  --bg: #fafafa; --surface: #ffffff; --surface2: #f0f0f0; --surface3: #e5e5e5;
+  --border: #e0dedb; --border2: #d1ceca;
+  --text: #2d2b28; --text2: #6b6560; --text3: #a39e98;
+  --accent: #1e1100; --accent2: #3a2815; --accent-light: #e9e2d9; --accent-dim: rgba(30,17,0,.10);
+  --user-bg: #e4eeef;
+  --phone-header: #1e1100; --phone-header-hover: #3a2815;
+  --phone-bg: #e5e5e5; --phone-card: #ffffff; --phone-asst: #f9f9f9;
+  --phone-user: #c3d3d0; --phone-input: #f0f0f0;
+  --phone-text: #2d2b28; --phone-secondary: #6b6560; --phone-muted: #a39e98;
+  --rp-header: #1e1100; --rp-bg: #e5e5e5; --rp-card: #ffffff;
+  --rp-asst: #f9f9f9; --rp-text: #2d2b28; --rp-secondary: #6b6560; --rp-muted: #a39e98;
+  --theme-action: #1e1100; --theme-action-hover: #3a2815; --theme-date: #1e1100;
+}
+:root.chocolate[data-ui-mode] .ctx-bar-fill { background: #1e1100; }
+:root.chocolate[data-ui-mode="roleplay"] .send-btn { background: #928b83; }
+:root.chocolate[data-ui-mode="roleplay"] .send-btn:hover { background: #7d756c; }
+:root.chocolate[data-ui-mode="roleplay"] .send-btn:disabled { background: var(--surface3); color: var(--text3); }
+.theme-choices { display: grid; gap: 10px; }
+.theme-choice { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 14px; }
+.theme-choice[aria-pressed="true"] { border-color: var(--theme-action); box-shadow: inset 0 0 0 1px var(--theme-action); }
+.theme-swatch { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(128,128,128,.2); }
 </style>
 <script>
 // 主题：在 body 渲染前应用，避免闪烁；暖白（默认）/ 夜间
@@ -2798,13 +2823,13 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       t = old === '1' ? 'night' : 'sepia';
     }
     // day 已移除，旧的 day 值当作 sepia
-    if (t === 'day') t = 'sepia';
+    if (!['sepia', 'chocolate', 'night'].includes(t)) t = 'sepia';
     document.documentElement.classList.add(t);
     var savedUi = JSON.parse(localStorage.getItem(['be','nb','en','_data'].join('')) || 'null');
     var isPhone = savedUi && savedUi.uiMode === 'chat';
     document.documentElement.dataset.uiMode = isPhone ? 'chat' : 'roleplay';
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute('content', isPhone ? (t === 'night' ? '#164b49' : '#18716f') : (t === 'night' ? '#164b49' : '#18716f'));
+    if (m) m.setAttribute('content', t === 'chocolate' ? '#1e1100' : (t === 'night' ? '#164b49' : '#18716f'));
   } catch(e){}
 })();
 </script>
@@ -2834,7 +2859,7 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
       <button class="icon-btn" id="favoritesBtn" onclick="showFavorites()" title="收藏">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>
       </button>
-      <button class="icon-btn" id="nightToggleBtn" onclick="cycleTheme()" title="切换到夜间护眼">
+      <button class="icon-btn" id="nightToggleBtn" onclick="showThemePicker()" title="切换到夜间护眼">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       </button>
       <button class="icon-btn" onclick="showStats()" title="统计">
@@ -2931,6 +2956,18 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- THEME PICKER -->
+<div class="modal-overlay" id="themeModal">
+  <div class="modal">
+    <h2>主题 <button onclick="closeModal('themeModal')" aria-label="关闭主题选择">&#10005;</button></h2>
+    <div class="theme-choices">
+      <button class="btn theme-choice" data-theme-choice="sepia" onclick="setTheme('sepia')"><span class="theme-swatch" style="background:#18716f"></span>青绿色</button>
+      <button class="btn theme-choice" data-theme-choice="chocolate" onclick="setTheme('chocolate')"><span class="theme-swatch" style="background:#1e1100"></span>巧克力色</button>
+      <button class="btn theme-choice" data-theme-choice="night" onclick="setTheme('night')"><span class="theme-swatch" style="background:#202625"></span>夜间模式</button>
     </div>
   </div>
 </div>
@@ -3890,21 +3927,27 @@ let state = loadState();
 // ============ 主题切换：暖白 ↔ 夜间护眼 ============
 const THEME_META = {
   sepia: {
-    color: '#FAFAFA',
-    label: '暖白',
+    color: '#18716f',
+    label: '青绿色',
     otherLabel: '夜间护眼',
-    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg>'
+  },
+  chocolate: {
+    color: '#1e1100',
+    label: '巧克力色',
+    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>'
   },
   night: {
-    color: '#171817',
-    label: '夜间护眼',
+    color: '#164b49',
+    label: '夜间模式',
     otherLabel: '暖白',
-    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
+    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
   }
 };
 
 function getCurrentTheme() {
-  return document.documentElement.classList.contains('night') ? 'night' : 'sepia';
+  const cl = document.documentElement.classList;
+  return cl.contains('night') ? 'night' : cl.contains('chocolate') ? 'chocolate' : 'sepia';
 }
 
 function syncThemeIcon() {
@@ -3912,25 +3955,32 @@ function syncThemeIcon() {
   if (!btn) return;
   const cur = getCurrentTheme();
   btn.innerHTML = THEME_META[cur].icon;
-  btn.title = '切换到' + THEME_META[cur].otherLabel;
+  btn.title = '主题：' + THEME_META[cur].label;
+  btn.setAttribute('aria-label', btn.title + '，选择主题');
+}
+
+function showThemePicker() {
+  const cur = getCurrentTheme();
+  document.querySelectorAll('[data-theme-choice]').forEach(btn => {
+    btn.setAttribute('aria-pressed', String(btn.dataset.themeChoice === cur));
+  });
+  openModal('themeModal', true);
+}
+
+function setTheme(next) {
+  if (!Object.prototype.hasOwnProperty.call(THEME_META, next)) return;
+  const cl = document.documentElement.classList;
+  cl.remove('sepia', 'chocolate', 'night');
+  cl.add(next);
+  try { localStorage.setItem(['be','nb','en','_theme'].join(''), next); } catch(e){}
+  syncChatAppearance();
+  syncThemeIcon();
+  closeModal('themeModal');
 }
 
 function cycleTheme() {
-  const cl = document.documentElement.classList;
-  const isNight = cl.contains('night');
-  cl.remove('night');
-  if (!isNight) {
-    cl.remove('sepia');
-    cl.add('night');
-  } else {
-    cl.add('sepia');
-  }
-  const next = getCurrentTheme();
-  try { localStorage.setItem(['be','nb','en','_theme'].join(''), next); } catch(e){}
-  const m = document.querySelector('meta[name="theme-color"]');
-  if (m) m.setAttribute('content', THEME_META[next].color);
-  syncChatAppearance();
-  syncThemeIcon();
+  const themes = ['sepia', 'chocolate', 'night'];
+  setTheme(themes[(themes.indexOf(getCurrentTheme()) + 1) % themes.length]);
 }
 
 // ============ INDEXEDDB LAYER (v2 — split stores) ============
@@ -5759,7 +5809,7 @@ function syncChatAppearance(mode = state.uiMode) {
   root.dataset.uiMode = isPhone ? 'chat' : 'roleplay';
   const isNight = getCurrentTheme() === 'night';
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', isPhone ? (isNight ? '#164b49' : '#18716f') : (isNight ? '#164b49' : '#18716f'));
+  if (meta) meta.setAttribute('content', THEME_META[getCurrentTheme()].color);
   updateChatPresence();
 }
 
