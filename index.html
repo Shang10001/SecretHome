@@ -2838,6 +2838,14 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
   font-family: 'SecretHomeReading', var(--font);
 }
 #customFontPreview { margin-top:10px; padding:12px; border-radius:10px; background:var(--surface2); color:var(--text); font-size:16px; line-height:1.8; }
+/* 加载点不再叠加内边距，外框沿用普通气泡。 */
+:root[data-ui-mode="chat"] .typing-bubble .typing-indicator {
+  display:flex; align-items:center; min-height:22.5px; padding:0;
+}
+:root[data-ui-mode="chat"] .chat-time-label {
+  text-align:center; color:var(--theme-date); font-family:var(--font);
+  font-size:11px; line-height:1.6; margin:4px 0 14px;
+}
 </style>
 <script>
 // 主题：在 body 渲染前应用，避免闪烁；暖白（默认）/ 夜间
@@ -6262,6 +6270,21 @@ function bulkDeleteSelectedMessages() {
   showToast(`已删除 ${indexes.length} 条消息`);
 }
 
+function chatMessageTime(message) {
+  const date = typeof message.sentAt === 'number' ? new Date(message.sentAt) : extractTimestamp(message);
+  return date && Number.isFinite(date.getTime()) ? date : null;
+}
+
+function formatChatTime(date, now = new Date()) {
+  const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  const day = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  if (day(date) === day(now)) return time;
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  if (day(date) === day(yesterday)) return `昨天 ${time}`;
+  const year = date.getFullYear() === now.getFullYear() ? '' : `${date.getFullYear()}年`;
+  return `${year}${date.getMonth()+1}月${date.getDate()}日 ${time}`;
+}
+
 // --- 聊天气泡渲染 ---
 function renderChatMessages() {
   const container = document.getElementById('messages');
@@ -6281,14 +6304,19 @@ function renderChatMessages() {
     return;
   }
 
+  let previousTime = null;
   container.innerHTML = conv.messages.map((m, i) => {
     if (m.deleted) return '';
+    const messageTime = chatMessageTime(m);
+    const showTime = messageTime && (!previousTime || messageTime - previousTime > 5 * 60 * 1000 || messageTime.toDateString() !== previousTime.toDateString());
+    const timeHtml = showTime ? `<div class="chat-time-label">${formatChatTime(messageTime)}</div>` : '';
+    if (messageTime) previousTime = messageTime;
     const menuBtn = `<button class="msg-inline-menu" onclick="toggleMsgMenu(${i}, event)">&#8943;</button>`;
     const bulkCheck = renderBulkDeleteCheckbox(i);
     if (m.role === 'user') {
       const imgHtml = getMessageImages(m).map(src => `<img class="msg-image" src="${esc(src)}">`).join('');
       const bubble = m.content ? `<div class="chat-bubble user first">${esc(m.content)}</div>` : '';
-      return `
+      return `${timeHtml}
         <div class="msg chat-group user" data-index="${i}">
           ${bulkCheck}
           ${menuBtn}
@@ -6302,7 +6330,7 @@ function renderChatMessages() {
           ? `<div class="chat-first-row"><div class="chat-bubble asst first">${renderMd(b)}</div>${menuBtn}</div>`
           : `<div class="chat-bubble asst">${renderMd(b)}</div>`
       ).join('');
-      return `
+      return `${timeHtml}
         <div class="msg chat-group asst" data-index="${i}">
           ${bulkCheck}
           <div class="chat-bubble-col" id="msgContent-${i}">${thinkingHtml}${bubbleHtml}</div>
@@ -6321,7 +6349,7 @@ function renderChatMessages() {
 // 流式：增量更新气泡，避免每个 chunk 重建 DOM 导致动画闪烁
 function renderStreamingChat(index, content) {
   const container = document.getElementById('messages');
-  const el = container.querySelectorAll('.msg')[index];
+  const el = container.querySelector(`.msg[data-index="${index}"]`);
   if (!el) return;
   const col = el.querySelector('.chat-bubble-col');
   if (!col) return;
@@ -7313,7 +7341,7 @@ async function sendMessage() {
   const now = new Date();
   const days = ['日','一','二','三','四','五','六'];
   const sendTs = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 周${days[now.getDay()]}`;
-  const userMsg = { role: 'user', content: text, ts: sendTs };
+  const userMsg = { role: 'user', content: text, ts: sendTs, sentAt: now.getTime() };
   setMessageImages(userMsg, pendingImages);
   pendingImages = [];
   renderImagePreview();
