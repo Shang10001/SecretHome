@@ -1412,7 +1412,8 @@ button.msg-status-dot:focus-visible {
   box-shadow: var(--shadow-lg);
   min-width: 170px;
   z-index: 160;
-  overflow: hidden;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
   animation: msgIn 0.12s ease-out;
 }
 .msg-menu.open { display: block; }
@@ -6710,6 +6711,25 @@ async function jumpToFavorite(id) {
 }
 
 // ============ MESSAGE MENU & BRANCHING ============
+async function copyAssistantReply(index) {
+  const message = getActiveConv()?.messages[index];
+  closeMsgMenus();
+  if (message?.role !== 'assistant' || message.deleted || !message.content?.trim()) {
+    showToast('没有可复制的回复');
+    return;
+  }
+
+  const text = isChatConvActive()
+    ? splitChatBubbles(message.content).join('\n\n')
+    : message.content;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('已复制全文');
+  } catch {
+    showToast('复制失败，请重试');
+  }
+}
+
 function toggleMsgMenu(index, event) {
   event.stopPropagation();
   const conv = getActiveConv();
@@ -6724,7 +6744,10 @@ function toggleMsgMenu(index, event) {
     <button class="conv-context-menu-item" onclick="startEdit(${index}); closeMsgMenus();">
       <span class="ctx-icon">&#9998;</span>编辑
     </button>
-    ${isAssistant ? `<button class="conv-context-menu-item" onclick="regenerateResponse(${index}); closeMsgMenus();">
+    ${isAssistant ? `<button class="conv-context-menu-item" onclick="copyAssistantReply(${index});">
+      <span class="ctx-icon" aria-hidden="true">&#10697;</span>复制
+    </button>
+    <button class="conv-context-menu-item" onclick="regenerateResponse(${index}); closeMsgMenus();">
       <span class="ctx-icon">&#8635;</span>重新生成
     </button>
     <button class="conv-context-menu-item" onclick="toggleFavorite(${index}); closeMsgMenus();">
@@ -6771,7 +6794,7 @@ function toggleMsgMenu(index, event) {
     }
     left = Math.max(12, left);
 
-    menu.style.top = top + 'px';
+    menu.style.top = Math.max(12, top) + 'px';
     menu.style.left = left + 'px';
   });
 }
