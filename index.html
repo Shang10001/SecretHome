@@ -3207,12 +3207,36 @@ html, body, .header, .messages, .input-area, .msg-content, .modal, .cache-indica
 
       <hr style="border:none;border-top:1px solid var(--border);margin:20px 0;">
       <h3 style="font-size:14px;font-weight:600;margin-bottom:10px;color:var(--text);">从 Kelivo 导入</h3>
-      <div class="hint" style="margin-bottom:12px;">从 Kelivo 备份包中导入对话记录。请选择备份中的 <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;">chats</code> JSON 文件。图片引用会保留为文字标记。支持 regenerate 版本选择。</div>
+      <div class="hint">选择解压后的 chats.json，预览后只导入一个助手的对话。图片引用会保留为文字标记。</div>
       <div class="btn-row-wrap">
-        <button class="btn primary" onclick="document.getElementById('kelivoFile').click()">选择 Kelivo chats 文件</button>
-        <input type="file" id="kelivoFile" accept=".json" style="display:none" onchange="importKelivo(event)">
+        <button class="btn primary" id="kelivoPickBtn" onclick="document.getElementById('kelivoFile').click()">选择 chats.json</button>
+        <input type="file" id="kelivoFile" accept=".json" hidden onchange="importKelivo(event)">
       </div>
-      <div id="kelivoStatus" style="margin-top:8px;font-size:12px;color:var(--text3);font-family:var(--mono);"></div>
+      <div id="kelivoOptions" hidden>
+        <div class="btn-row-wrap">
+          <button class="btn" onclick="document.getElementById('kelivoNamesFile').click()">读取助手名称（可选）</button>
+          <input type="file" id="kelivoNamesFile" accept=".json" hidden onchange="readKelivoAssistantNames(event)">
+        </div>
+        <div class="hint">助手只显示编号时，可选择同一备份的 settings.json。只在本机读取助手名称。</div>
+        <div class="field">
+          <label for="kelivoSource">Kelivo 来源助手</label>
+          <select id="kelivoSource" onchange="updateKelivoPreview()"></select>
+          <div class="hint" id="kelivoPreview"></div>
+        </div>
+        <div class="field">
+          <label for="kelivoTarget">导入到小家的助手</label>
+          <select id="kelivoTarget" onchange="updateKelivoPreview()"></select>
+        </div>
+        <div class="field">
+          <label for="kelivoMode">放在哪个模式</label>
+          <select id="kelivoMode">
+            <option value="chat">聊天模式</option>
+            <option value="roleplay">角色扮演模式</option>
+          </select>
+        </div>
+        <button class="btn primary" id="kelivoImportBtn" onclick="confirmKelivoImport()" disabled>导入所选助手的对话</button>
+      </div>
+      <div class="hint" id="kelivoStatus" role="status"></div>
 
       <hr style="border:none;border-top:1px solid var(--border);margin:20px 0;">
       <div style="font-family:var(--mono);font-size:11px;padding:4px 0;" id="storageUsage">存储: 检测中...</div>
@@ -7875,127 +7899,219 @@ function setupInputShortcuts() {
 }
 
 // ============ KELIVO IMPORT ============
-function importKelivo(event) {
+let kelivoImportData = null;
+let kelivoImportBusy = false;
+
+function kelivoElement(id) {
+  return document.getElementById(id);
+}
+
+function fillKelivoSources(selected = '') {
+  const select = kelivoElement('kelivoSource');
+  select.replaceChildren(new Option('请选择来源助手', ''));
+  kelivoImportData.groups.forEach(({ id, conversations }, index) => {
+    const name = kelivoImportData.names.get(id) || conversations[0].assistantName ||
+      (id ? '助手 ' + (index + 1) : '未分配助手');
+    select.add(new Option(name + '（' + conversations.length + ' 个对话）', String(index)));
+  });
+  select.value = selected;
+  updateKelivoPreview();
+}
+
+function selectedKelivoGroup() {
+  const selected = kelivoElement('kelivoSource').value;
+  return selected === '' ? null : kelivoImportData?.groups[Number(selected)];
+}
+
+function updateKelivoPreview() {
+  const group = selectedKelivoGroup();
+  const titles = group?.conversations.slice(0, 3).map(conv => conv.title || '未命名对话');
+  kelivoElement('kelivoPreview').textContent = titles?.length ? '对话示例：' + titles.join('、') : '';
+  kelivoElement('kelivoImportBtn').disabled = kelivoImportBusy || !group || !kelivoElement('kelivoTarget').value;
+}
+
+async function importKelivo(event) {
   const file = event.target.files[0];
-  if (!file) return;
-  const statusEl = document.getElementById('kelivoStatus');
-  statusEl.textContent = '读取中...';
-
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    try {
-      const data = JSON.parse(e.target.result);
-      const kelivoConvs = data.conversations || [];
-      const kelivoMsgs = data.messages || [];
-
-      if (kelivoConvs.length === 0) {
-        statusEl.textContent = '未找到对话数据';
-        return;
-      }
-
-      // Build message lookup: id -> message
-      const msgMap = {};
-      for (const m of kelivoMsgs) {
-        msgMap[m.id] = m;
-      }
-
-      // Build groupId -> versions map for handling regenerations
-      const groupVersions = {};
-      for (const m of kelivoMsgs) {
-        const gid = m.groupId || m.id;
-        if (!groupVersions[gid]) groupVersions[gid] = [];
-        groupVersions[gid].push(m);
-      }
-      // Sort versions within each group
-      for (const gid in groupVersions) {
-        groupVersions[gid].sort((a, b) => (a.version || 0) - (b.version || 0));
-      }
-
-      let importedCount = 0;
-      let msgCount = 0;
-
-      for (const conv of kelivoConvs) {
-        // Check if already imported (by original ID)
-        const newId = 'kelivo_' + conv.id;
-        if (state.conversations[newId]) continue;
-
-        // Get version selections from conversation
-        const versionSel = conv.versionSelections || {};
-
-        // Build ordered message list using messageIds
-        const messages = [];
-        const seenGroups = new Set();
-
-        for (const mid of (conv.messageIds || [])) {
-          const msg = msgMap[mid];
-          if (!msg) continue;
-
-          const gid = msg.groupId || msg.id;
-
-          // Skip if we already processed this group
-          if (seenGroups.has(gid)) continue;
-          seenGroups.add(gid);
-
-          // Pick the right version
-          const versions = groupVersions[gid];
-          let chosen = msg;
-          if (versions && versions.length > 1) {
-            const selIdx = versionSel[gid];
-            if (selIdx !== undefined && versions[selIdx]) {
-              chosen = versions[selIdx];
-            } else {
-              // Default to last version
-              chosen = versions[versions.length - 1];
-            }
-          }
-
-          if (!chosen.content || !chosen.role) continue;
-
-          // Clean up content: replace image references
-          let content = chosen.content;
-          content = content.replace(/\[image:[^\]]*[\/\\]([^\]\/\\]+)\]/g, '[图片: $1]');
-
-          // Only keep user and assistant messages
-          if (chosen.role === 'user' || chosen.role === 'assistant') {
-            messages.push({ role: chosen.role, content });
-            msgCount++;
-          }
-        }
-
-        if (messages.length === 0) continue;
-
-        const convData = {
-          id: newId,
-          title: conv.title || '(Kelivo) 未命名对话',
-          messages,
-          created: new Date(conv.createdAt || conv.updatedAt || Date.now()).getTime(),
-          assistantId: state.activeAssistantId || 'asst_default'
-        };
-        // Save full conv to IDB
-        await saveConvToIDB(convData);
-        // Save metadata to state index
-        state.conversations[newId] = {
-          id: newId,
-          title: convData.title,
-          created: convData.created,
-          msgCount: messages.length,
-          assistantId: convData.assistantId
-        };
-        importedCount++;
-      }
-
-      saveSettingsToLS();
-      saveSettingsToIDB();
-      renderMessages();
-      statusEl.textContent = `导入完成: ${importedCount} 个对话, ${msgCount} 条消息`;
-      showToast(`Kelivo 导入完成: ${importedCount} 个对话`);
-
-    } catch(err) {
-      statusEl.textContent = '导入失败: ' + err.message;
-    }
-  };
-  reader.readAsText(file);
   event.target.value = '';
+  if (!file || kelivoImportBusy) return;
+
+  kelivoImportBusy = true;
+  const status = kelivoElement('kelivoStatus');
+  const picker = kelivoElement('kelivoPickBtn');
+  picker.disabled = true;
+  kelivoImportData = null;
+  kelivoElement('kelivoOptions').hidden = true;
+  status.textContent = '正在读取聊天记录…';
+  try {
+    const data = JSON.parse(await file.text());
+    if (!Array.isArray(data?.conversations) || !Array.isArray(data?.messages)) {
+      throw new Error('请选择 Kelivo 备份里的 chats.json');
+    }
+
+    const groups = new Map();
+    for (const conv of data.conversations) {
+      if (!conv?.id || !Array.isArray(conv.messageIds) || !conv.messageIds.length) continue;
+      const id = String(conv.assistantId ?? '');
+      if (!groups.has(id)) groups.set(id, { id, conversations: [] });
+      groups.get(id).conversations.push(conv);
+    }
+    if (!groups.size) throw new Error('未找到有消息的对话');
+
+    kelivoImportData = { groups: Array.from(groups.values()), messages: data.messages, names: new Map() };
+    const target = kelivoElement('kelivoTarget');
+    target.replaceChildren(new Option('请选择目标助手', ''));
+    for (const assistant of getOrderedAssistants()) {
+      target.add(new Option(assistant.name, assistant.id));
+    }
+    kelivoElement('kelivoMode').value = state.uiMode === 'chat' ? 'chat' : 'roleplay';
+    fillKelivoSources();
+    kelivoElement('kelivoOptions').hidden = false;
+    status.textContent = '请选择来源助手和导入位置。';
+  } catch (error) {
+    status.textContent = '读取失败：' + error.message;
+  } finally {
+    kelivoImportBusy = false;
+    picker.disabled = false;
+    updateKelivoPreview();
+  }
+}
+
+async function readKelivoAssistantNames(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  const pending = kelivoImportData;
+  if (!file || !pending || kelivoImportBusy) return;
+  const status = kelivoElement('kelivoStatus');
+  try {
+    const settings = JSON.parse(await file.text());
+    const raw = settings?.assistants_v1 ?? settings?.assistants;
+    const names = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (!Array.isArray(names)) throw new Error('未找到助手名称');
+    if (pending !== kelivoImportData || kelivoImportBusy) return;
+    pending.names = new Map(names.filter(a => a?.id && typeof a.name === 'string').map(a => [String(a.id), a.name]));
+    fillKelivoSources(kelivoElement('kelivoSource').value);
+    status.textContent = pending.groups.some(group => pending.names.has(group.id))
+      ? '已读取助手名称，请确认来源助手。'
+      : '没有匹配的助手名称，可以根据对话标题辨认。';
+  } catch (error) {
+    if (pending === kelivoImportData && !kelivoImportBusy) status.textContent = '读取名称失败：' + error.message;
+  }
+}
+
+function buildKelivoConversations(group, sourceMessages, assistantId, mode) {
+  const messagesById = new Map();
+  const versionsByGroup = new Map();
+  for (const message of sourceMessages) {
+    if (!message?.id) continue;
+    messagesById.set(message.id, message);
+    const id = message.groupId || message.id;
+    if (!versionsByGroup.has(id)) versionsByGroup.set(id, []);
+    versionsByGroup.get(id).push(message);
+  }
+  for (const versions of versionsByGroup.values()) {
+    versions.sort((a, b) => (a.version || 0) - (b.version || 0));
+  }
+
+  const conversations = [];
+  let skipped = 0;
+  for (const source of group.conversations) {
+    const id = 'kelivo_' + source.id;
+    if (state.conversations[id]) {
+      skipped++;
+      continue;
+    }
+
+    const messages = [];
+    const seen = new Set();
+    for (const messageId of source.messageIds) {
+      const original = messagesById.get(messageId);
+      if (!original) continue;
+      const groupId = original.groupId || original.id;
+      if (seen.has(groupId)) continue;
+      seen.add(groupId);
+      const versions = versionsByGroup.get(groupId).filter(message =>
+        !message.conversationId || message.conversationId === source.id || message.id === original.id);
+      const selected = versions[source.versionSelections?.[groupId]] || versions[versions.length - 1];
+      if (typeof selected?.content !== 'string' || !selected.content.trim()) continue;
+      if (selected.role !== 'user' && selected.role !== 'assistant') continue;
+
+      const content = selected.content.replace(/\[image:[^\]]*[\/\\]([^\]\/\\]+)\]/g, '[图片: $1]');
+      const message = { role: selected.role, content };
+      const timestamp = selected.timestamp ?? selected.createdAt;
+      const time = timestamp == null ? NaN : new Date(timestamp).getTime();
+      if (Number.isFinite(time)) {
+        message.ts = selected.role === 'user' ? formatMsgTs(time) : time;
+        if (selected.role === 'user') message.sentAt = time;
+      }
+      messages.push(message);
+    }
+    if (!messages.length) {
+      skipped++;
+      continue;
+    }
+    const created = new Date(source.createdAt ?? source.updatedAt ?? NaN).getTime();
+    conversations.push({
+      id, assistantId, mode, messages,
+      title: typeof source.title === 'string' && source.title.trim() ? source.title : '(Kelivo) 未命名对话',
+      created: Number.isFinite(created) ? created : getConversationFirstMessageTime({ messages }) || Date.now()
+    });
+  }
+  return { conversations, skipped };
+}
+
+async function confirmKelivoImport() {
+  const group = selectedKelivoGroup();
+  const assistantId = kelivoElement('kelivoTarget').value;
+  if (kelivoImportBusy || !group || !state.assistants[assistantId]) return;
+  const mode = kelivoElement('kelivoMode').value;
+  const status = kelivoElement('kelivoStatus');
+  const picker = kelivoElement('kelivoPickBtn');
+  kelivoImportBusy = true;
+  picker.disabled = true;
+  updateKelivoPreview();
+  status.textContent = '正在导入…';
+  try {
+    const { conversations, skipped } = buildKelivoConversations(group, kelivoImportData.messages, assistantId, mode);
+    if (!conversations.length) {
+      status.textContent = '没有新的可导入对话。已导入或无可读消息的对话会跳过。';
+      return;
+    }
+
+    if (!idb) await openIDB();
+    if (!state.assistants[assistantId]) throw new Error('目标助手已删除，请重新选择');
+    const index = {};
+    for (const conv of conversations) {
+      index[conv.id] = {
+        id: conv.id, assistantId, mode, title: conv.title, created: conv.created,
+        msgCount: conv.messages.length, firstMessageAt: getConversationFirstMessageTime(conv)
+      };
+    }
+
+    // 对话和列表索引一起保存，避免写入失败时出现空对话。
+    const settings = { ...state, conversations: { ...state.conversations, ...index } };
+    delete settings._activeConvData;
+    await new Promise((resolve, reject) => {
+      const tx = idb.transaction(['settings', 'conversations'], 'readwrite');
+      tx.oncomplete = resolve;
+      tx.onabort = () => reject(tx.error || new Error('未能保存对话'));
+      const store = tx.objectStore('conversations');
+      for (const conv of conversations) store.add(JSON.stringify(conv), conv.id);
+      tx.objectStore('settings').put(JSON.stringify(settings), 'main');
+    });
+    Object.assign(state.conversations, index);
+    saveSettingsToLS();
+    refreshAssistantViews();
+    const count = conversations.reduce((sum, conv) => sum + conv.messages.length, 0);
+    status.textContent = '已导入 ' + conversations.length + ' 个对话、' + count + ' 条消息' +
+      (skipped ? '，跳过 ' + skipped + ' 个已导入或无可读消息的对话。' : '。');
+    showToast('Kelivo 导入完成');
+  } catch (error) {
+    status.textContent = '导入失败：' + error.message;
+  } finally {
+    kelivoImportBusy = false;
+    picker.disabled = false;
+    updateKelivoPreview();
+  }
 }
 
 // ============ SETTINGS TABS ============
